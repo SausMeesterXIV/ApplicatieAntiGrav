@@ -1,0 +1,461 @@
+import React, { useMemo } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import { Event, QuoteItem, CountdownItem, User, Drink } from '../types';
+import { AppContextType } from '../App';
+
+export const HomeScreen: React.FC = () => {
+  const {
+    balance,
+    events,
+    quotes,
+    countdowns,
+    currentUser,
+    handleQuickStreep,
+    drinks
+  } = useOutletContext<AppContextType>();
+
+  const navigate = useNavigate();
+  // We use the same 'quickDrink' lookup that used to happen in App.tsx
+  const quickDrink = drinks.find(d => String(d.id) === String(currentUser.quickDrinkId || '2'));
+
+  const displayName = currentUser.nickname || currentUser.name?.split(' ')[0] || 'Lid';
+
+  // Logic to find next 2 upcoming events
+  const now = new Date();
+  const upcomingEvents = events
+    .filter(e => new Date(e.date) >= new Date(now.setHours(0, 0, 0, 0))) // Filter past events (keep today)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) // Sort by date ascending
+    .slice(0, 2); // Take first 2
+
+  // Find Quote of the Week (Most likes - dislikes) from Recent Quotes only (< 4 weeks)
+  const topQuote = useMemo(() => {
+    const today = new Date();
+    const fourWeeksAgo = new Date();
+    fourWeeksAgo.setDate(today.getDate() - 28);
+
+    const recentQuotes = quotes.filter(q => new Date(q.date) >= fourWeeksAgo);
+
+    if (recentQuotes.length === 0) return null;
+
+    // Sort by Net Score
+    return [...recentQuotes].sort((a, b) => (b.likes.length - b.dislikes.length) - (a.likes.length - a.dislikes.length))[0];
+  }, [quotes]);
+
+  // Pre-filter valid countdowns (only today or future) AND SORT them by date
+  const validCountdowns = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return countdowns
+      .filter(c => {
+        const t = new Date(c.targetDate);
+        t.setHours(0, 0, 0, 0);
+        return t.getTime() >= today.getTime();
+      })
+      .sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime());
+  }, [countdowns]);
+
+  // Camp Countdown Logic Helper
+  const renderCountdown = (item: CountdownItem, index: number) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const target = new Date(item.targetDate);
+    // Explicitly set target hours to match "start of day" calculation to avoid off-by-one errors
+    target.setHours(0, 0, 0, 0);
+
+    const diffTime = target.getTime() - today.getTime();
+    const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Safety check (already filtered, but robust)
+    if (daysLeft < 0) return null;
+
+    if (daysLeft === 0) {
+      // Today is the day!
+      return (
+        <div key={item.id} className="bg-gradient-to-r from-pink-500 to-rose-500 rounded-2xl p-4 text-white shadow-lg shadow-pink-500/30 relative overflow-hidden animate-pulse">
+          <div className="flex flex-col items-center justify-center relative z-10">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="material-icons-round text-lg">celebration</span>
+              <span className="text-xs font-bold uppercase tracking-wider opacity-90">Vandaag is start</span>
+            </div>
+            <h2 className="text-xl font-extrabold text-center leading-tight">{item.title}!</h2>
+          </div>
+        </div>
+      );
+    }
+
+    // Future
+    const targetMonth = target.toLocaleString('nl-BE', { month: 'short' }).toUpperCase();
+    const targetDay = target.getDate();
+
+    return (
+      <div
+        key={item.id}
+        className="rounded-2xl p-4 text-white shadow-lg relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/30"
+      >
+        <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+
+        <div className="flex justify-between items-center relative z-10">
+          <div className="flex-1 pr-2">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-0.5">{item.title}</h2>
+            <p className="text-sm font-medium text-white/90">Nog <span className="font-bold text-xl text-white">{daysLeft}</span> nachten!</p>
+          </div>
+          <div className="flex flex-col items-center gap-2 shrink-0">
+            <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg border border-white/10 flex flex-col items-center min-w-[3.5rem]">
+              <span className="text-xl font-bold leading-none">{targetDay}</span>
+              <span className="text-[9px] uppercase font-bold mt-0.5">{targetMonth}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen pb-24 relative">
+      {/* Header */}
+      <header className="px-6 py-6 flex justify-between items-center bg-surface-light dark:bg-surface-dark shadow-sm">
+        <div className="flex flex-col justify-center">
+          <span className="text-sm font-bold text-primary dark:text-blue-500 uppercase tracking-wider mb-1">KSA Aalter</span>
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white leading-none">Welkom, {displayName}</h1>
+        </div>
+        <div
+          onClick={() => navigate('/settings')}
+          className="h-16 w-16 rounded-full border-2 border-white dark:border-gray-700 shadow-md overflow-hidden cursor-pointer active:scale-95 transition-transform"
+        >
+          <img
+            src={currentUser.avatar}
+            alt="Profile"
+            className="h-full w-full object-cover"
+          />
+        </div>
+      </header>
+
+      <main className="flex-1 px-4 py-6 space-y-6">
+
+        {/* --- DYNAMIC DASHBOARD WIDGETS --- */}
+
+        {/* 1. Quote of the Week (Splash) */}
+        {topQuote && (
+          <section
+            onClick={() => navigate('/quotes')}
+            className="bg-white dark:bg-[#1e2330] rounded-2xl p-0.5 shadow-sm border border-gray-100 dark:border-gray-800 cursor-pointer group hover:scale-[1.01] transition-transform"
+          >
+            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/10 dark:to-orange-900/10 rounded-[14px] p-5 relative overflow-hidden">
+              {/* Decorative Quote Icon */}
+              <div className="absolute top-2 right-4 text-8xl font-serif text-yellow-500/10 dark:text-yellow-500/5 select-none leading-none">”</div>
+
+              <div className="flex items-center gap-2 mb-3">
+                <span className="material-icons-round text-yellow-500 text-sm">emoji_events</span>
+                <h2 className="text-xs font-bold text-yellow-600 dark:text-yellow-500 uppercase tracking-widest">Quote van de week</h2>
+              </div>
+
+              <p className="text-gray-900 dark:text-white font-serif italic text-lg leading-relaxed mb-3 pr-4">
+                "{topQuote.text}"
+              </p>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-[10px] font-bold text-yellow-700 dark:text-yellow-400">
+                    {topQuote.authorName.charAt(0)}
+                  </div>
+                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400">{topQuote.authorName}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 text-pink-500">
+                    <span className="material-icons-round text-sm">thumb_up</span>
+                    <span className="text-xs font-bold">{topQuote.likes.length}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-400">
+                    <span className="material-icons-round text-sm">thumb_down</span>
+                    <span className="text-xs font-bold">{topQuote.dislikes.length}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 2. Countdown Widgets (Conditional) - Now BELOW Quote */}
+        {validCountdowns.length > 0 && (
+          <section className={`mb-6 ${validCountdowns.length > 1 ? "grid grid-cols-2 gap-3" : ""}`}>
+            {validCountdowns.map((item, index) => renderCountdown(item, index))}
+          </section>
+        )}
+
+        {/* PRIMARY USER ACTIONS */}
+        <div className="grid grid-cols-2 gap-4">
+
+          {/* Strepen Module */}
+          <div
+            onClick={() => navigate('/strepen')}
+            className="col-span-2 sm:col-span-1 bg-surface-light dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow cursor-pointer group"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-primary dark:text-blue-300">
+                  <span className="material-icons-round">local_bar</span>
+                </div>
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-white">Strepen</h3>
+              </div>
+              {handleQuickStreep && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleQuickStreep();
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-full shadow-md active:scale-90 active:bg-blue-800 transition-all flex items-center gap-1.5 border border-blue-500/20"
+                  title={`Quick ${quickDrink?.name || 'Drink'}`}
+                >
+                  <span className="material-icons-round text-sm">local_bar</span>
+                  <span className="text-xs font-bold">+1</span>
+                </button>
+              )}
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded-lg group-hover:bg-blue-50 dark:group-hover:bg-gray-700 transition-colors">
+                <span className="text-gray-700 dark:text-gray-300">Strepen zetten</span>
+                <span className="material-icons-round text-xs text-gray-400">arrow_forward_ios</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Frieten Module */}
+          <div
+            onClick={() => navigate('/frituur')}
+            className="col-span-2 sm:col-span-1 bg-surface-light dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow cursor-pointer group"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg text-yellow-600 dark:text-yellow-400">
+                <span className="material-icons-round">fastfood</span>
+              </div>
+              <h3 className="font-semibold text-lg text-gray-900 dark:text-white">Frieten</h3>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded-lg group-hover:bg-yellow-50 dark:group-hover:bg-gray-700 transition-colors">
+                <span className="text-gray-700 dark:text-gray-300">Bestelling plaatsen</span>
+                <span className="material-icons-round text-xs text-gray-400">arrow_forward_ios</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* AGENDA (User View) */}
+        <section>
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+              <span className="material-icons-round text-primary">event</span>
+              Mijn Agenda
+            </h2>
+            <button
+              onClick={() => navigate('/agenda')}
+              className="text-xs font-bold text-primary hover:text-blue-600"
+            >
+              Alles bekijken
+            </button>
+          </div>
+
+          <div className="bg-surface-light dark:bg-surface-dark rounded-2xl p-2 shadow-sm border border-gray-100 dark:border-gray-800 space-y-1">
+            {upcomingEvents.length > 0 ? (
+              upcomingEvents.map((event, index) => {
+                const evtDate = new Date(event.date);
+                const day = evtDate.getDate();
+                const month = evtDate.toLocaleString('nl-BE', { month: 'short' }).replace('.', '');
+
+                return (
+                  <div key={event.id}>
+                    <div
+                      onClick={() => navigate('/agenda')}
+                      className="flex items-center gap-4 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl transition-colors cursor-pointer"
+                    >
+                      <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl h-14 w-14 flex flex-col items-center justify-center shrink-0 border border-gray-200 dark:border-gray-700">
+                        <span className="text-lg font-bold leading-none">{day}</span>
+                        <span className="text-[10px] font-bold uppercase leading-none text-gray-500">{month}</span>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-gray-900 dark:text-white text-base">{event.title}</h3>
+                        <div className="flex items-center gap-3 text-gray-500 text-xs mt-0.5">
+                          <span className="flex items-center gap-1">
+                            <span className="material-icons-round text-[10px]">schedule</span> {event.startTime}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="material-icons-round text-[10px]">place</span> {event.location}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="material-icons-round text-gray-300">chevron_right</span>
+                    </div>
+                    {/* Add separator if it's the first item and there are more items */}
+                    {index === 0 && upcomingEvents.length > 1 && (
+                      <div className="h-px bg-gray-100 dark:bg-gray-800 mx-3"></div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-4 text-center text-gray-400 text-sm">
+                Geen komende evenementen.
+              </div>
+            )}
+          </div>
+
+          {/* Bierpong Button */}
+          <div
+            onClick={() => navigate('/bierpong')}
+            className="flex items-center gap-4 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl transition-colors cursor-pointer"
+          >
+            <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl h-14 w-14 flex flex-col items-center justify-center shrink-0 border border-gray-200 dark:border-gray-700">
+              <span className="material-icons-round text-lg">sports_bar</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-gray-900 dark:text-white text-base">Bierpong</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Bekijk de stand</p>
+            </div>
+            <span className="material-icons-round text-gray-300">chevron_right</span>
+          </div>
+
+        </section>
+
+        {/* --- ADMIN SECTIONS BELOW --- */}
+
+        {/* Hoofdleiding Section */}
+        <section>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <span className="material-icons-round text-primary text-sm">admin_panel_settings</span>
+            <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hoofdleiding</h2>
+          </div>
+          <div className="grid gap-3">
+            {/* Rollen & Beheer Card */}
+            <div
+              onClick={() => navigate('/admin/rollen')}
+              className="bg-white dark:bg-surface-dark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
+                  <span className="material-icons-round">manage_accounts</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Rollen & Beheer</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Rechten aanpassen</p>
+                </div>
+              </div>
+              <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+            </div>
+
+            {/* Send Message Card */}
+            <div
+              onClick={() => navigate('/notificaties/nieuw')}
+              className="bg-white dark:bg-surface-dark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                  <span className="material-icons-round">send</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Bericht Versturen</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Naar leiding of groepen</p>
+                </div>
+              </div>
+              <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Team Drank Section */}
+        <section>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <span className="material-icons-round text-primary text-sm">local_drink</span>
+            <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Team Drank</h2>
+          </div>
+          <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
+            <div className="grid grid-cols-2 gap-3">
+              <div
+                onClick={() => navigate('/strepen/dashboard')}
+                className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+              >
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 w-fit group-hover:scale-110 transition-transform origin-left">
+                  <span className="material-icons-round">dashboard</span>
+                </div>
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Dashboard</span>
+              </div>
+
+              <div
+                onClick={() => navigate('/strepen/voorraad')}
+                className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+              >
+                <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg text-orange-600 dark:text-orange-400 w-fit group-hover:scale-110 transition-transform origin-left">
+                  <span className="material-icons-round">inventory_2</span>
+                </div>
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Voorraad</span>
+              </div>
+
+              <div
+                onClick={() => navigate('/strepen/facturatie/nieuw')}
+                className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+              >
+                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-600 dark:text-green-400 w-fit group-hover:scale-110 transition-transform origin-left">
+                  <span className="material-icons-round">attach_money</span>
+                </div>
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Rekeningen</span>
+              </div>
+
+              <div
+                onClick={() => navigate('/strepen/facturatie')}
+                className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+              >
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400 w-fit group-hover:scale-110 transition-transform origin-left">
+                  <span className="material-icons-round">receipt_long</span>
+                </div>
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Facturen</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Sfeerbeheer Section (Admin Only) */}
+        <section>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <span className="material-icons-round text-primary text-sm">celebration</span>
+            <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sfeerbeheer</h2>
+          </div>
+
+          <div className="grid gap-3">
+            <div
+              onClick={() => navigate('/agenda/beheer')}
+              className="bg-white dark:bg-surface-dark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                  <span className="material-icons-round">edit_calendar</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Agenda & Aftelklok</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Events en sfeer beheren</p>
+                </div>
+              </div>
+              <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+            </div>
+
+            {/* Quotes Button - Point to Management View */}
+            <div
+              onClick={() => navigate('/quotes/beheer')}
+              className="bg-white dark:bg-surface-dark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-pink-100 dark:bg-pink-900/30 rounded-xl text-pink-600 dark:text-pink-400 group-hover:scale-110 transition-transform">
+                  <span className="material-icons-round">format_quote</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Quoteboek</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Wall of Shame / Fame</p>
+                </div>
+              </div>
+              <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  );
+};

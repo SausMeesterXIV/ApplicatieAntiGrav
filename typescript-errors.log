@@ -1,0 +1,71 @@
+src/App.tsx(5,44): error TS2307: Cannot find module './lib/data' or its corresponding type declarations.
+src/App.tsx(171,17): error TS2353: Object literal may only specify known properties, and 'name' does not exist in type 'SetStateAction<User>'.
+src/App.tsx(211,36): error TS2339: Property 'name' does not exist on type 'User'.
+src/App.tsx(250,84): error TS2339: Property 'name' does not exist on type 'User'.
+src/App.tsx(295,28): error TS2322: Type '{ activeTab: string; onTabChange: () => void; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'activeTab' does not exist on type 'IntrinsicAttributes'.
+src/App.tsx(328,82): error TS2741: Property 'onBack' is missing in type '{}' but required in type 'TeamDrankBillingExcelPreviewScreenProps'.
+src/App.tsx(329,67): error TS2739: Type '{}' is missing the following properties from type 'ConsumptionOverviewScreenProps': onBack, users, drinks, streaks
+src/App.tsx(331,62): error TS2739: Type '{}' is missing the following properties from type 'MyInvoiceScreenProps': onBack, balance, currentUser
+src/screens/BierpongScreen.tsx(59,123): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/ConsumptionOverviewScreen.tsx(2,45): error TS2307: Cannot find module '../lib/data' or its corresponding type declarations.
+src/screens/ConsumptionOverviewScreen.tsx(88,37): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/FriesOverviewScreen.tsx(14,5): error TS2339: Property 'handleArchiveFriesSession' does not exist on type 'AppContextType'.
+src/screens/FriesScreen.tsx(5,28): error TS2307: Cannot find module '../lib/data' or its corresponding type declarations.
+src/screens/FriesScreen.tsx(109,56): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/FriesScreen.tsx(145,43): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/screens/FriesScreen.tsx(175,30): error TS7006: Parameter 'user' implicitly has an 'any' type.
+src/screens/FriesScreen.tsx(214,84): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/FriesScreen.tsx(243,102): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/FriesScreen.tsx(561,61): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/HomeScreen.tsx(21,59): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/NewMessageScreen.tsx(3,28): error TS2307: Cannot find module '../lib/data' or its corresponding type declarations.
+src/screens/NewMessageScreen.tsx(69,26): error TS7006: Parameter 'user' implicitly has an 'any' type.
+src/screens/NudgeSelectorScreen.tsx(3,28): error TS2307: Cannot find module '../lib/data' or its corresponding type declarations.
+src/screens/NudgeSelectorScreen.tsx(26,42): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/screens/NudgeSelectorScreen.tsx(64,33): error TS7006: Parameter 'leader' implicitly has an 'any' type.
+src/screens/QuotesScreen.tsx(6,44): error TS2307: Cannot find module '../lib/data' or its corresponding type declarations.
+src/screens/QuotesScreen.tsx(34,45): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/screens/QuotesScreen.tsx(42,42): error TS18048: 'currentUser.roles' is possibly 'undefined'.
+src/screens/QuotesScreen.tsx(114,26): error TS2739: Type 'QuoteItem' is missing the following properties from type 'Quote': tekst, auteur, datum, upvotes
+src/screens/QuotesScreen.tsx(114,36): error TS2739: Type 'QuoteItem' is missing the following properties from type 'Quote': tekst, auteur, datum, upvotes
+src/screens/QuotesScreen.tsx(118,5): error TS2322: Type 'QuoteItem[]' is not assignable to type 'Quote[]'.
+  Type 'QuoteItem' is missing the following properties from type 'Quote': tekst, auteur, datum, upvotes
+src/screens/QuotesScreen.tsx(162,44): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/screens/QuotesScreen.tsx(162,64): error TS2339: Property 'authorId' does not exist on type 'Quote'.
+src/screens/QuotesScreen.tsx(163,36): error TS2339: Property 'likes' does not exist on type 'Quote'.
+src/screens/QuotesScreen.tsx(163,57): error TS2339: Property 'dislikes' does not exist on type 'Quote'.
+src/screens/QuotesScreen.tsx(171,36): error TS2339: Property 'likes' does not exist on type 'Quote'.
+src/screens/QuotesScreen.tsx(172,39): error TS2339: Property 'dislikes' does not exist on type 'Quote'.
+src/screens/QuotesScreen.tsx(200,28): error TS2339: Property 'text' does not exist on type 'Quote'.
+src/screens/QuotesScreen.tsx(212,115): error TS2339: Property 'authorName' does not exist on type 'Quote'.
+src/screens/QuotesScreen.tsx(228,70): error TS2339: Property 'likes' does not exist on type 'Quote'.
+src/screens/QuotesScreen.tsx(241,70): error TS2339: Property 'dislikes' does not exist on type 'Quote'.
+src/screens/QuotesScreen.tsx(255,37): error TS2339: Property 'date' does not exist on type 'Quote'.
+src/screens/QuotesScreen.tsx(327,47): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/screens/RolesManageScreen.tsx(3,28): error TS2307: Cannot find module '../lib/data' or its corresponding type declarations.
+src/screens/RolesManageScreen.tsx(9,11): error TS2339: Property 'usersContext' does not exist on type 'AppContextType'.
+src/screens/RolesManageScreen.tsx(20,45): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/RolesManageScreen.tsx(58,14): error TS18048: 'user.roles' is possibly 'undefined'.
+src/screens/RolesManageScreen.tsx(59,14): error TS18048: 'user.roles' is possibly 'undefined'.
+src/screens/RolesManageScreen.tsx(60,16): error TS18048: 'user.roles' is possibly 'undefined'.
+src/screens/RolesManageScreen.tsx(68,23): error TS18048: 'u.roles' is possibly 'undefined'.
+src/screens/RolesManageScreen.tsx(69,26): error TS2488: Type 'string[] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/screens/RolesManageScreen.tsx(104,24): error TS18048: 'selectedUser.roles' is possibly 'undefined'.
+src/screens/RolesManageScreen.tsx(189,55): error TS18048: 'user.roles' is possibly 'undefined'.
+src/screens/RolesManageScreen.tsx(206,56): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/RolesManageScreen.tsx(208,90): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/RolesManageScreen.tsx(219,93): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/RolesManageScreen.tsx(223,22): error TS18048: 'user.roles' is possibly 'undefined'.
+src/screens/RolesManageScreen.tsx(225,26): error TS18048: 'user.roles' is possibly 'undefined'.
+src/screens/RolesManageScreen.tsx(262,92): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/SettingsScreen.tsx(96,113): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/SettingsScreen.tsx(108,36): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/StrepenScreen.tsx(7,28): error TS2307: Cannot find module '../lib/data' or its corresponding type declarations.
+src/screens/StrepenScreen.tsx(12,5): error TS2339: Property 'currentBalance' does not exist on type 'AppContextType'.
+src/screens/StrepenScreen.tsx(179,33): error TS2339: Property 'name' does not exist on type 'User'.
+src/screens/TeamDrankArchiveScreen.tsx(3,28): error TS2307: Cannot find module '../lib/data' or its corresponding type declarations.
+src/screens/TeamDrankArchiveScreen.tsx(114,48): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/screens/TeamDrankBillingScreen.tsx(149,69): error TS2339: Property 'name' does not exist on type '{ isPaid: boolean; hasDebt: boolean; effectiveDebt: number; id: string; naam: string; email: string; rol: "admin" | "team_drank" | "standaard"; actief: boolean; nickname?: string | undefined; ... 5 more ...; quickDrinkId?: string | undefined; }'.
+src/screens/TeamDrankBillingScreen.tsx(155,104): error TS2339: Property 'name' does not exist on type '{ isPaid: boolean; hasDebt: boolean; effectiveDebt: number; id: string; naam: string; email: string; rol: "admin" | "team_drank" | "standaard"; actief: boolean; nickname?: string | undefined; ... 5 more ...; quickDrinkId?: string | undefined; }'.
+src/screens/TeamDrankStreaksScreen.tsx(51,119): error TS2339: Property 'name' does not exist on type 'User'.
