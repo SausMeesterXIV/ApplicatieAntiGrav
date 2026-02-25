@@ -10,21 +10,21 @@ export const BottomNav: React.FC = () => {
   const navItems = [
     { id: 'home', icon: 'home', label: 'Start' },
     { id: 'strepen', icon: 'local_bar', label: 'Strepen' },
-    { id: 'notifications', icon: 'notifications', label: 'Meldingen', badge: true },
+    { id: 'notificaties', icon: 'notifications', label: 'Meldingen', badge: true },
     { id: 'agenda', icon: 'event', label: 'Agenda' },
     { id: 'settings', icon: 'settings', label: 'Instellingen' },
   ];
 
   return (
-    <nav className="fixed bottom-0 w-full bg-surface-light dark:bg-surface-dark border-t border-gray-200 dark:border-gray-800 pb-safe pt-2 px-4 z-50">
+    <nav className="fixed bottom-0 w-full bg-gray-50 border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] pb-safe pt-2 px-4 z-50">
       <div className="flex justify-between items-center pb-4">
         {navItems.map((item) => (
           <button
             key={item.id}
             onClick={() => navigate(`/${item.id === 'home' ? '' : item.id}`)}
             className={`flex flex-col items-center gap-1 p-2 transition-colors duration-200 relative group ${activeTab === item.id
-                ? 'text-primary dark:text-blue-400'
-                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+              ? 'text-primary dark:text-blue-400'
+              : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
               }`}
           >
             <div className="relative">

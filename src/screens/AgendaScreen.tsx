@@ -67,7 +67,7 @@ export const AgendaScreen: React.FC = () => {
   }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-[#0f172a] overflow-hidden transition-colors duration-200">
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
       {/* Header */}
       <header className="px-4 py-4 flex items-center justify-between shrink-0 bg-gray-50 dark:bg-[#0f172a] z-10 transition-colors relative">
         <div className="flex items-center gap-2">
@@ -187,7 +187,7 @@ export const AgendaScreen: React.FC = () => {
       </div>
 
       {/* Event List */}
-      <div className="flex-1 overflow-y-auto px-4 pb-24 pt-2 space-y-4 no-scrollbar">
+      <div className="px-4 pb-24 pt-2 space-y-4">
 
         {eventsThisMonth.length > 0 ? (
           eventsThisMonth.map(event => {
