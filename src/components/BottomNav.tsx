@@ -16,7 +16,7 @@ export const BottomNav: React.FC = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 w-full bg-gray-50 border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] pb-safe pt-2 px-4 z-50">
+    <nav className="fixed bottom-0 w-full bg-gray-50 dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] pb-safe pt-2 px-4 z-50 transition-colors duration-200">
       <div className="flex justify-between items-center pb-4">
         {navItems.map((item) => (
           <button

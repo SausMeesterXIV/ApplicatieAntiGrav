@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { MOCK_USERS } from '../lib/data';
 import { User } from '../types';
 import { AppContextType } from '../App';
+import * as db from '../lib/supabaseService';
+import { showToast } from '../components/Toast';
 
 export const RolesManageScreen: React.FC = () => {
   const navigate = useNavigate();
   const { users, setUsers: setUsersContext } = useOutletContext<AppContextType>();
 
-  // Data moved to state to allow updates, initialized from centralized MOCK_USERS
-  const [localUsers, setLocalUsers] = useState<User[]>(users || MOCK_USERS);
+  // Data from Supabase via context
+  const [localUsers, setLocalUsers] = useState<User[]>(users);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // New state for "Quick Assign Mode"
@@ -17,7 +18,7 @@ export const RolesManageScreen: React.FC = () => {
 
   const [search, setSearch] = useState('');
 
-  const filteredUsers = localUsers.filter(u => (u.name || u.naam || '').toLowerCase().includes(search.toLowerCase()));
+  const filteredUsers = localUsers.filter(u => (u.naam || '').toLowerCase().includes(search.toLowerCase()));
 
   // Role toggles state (for the modal)
   const [toggles, setToggles] = useState({
@@ -61,21 +62,34 @@ export const RolesManageScreen: React.FC = () => {
     });
   };
 
-  const toggleRoleForUser = (userId: string, role: string) => {
-    setLocalUsers(prevUsers => prevUsers.map(u => {
-      if (u.id !== userId) return u;
+  const toggleRoleForUser = async (userId: string, role: string) => {
+    const user = localUsers.find(u => u.id === userId);
+    if (!user) return;
 
-      const hasRole = (u.roles || []).includes(role);
-      let newRoles = [...(u.roles || [])];
+    const hasRole = (user.roles || []).includes(role);
+    let newRoles = [...(user.roles || [])];
 
-      if (hasRole) {
-        newRoles = newRoles.filter(r => r !== role);
-      } else {
-        newRoles.push(role);
-      }
+    if (hasRole) {
+      newRoles = newRoles.filter(r => r !== role);
+    } else {
+      newRoles.push(role);
+    }
 
-      return { ...u, roles: newRoles };
-    }));
+    const updatedUser = { ...user, roles: newRoles };
+
+    // Optimistic update
+    setLocalUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+
+    try {
+      await db.updateProfile(userId, { roles: newRoles });
+      // Sync to global context
+      setUsersContext(prev => prev.map(u => u.id === userId ? updatedUser : u));
+      showToast(`Rol '${role}' ${hasRole ? 'verwijderd' : 'toegevoegd'}`, 'success');
+    } catch (error) {
+      // Rollback
+      setLocalUsers(prev => prev.map(u => u.id === userId ? user : u));
+      showToast('Fout bij het opslaan van de rol', 'error');
+    }
   };
 
   const handleResetNickname = (userId: string) => {
@@ -92,21 +106,32 @@ export const RolesManageScreen: React.FC = () => {
   };
 
   // Handle saving from the modal
-  const saveFromModal = () => {
+  const saveFromModal = async () => {
     if (!selectedUser) return;
 
-    // Construct new roles based on toggles (simplified for demo)
+    // Construct new roles based on toggles
     const newRoles: string[] = [];
     if (toggles.sfeer) newRoles.push('Sfeerbeheer');
     if (toggles.drank) newRoles.push('Drank');
     if (toggles.finance) newRoles.push('Financiën');
-    // Preserve other roles not in the toggle list (like Materiaal or Hoofdleiding)
+    // Preserve other roles not in the toggle list
     const otherRoles = (selectedUser.roles || []).filter((r: string) => !['Sfeerbeheer', 'Drank', 'Financiën'].includes(r));
-
     const finalRoles = [...newRoles, ...otherRoles];
 
-    setLocalUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, roles: finalRoles } : u));
+    const updatedUser = { ...selectedUser, roles: finalRoles };
+
+    // Optimistic update
+    setLocalUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
     setSelectedUser(null);
+
+    try {
+      await db.updateProfile(selectedUser.id, { roles: finalRoles });
+      // Sync to global context
+      setUsersContext(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
+      showToast('Rollen opgeslagen!', 'success');
+    } catch (error) {
+      showToast('Fout bij het opslaan van de rollen', 'error');
+    }
   };
 
   return (
@@ -203,9 +228,9 @@ export const RolesManageScreen: React.FC = () => {
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-50 dark:border-[#0f172a] bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0 relative">
                     {user.avatar ? (
-                      <img src={user.avatar} alt={user.name || user.naam} className="w-full h-full object-cover" />
+                      <img src={user.avatar} alt={user.naam} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-blue-600 dark:text-blue-400 font-bold">{(user.name || user.naam || '').charAt(0)}</span>
+                      <span className="text-blue-600 dark:text-blue-400 font-bold">{(user.naam || '').charAt(0)}</span>
                     )}
 
                     {/* Checkmark overlay for active assign mode */}
@@ -216,7 +241,7 @@ export const RolesManageScreen: React.FC = () => {
                     )}
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white text-base">{user.name || user.naam}</h3>
+                    <h3 className="font-bold text-gray-900 dark:text-white text-base">{user.naam}</h3>
                     {user.nickname && (
                       <p className="text-xs text-gray-500 dark:text-gray-400">({user.nickname})</p>
                     )}
@@ -259,7 +284,7 @@ export const RolesManageScreen: React.FC = () => {
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">Rollen beheren</h3>
-                <p className="text-sm text-blue-600 dark:text-blue-400">Voor {selectedUser.name || selectedUser.naam}</p>
+                <p className="text-sm text-blue-600 dark:text-blue-400">Voor {selectedUser.naam}</p>
                 {selectedUser.nickname && (
                   <div className="flex items-center gap-2 mt-2">
                     <span className="text-xs text-gray-500">Bijnaam: {selectedUser.nickname}</span>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MOCK_USERS } from '../lib/data';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import { AppContextType } from '../App';
 
 export const NewMessageScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -9,8 +9,8 @@ export const NewMessageScreen: React.FC = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [isOfficial, setIsOfficial] = useState(true);
 
-  // Use MOCK_USERS for consistency
-  const users = MOCK_USERS;
+  // Users from Supabase via context
+  const { users } = useOutletContext<AppContextType>();
 
   const toggleUser = (id: string) => {
     if (selectedUsers.includes(id)) {

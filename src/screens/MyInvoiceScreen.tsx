@@ -1,20 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import QRCode from 'react-qr-code';
 import { ChevronBack } from '../components/ChevronBack';
 
-import { User } from '../types';
+import { User, Streak, Drink, Order } from '../types';
 import { AppContextType } from '../App';
 
 export interface MyInvoiceScreenProps {
   onBack?: () => void;
   balance?: number;
   currentUser?: User;
+  streaks?: Streak[];
+  friesOrders?: Order[];
 }
 
 export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
   onBack: propOnBack,
   balance: propBalance,
-  currentUser: propCurrentUser
+  currentUser: propCurrentUser,
+  streaks: propStreaks,
+  friesOrders: propFriesOrders
 }) => {
   const navigate = useNavigate();
   const context = useOutletContext<AppContextType | null>();
@@ -22,11 +27,60 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
   // Use props if provided, otherwise context
   const currentUser = propCurrentUser || context?.currentUser;
   const balance = propBalance ?? context?.balance ?? 0;
+  const allStreaks = propStreaks || context?.streaks || [];
+  const allFriesOrders = propFriesOrders || context?.friesOrders || [];
+
+  const [showPayconiq, setShowPayconiq] = useState(false);
+
+  // Generate a mock Payconiq deep link / QR content (In a real app, you'd use the Payconiq API)
+  // For now, we just encode a simple message or a dummy deep link 
+  const payconiqQrValue = `https://payconiq.com/pay?amount=${balance.toFixed(2)}&message=KSA_Bar_${currentUser?.naam?.replace(/\s+/g, '_')}`;
 
   const handleBack = () => {
     if (propOnBack) propOnBack();
     else navigate(-1);
   };
+
+  // Group streaks by drink
+  const userStreaks = allStreaks.filter(s => s.userId === currentUser?.id);
+
+  const groupedConsumptions = userStreaks.reduce((acc, streak) => {
+    if (!acc[streak.drinkId]) {
+      acc[streak.drinkId] = {
+        name: streak.drinkName,
+        quantity: 0,
+        totalPrice: 0,
+        unitPrice: streak.price / (streak.amount || 1)
+      };
+    }
+    acc[streak.drinkId].quantity += (streak.amount || 1);
+    acc[streak.drinkId].totalPrice += streak.price;
+    return acc;
+  }, {} as Record<string, { name: string; quantity: number; totalPrice: number; unitPrice: number }>);
+
+  const consumptionsList = Object.values(groupedConsumptions).sort((a, b) => b.quantity - a.quantity);
+
+  // Group fries orders
+  const userFriesOrders = allFriesOrders.filter(o => o.userId === currentUser?.id);
+  const groupedFries = userFriesOrders.reduce((acc, order) => {
+    order.items.forEach(item => {
+      const key = `${item.name}-${item.price}`;
+      if (!acc[key]) {
+        acc[key] = {
+          name: item.name,
+          quantity: 0,
+          totalPrice: 0,
+          unitPrice: item.price
+        };
+      }
+      acc[key].quantity += item.quantity;
+      acc[key].totalPrice += (item.price * item.quantity);
+    });
+    return acc;
+  }, {} as Record<string, { name: string; quantity: number; totalPrice: number; unitPrice: number }>);
+
+  const friesList = Object.values(groupedFries).sort((a, b) => b.quantity - a.quantity);
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200">
       {/* Header */}
@@ -48,9 +102,17 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
           <h2 className="text-gray-500 dark:text-gray-400 text-xs font-bold tracking-widest uppercase mb-2 relative z-10">Voorlopig Totaal</h2>
           <div className="text-5xl font-bold text-blue-600 dark:text-blue-500 mb-4 relative z-10">€ {balance.toFixed(2).replace('.', ',')}</div>
 
-          <div className="inline-flex items-center gap-2 bg-gray-50 dark:bg-[#191e2b] border border-blue-100 dark:border-blue-900/30 px-3 py-1.5 rounded-full relative z-10">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            <span className="text-xs text-blue-600 dark:text-blue-200 font-medium">Live berekend</span>
+          <div className="flex flex-col items-center gap-3 w-full relative z-10 mt-2">
+            <button
+              onClick={() => setShowPayconiq(true)}
+              className="bg-[#FF0066] hover:bg-[#e6005c] w-full text-white font-bold py-3 rounded-xl shadow-lg shadow-[#FF0066]/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+              <span className="material-icons-round text-sm">qr_code_scanner</span>
+              Betaal met Payconiq
+            </button>
+            <div className="inline-flex items-center gap-2 bg-gray-50 dark:bg-[#191e2b] border border-blue-100 dark:border-blue-900/30 px-3 py-1.5 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              <span className="text-xs text-blue-600 dark:text-blue-200 font-medium">Live berekend</span>
+            </div>
           </div>
         </div>
 
@@ -62,23 +124,21 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
           </div>
 
           <div className="bg-white dark:bg-[#1e2330] rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800/50 divide-y divide-gray-100 dark:divide-gray-800/50 shadow-sm transition-colors duration-200">
-            {/* Item 1 */}
-            <div className="p-4 flex justify-between items-center">
-              <div>
-                <h4 className="text-gray-900 dark:text-white font-medium">Bier</h4>
-                <p className="text-gray-500 text-xs mt-0.5">10x € 1,20</p>
+            {consumptionsList.length > 0 ? (
+              consumptionsList.map((item, index) => (
+                <div key={index} className="p-4 flex justify-between items-center">
+                  <div>
+                    <h4 className="text-gray-900 dark:text-white font-medium">{item.name}</h4>
+                    <p className="text-gray-500 text-xs mt-0.5">{item.quantity}x € {item.unitPrice.toFixed(2).replace('.', ',')}</p>
+                  </div>
+                  <span className="font-bold text-gray-900 dark:text-white">€ {item.totalPrice.toFixed(2).replace('.', ',')}</span>
+                </div>
+              ))
+            ) : (
+              <div className="p-6 text-center text-gray-500 text-sm">
+                Geen consumpties gevonden voor deze periode.
               </div>
-              <span className="font-bold text-gray-900 dark:text-white">€ 12,00</span>
-            </div>
-
-            {/* Item 2 */}
-            <div className="p-4 flex justify-between items-center">
-              <div>
-                <h4 className="text-gray-900 dark:text-white font-medium">Cola</h4>
-                <p className="text-gray-500 text-xs mt-0.5">5x € 1,00</p>
-              </div>
-              <span className="font-bold text-gray-900 dark:text-white">€ 5,00</span>
-            </div>
+            )}
           </div>
         </section>
 
@@ -90,32 +150,21 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
           </div>
 
           <div className="bg-white dark:bg-[#1e2330] rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800/50 divide-y divide-gray-100 dark:divide-gray-800/50 shadow-sm transition-colors duration-200">
-            {/* Item 1 */}
-            <div className="p-4 flex justify-between items-center">
-              <div>
-                <h4 className="text-gray-900 dark:text-white font-medium">Friet Groot</h4>
-                <p className="text-gray-500 text-xs mt-0.5">1x € 3,50</p>
+            {friesList.length > 0 ? (
+              friesList.map((item, index) => (
+                <div key={index} className="p-4 flex justify-between items-center">
+                  <div>
+                    <h4 className="text-gray-900 dark:text-white font-medium">{item.name}</h4>
+                    <p className="text-gray-500 text-xs mt-0.5">{item.quantity}x € {item.unitPrice.toFixed(2).replace('.', ',')}</p>
+                  </div>
+                  <span className="font-bold text-gray-900 dark:text-white">€ {item.totalPrice.toFixed(2).replace('.', ',')}</span>
+                </div>
+              ))
+            ) : (
+              <div className="p-6 text-center text-gray-500 text-sm">
+                Geen frietbestellingen gevonden.
               </div>
-              <span className="font-bold text-gray-900 dark:text-white">€ 3,50</span>
-            </div>
-
-            {/* Item 2 */}
-            <div className="p-4 flex justify-between items-center">
-              <div>
-                <h4 className="text-gray-900 dark:text-white font-medium">Curryworst</h4>
-                <p className="text-gray-500 text-xs mt-0.5">2x € 2,00</p>
-              </div>
-              <span className="font-bold text-gray-900 dark:text-white">€ 4,00</span>
-            </div>
-
-            {/* Item 3 */}
-            <div className="p-4 flex justify-between items-center">
-              <div>
-                <h4 className="text-gray-900 dark:text-white font-medium">Mayonaise</h4>
-                <p className="text-gray-500 text-xs mt-0.5">1x € 0,50</p>
-              </div>
-              <span className="font-bold text-gray-900 dark:text-white">€ 0,50</span>
-            </div>
+            )}
           </div>
         </section>
 
@@ -130,15 +179,55 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
       </main>
 
       {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 p-6 bg-gray-50 dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 z-20 transition-colors duration-200">
+      <footer className="fixed bottom-20 left-0 right-0 p-6 bg-gray-50 dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 z-20 transition-colors duration-200">
         <div className="flex justify-between items-center">
           <span className="text-gray-500 text-sm font-medium">Huidige Periode</span>
           <div className="flex items-center gap-2">
             <span className="material-icons-round text-gray-500 text-sm">calendar_today</span>
-            <span className="text-gray-900 dark:text-white text-sm font-bold">September 2023</span>
+            <span className="text-gray-900 dark:text-white text-sm font-bold">Huidige openstaande</span>
           </div>
         </div>
       </footer>
+
+      {/* Payconiq Modal */}
+      {showPayconiq && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-gray-900/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-white dark:bg-[#1e2330] rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 border border-gray-200 dark:border-gray-800">
+            <div className="bg-[#FF0066] p-6 text-center text-white relative">
+              <button
+                onClick={() => setShowPayconiq(false)}
+                className="absolute top-4 right-4 p-2 bg-black/10 hover:bg-black/20 rounded-full transition-colors"
+              >
+                <span className="material-icons-round text-xl">close</span>
+              </button>
+              <h3 className="font-bold text-xl mb-1 mt-2">Payconiq</h3>
+              <p className="text-[#FF0066]-100 text-sm font-medium opacity-90">Betaal je openstaande saldo</p>
+            </div>
+
+            <div className="p-8 flex flex-col items-center">
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 w-full aspect-square flex items-center justify-center">
+                <QRCode
+                  value={payconiqQrValue}
+                  size={200}
+                  style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                  viewBox={`0 0 256 256`}
+                  fgColor="#000000"
+                  bgColor="#ffffff"
+                />
+              </div>
+
+              <div className="text-center w-full bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                <p className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-widest font-bold mb-1">Te Betalen</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">€ {balance.toFixed(2).replace('.', ',')}</p>
+              </div>
+
+              <p className="text-center text-xs text-gray-400 mt-6 max-w-[200px] leading-relaxed">
+                Scan deze code met je Payconiq by Bancontact app of je bank-app.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

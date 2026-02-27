@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { User, Drink, Streak, StockItem, Order, CountdownItem, BierpongGame, QuoteItem, Notification, Event } from './types';
-import { getCurrentUser, MOCK_USERS } from './lib/data';
+import * as db from './lib/supabaseService';
+import { showToast, ToastContainer } from './components/Toast';
 
 import { BottomNav } from './components/BottomNav';
 import { CredentialsScreen } from './screens/CredentialsScreen';
+import { CreditsScreen } from './screens/CreditsScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { NotificationsScreen } from './screens/NotificationsScreen';
 import { NewMessageScreen } from './screens/NewMessageScreen';
@@ -14,6 +16,7 @@ import { AgendaScreen } from './screens/AgendaScreen';
 import { AgendaManageScreen } from './screens/AgendaManageScreen';
 import { FriesScreen } from './screens/FriesScreen';
 import { FriesOverviewScreen } from './screens/FriesOverviewScreen';
+import { FriesHistoryScreen } from './screens/FriesHistoryScreen';
 import { StrepenScreen } from './screens/StrepenScreen';
 import { TeamDrankDashboardScreen } from './screens/TeamDrankDashboardScreen';
 import { TeamDrankStockScreen } from './screens/TeamDrankStockScreen';
@@ -23,9 +26,11 @@ import { TeamDrankInvoicesScreen } from './screens/TeamDrankInvoicesScreen';
 import { TeamDrankArchiveScreen } from './screens/TeamDrankArchiveScreen';
 import { TeamDrankExcelPreviewScreen } from './screens/TeamDrankExcelPreviewScreen';
 import { TeamDrankBillingExcelPreviewScreen } from './screens/TeamDrankBillingExcelPreviewScreen';
-import { ConsumptionOverviewScreen, ConsumptionOverviewScreenProps } from './screens/ConsumptionOverviewScreen';
-import { MyInvoiceScreen, MyInvoiceScreenProps } from './screens/MyInvoiceScreen';
+import { ConsumptionOverviewScreen } from './screens/ConsumptionOverviewScreen';
+import { StrepenHistoryScreen } from './screens/StrepenHistoryScreen';
+import { MyInvoiceScreen } from './screens/MyInvoiceScreen';
 import { BierpongScreen } from './screens/BierpongScreen';
+import { BierpongManageScreen } from './screens/BierpongManageScreen';
 import { QuotesScreen } from './screens/QuotesScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { RolesManageScreen } from './screens/RolesManageScreen';
@@ -52,20 +57,24 @@ export type AppContextType = {
     setFriesPickupTime: React.Dispatch<React.SetStateAction<string | null>>;
     countdowns: CountdownItem[];
     setCountdowns: React.Dispatch<React.SetStateAction<CountdownItem[]>>;
+    handleSaveCountdowns: (countdowns: CountdownItem[]) => void;
     bierpongGames: BierpongGame[];
     setBierpongGames: React.Dispatch<React.SetStateAction<BierpongGame[]>>;
+    handleAddBierpongGame: (playerIds: string[], winnerId: string) => void;
+    duoBierpongWinners: string[];
+    setDuoBierpongWinners: React.Dispatch<React.SetStateAction<string[]>>;
     quotes: QuoteItem[];
     setQuotes: React.Dispatch<React.SetStateAction<QuoteItem[]>>;
     events: Event[];
     setEvents: React.Dispatch<React.SetStateAction<Event[]>>;
     notifications: Notification[];
     setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
-    handleAddCost: (amount: number, drink?: Drink) => void;
+    handleAddCost: (amount: number, drink?: Drink, quantity?: number) => void;
     handleDeleteStreak: (id: string) => void;
     handleQuickStreep: () => void;
     handlePlaceFryOrder: (items: any[], totalCost: number, targetUser?: User) => void;
     handleRemoveFryOrder: (orderId: string) => void;
-    handleArchiveSession: () => void;
+    handleArchiveFriesSession: () => void;
     handleVoteQuote: (id: string, type: 'like' | 'dislike') => void;
     handleAddQuote: (text: string, context: string, authorId: string) => void;
     handleDeleteQuote: (id: string) => void;
@@ -73,162 +82,327 @@ export type AppContextType = {
     handleDeleteEvent: (id: string) => void;
     handleAddNotification: (notification: Omit<Notification, 'id'>) => void;
     handleMarkNotificationAsRead: (id: number) => void;
+    frituurSessieId: string | null;
 };
 
+const DEFAULT_USER: User = {
+    id: '',
+    naam: 'Laden...',
+    name: 'Laden...',
+    email: '',
+    rol: 'standaard',
+    actief: true,
+    avatar: 'https://i.pravatar.cc/150?u=default',
+};
 
 function App() {
     const [session, setSession] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
-    // Provide the Supabase profile mapped to the prototype User structure
-    const [currentUser, setCurrentUser] = useState<User>(() => getCurrentUser());
-    const [users, setUsers] = useState<User[]>(MOCK_USERS);
-
+    // State - all initialized empty, loaded from Supabase
+    const [currentUser, setCurrentUser] = useState<User>(DEFAULT_USER);
+    const [users, setUsers] = useState<User[]>([]);
     const [drinks, setDrinks] = useState<Drink[]>([]);
-
-    // Default streaks from prototype
-    const [streaks, setStreaks] = useState<Streak[]>([
-        { id: 's1', userId: '1', drinkId: '2', drinkName: 'Bier', price: 1.20, timestamp: new Date(new Date().setDate(new Date().getDate() - 1)) },
-        { id: 's2', userId: '2', drinkId: '1', drinkName: 'Cola', price: 1.00, timestamp: new Date(new Date().setDate(new Date().getDate() - 1)) },
-    ]);
-
-    const [stockItems, setStockItems] = useState<StockItem[]>([
-        { id: 1, name: 'Stella Vaten (50L)', label: 'Kampvuuravond', category: 'Standaard', count: 3, unit: 'stuks', exp: '12/10/24', urgent: true, icon: 'sports_bar', color: 'bg-yellow-500' },
-        { id: 2, name: 'Cola Kratten (24x25cl)', label: 'Startdag', category: 'Standaard', count: 8, unit: 'kratt.', exp: '01/05/25', urgent: false, icon: 'local_drink', color: 'bg-red-900' }
-    ]);
-
-    const [balance, setBalance] = useState(25.00);
+    const [streaks, setStreaks] = useState<Streak[]>([]);
+    const [stockItems, setStockItems] = useState<StockItem[]>([]);
+    const [balance, setBalance] = useState(0);
     const [friesOrders, setFriesOrders] = useState<Order[]>([]);
     const [friesSessionStatus, setFriesSessionStatus] = useState<'open' | 'closed' | 'completed' | 'ordering' | 'ordered'>('closed');
     const [friesPickupTime, setFriesPickupTime] = useState<string | null>(null);
+    const [frituurSessieId, setFrituurSessieId] = useState<string | null>(null);
+    const [countdowns, setCountdowns] = useState<CountdownItem[]>([]);
+    const [bierpongGames, setBierpongGames] = useState<BierpongGame[]>([]);
+    const [duoBierpongWinners, setDuoBierpongWinners] = useState<string[]>([]);
+    const [quotes, setQuotes] = useState<QuoteItem[]>([]);
+    const [events, setEvents] = useState<Event[]>([]);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
 
-    const [countdowns, setCountdowns] = useState<CountdownItem[]>(() => {
-        const nextYear = new Date().getFullYear() + 1;
-        return [{ id: '1', title: 'Groot Kamp', targetDate: new Date(nextYear, 6, 21) }];
-    });
+    // ==================== AUTH & INITIAL DATA LOAD ====================
 
-    const [bierpongGames, setBierpongGames] = useState<BierpongGame[]>([
-        { id: 'bp1', playerIds: ['1', '2'], winnerId: '1', timestamp: new Date() }
-    ]);
-
-    const [quotes, setQuotes] = useState<QuoteItem[]>([
-        {
-            id: '1', text: "Tibo is de opperkeizer 👑", authorId: '2', authorName: 'Luuk',
-            context: 'Tijdens de algemene vergadering', date: new Date(),
-            likes: ['3', '4'], dislikes: [], addedBy: '1'
+    useEffect(() => {
+        // Apply dark mode globally on load
+        const saved = localStorage.getItem('dark_mode');
+        if (saved === 'true' || (saved === null && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
         }
-    ]);
-
-    const [events, setEvents] = useState<Event[]>([
-        { id: '1', title: 'Leidingskring', date: new Date(), location: 'Lokaal', type: 'vergadering', startTime: '20:00' }
-    ]);
-
-    const [notifications, setNotifications] = useState<Notification[]>([
-        {
-            id: 1, type: 'official', sender: 'Hoofdleiding', role: 'ADMIN', title: 'Openstaande Drankrekening',
-            content: 'Betaal a.u.b. je drankrekening', time: '2u geleden', isRead: false,
-            action: '', icon: 'security', color: 'bg-blue-100 text-blue-600'
-        }
-    ]);
+    }, []);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
-            if (session) fetchProfile(session.user.id);
-            else setLoading(false);
-        });
-
-        supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session);
-            if (session) fetchProfile(session.user.id);
-            else {
-                // Return to mock user if logged out during dev, or handle properly
+            if (session) {
+                loadAllData(session.user.id);
+            } else {
                 setLoading(false);
             }
         });
 
-        // Fetch drinks
-        const fetchDrinks = async () => {
-            const { data } = await supabase.from('dranken').select('*').order('naam');
-            if (data && data.length > 0) {
-                setDrinks(data.map(d => ({ id: d.id, name: d.naam, price: d.prijs })));
-            } else {
-                setDrinks([
-                    { id: '1', name: 'Cola', price: 1.00 },
-                    { id: '2', name: 'Bier', price: 1.20 },
-                ]);
+        // Offline Sync Logic
+        const handleOnline = async () => {
+            const pendingStr = localStorage.getItem('ksa_pending_streaks');
+            if (!pendingStr) return;
+            try {
+                const pendingStreaks = JSON.parse(pendingStr) as any[];
+                if (pendingStreaks.length > 0) {
+                    showToast(`Netwerk hersteld. ${pendingStreaks.length} offline strepen synchroniseren...`, 'info');
+                    for (const streak of pendingStreaks) {
+                        try {
+                            const realId = await db.addConsumptie(streak.userId, streak.drinkId, streak.quantity);
+                            // Replace in UI state if still there (usually user refreshed though)
+                            setStreaks(prev => prev.map(s => s.id === streak.tempId ? { ...s, id: realId } : s));
+                        } catch (e) {
+                            console.error('Failed to sync streak', streak, e);
+                        }
+                    }
+                    localStorage.removeItem('ksa_pending_streaks');
+                    showToast('Vastgelopen strepen succesvol gesynct!', 'success');
+                }
+            } catch (e) {
+                console.error('Sync failed', e);
             }
         };
-        fetchDrinks();
+
+        window.addEventListener('online', handleOnline);
+
+        return () => window.removeEventListener('online', handleOnline);
     }, []);
 
-    async function fetchProfile(userId: string) {
-        const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-        if (data) {
-            setCurrentUser({
-                ...currentUser,
-                id: data.id,
-                naam: data.naam,
-                name: data.naam,
-                rol: data.rol,
-            });
+    useEffect(() => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+            if (session) {
+                setLoading(true);
+                loadAllData(session.user.id);
+            } else {
+                setLoading(false);
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    async function loadAllData(userId: string) {
+        try {
+            // Load all data in parallel
+            const [
+                profilesData,
+                drinksData,
+                consumptiesData,
+                balanceData,
+                eventsData,
+                quotesData,
+                notificatiesData,
+                bierpongData,
+                kampioenenData,
+                stockData,
+                frituurSessieData,
+                countdownsData,
+            ] = await Promise.all([
+                db.fetchProfiles(),
+                db.fetchDranken(),
+                db.fetchConsumpties(),
+                db.fetchBalanceForUser(userId),
+                db.fetchEvents(),
+                db.fetchQuotes(),
+                db.fetchNotificaties(userId),
+                db.fetchBierpongGames(),
+                db.fetchBierpongKampioenen(),
+                db.fetchStockItems(),
+                db.fetchActiveFrituurSessie(),
+                db.fetchCountdowns(),
+            ]);
+
+            // Set current user from profiles
+            const me = profilesData.find(p => p.id === userId);
+            if (me) {
+                setCurrentUser(me as User);
+            } else {
+                console.warn('Profiel niet gevonden of inactief. Uitloggen...');
+                await supabase.auth.signOut();
+                return;
+            }
+
+            setUsers(profilesData);
+            setDrinks(drinksData);
+            setStreaks(consumptiesData);
+            setBalance(balanceData);
+            setEvents(eventsData);
+            setQuotes(quotesData);
+            setNotifications(notificatiesData);
+            setBierpongGames(bierpongData);
+            setDuoBierpongWinners(kampioenenData);
+            setStockItems(stockData);
+            setCountdowns(countdownsData);
+
+            // Load frituur session
+            if (frituurSessieData) {
+                setFrituurSessieId(frituurSessieData.id);
+                setFriesSessionStatus(frituurSessieData.status as any);
+                setFriesPickupTime(frituurSessieData.pickupTime);
+            }
+            // Always load ALL orders (for history + active session display)
+            const allOrders = await db.fetchFrituurBestellingen();
+            setFriesOrders(allOrders);
+        } catch (error) {
+            console.error('Error loading data:', error);
+            showToast('Fout bij het laden van de gegevens', 'error');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }
 
-    // --- Handlers ---
-    const handleAddCost = (amount: number, drink?: Drink) => {
-        setBalance(prev => prev + amount);
-        if (drink) {
-            const newStreak: Streak = {
-                id: Date.now().toString(), userId: currentUser.id, drinkId: drink.id,
-                drinkName: drink.name, price: drink.price, timestamp: new Date(),
-            };
-            setStreaks(prev => [newStreak, ...prev]);
+    // ==================== HANDLERS (Supabase-backed) ====================
+
+    const handleAddCost = async (amount: number, drink?: Drink, quantity: number = 1) => {
+        if (!drink || !session?.user?.id) return;
+
+        // Optimistic update
+        const tempId = Date.now().toString();
+        const newStreak: Streak = {
+            id: tempId,
+            userId: currentUser.id,
+            drinkId: drink.id,
+            drinkName: drink.name,
+            price: drink.price * quantity,
+            amount: quantity,
+            timestamp: new Date(),
+        };
+        setStreaks(prev => [newStreak, ...prev]);
+        setBalance(prev => prev + (amount * quantity));
+
+        try {
+            const realId = await db.addConsumptie(currentUser.id, String(drink.id), quantity);
+            // Replace temp ID with the real one
+            setStreaks(prev => prev.map(s => s.id === tempId ? { ...s, id: realId } : s));
+            showToast(`${quantity}x ${drink.name} gestreept! (+€${(amount * quantity).toFixed(2)})`, 'success');
+        } catch (error) {
+            // Offline Mode Logic (Save to localStorage)
+            if (!navigator.onLine) {
+                const pendingStreaks = JSON.parse(localStorage.getItem('ksa_pending_streaks') || '[]');
+                pendingStreaks.push({
+                    userId: currentUser.id,
+                    drinkId: String(drink.id),
+                    quantity,
+                    tempId,
+                    name: drink.name
+                });
+                localStorage.setItem('ksa_pending_streaks', JSON.stringify(pendingStreaks));
+
+                showToast(`Offline opgeslagen: ${quantity}x ${drink.name}. Wordt gesynct bij verbinding.`, 'warning');
+            } else {
+                // Rollback if actual error
+                setStreaks(prev => prev.filter(s => s.id !== tempId));
+                setBalance(prev => prev - (amount * quantity));
+                showToast('Fout bij het strepen. Probeer opnieuw.', 'error');
+            }
         }
     };
 
-    const handleDeleteStreak = (id: string) => setStreaks(prev => prev.filter(s => s.id !== id));
+    const handleDeleteStreak = async (id: string) => {
+        const streak = streaks.find(s => s.id === id);
+        if (!streak) return;
+
+        // Optimistic update
+        setStreaks(prev => prev.filter(s => s.id !== id));
+        setBalance(prev => prev - streak.price);
+
+        try {
+            await db.deleteConsumptie(id);
+            showToast('Streep verwijderd', 'info');
+        } catch (error) {
+            // Rollback
+            setStreaks(prev => [streak, ...prev]);
+            setBalance(prev => prev + streak.price);
+            showToast('Fout bij het verwijderen', 'error');
+        }
+    };
 
     const handleQuickStreep = () => {
-        const drinkId = currentUser.quickDrinkId || '2';
+        const drinkId = currentUser.quickDrinkId || (drinks.length > 0 ? String(drinks[0].id) : null);
+        if (!drinkId) return;
         const drink = drinks.find(d => String(d.id) === String(drinkId));
         if (drink) {
             handleAddCost(drink.price, drink);
-            handleAddNotification({
-                type: 'official', sender: 'Systeem', role: '', title: 'Quick Streep',
-                content: `Je hebt zojuist een ${drink.name} gestreept.`,
-                time: 'Zonet', isRead: false, action: '', icon: 'local_bar',
-                color: 'bg-blue-100 text-blue-600'
-            });
         }
     };
 
-    const handlePlaceFryOrder = (items: any[], totalCost: number, targetUser?: User) => {
+    const handlePlaceFryOrder = async (items: any[], totalCost: number, targetUser?: User) => {
         const orderForUser = targetUser || currentUser;
-        if (!targetUser) handleAddCost(totalCost);
+        const isOwnOrder = orderForUser.id === currentUser.id;
+
+        // Optimistic update
+        const tempId = Math.random().toString(36).substr(2, 9);
         const newOrder: Order = {
-            id: Math.random().toString(36).substr(2, 9), userId: orderForUser.id,
-            userName: orderForUser.naam || orderForUser.name || 'Onbekend', items, totalPrice: totalCost, date: new Date(), status: 'pending'
+            id: tempId,
+            userId: orderForUser.id,
+            userName: orderForUser.naam || orderForUser.name || 'Onbekend',
+            items,
+            totalPrice: totalCost,
+            date: new Date(),
+            status: 'pending'
         };
         setFriesOrders(prev => [newOrder, ...prev]);
-    };
 
-    const handleRemoveFryOrder = (orderId: string) => {
-        const orderToRemove = friesOrders.find(o => o.id === orderId);
-        if (orderToRemove) {
-            if (orderToRemove.userId === currentUser.id) handleAddCost(-orderToRemove.totalPrice);
-            setFriesOrders(prev => prev.filter(o => o.id !== orderId));
+        // Also update balance if it's the current user's order
+        if (isOwnOrder) {
+            setBalance(prev => prev + totalCost);
+        }
+
+        try {
+            const realId = await db.addFrituurBestelling(
+                orderForUser.id,
+                orderForUser.naam || orderForUser.name || 'Onbekend',
+                frituurSessieId,
+                items,
+                totalCost
+            );
+            setFriesOrders(prev => prev.map(o => o.id === tempId ? { ...o, id: realId } : o));
+            showToast('Bestelling geplaatst! 🍟', 'success');
+        } catch (error) {
+            setFriesOrders(prev => prev.filter(o => o.id !== tempId));
+            // Rollback balance
+            if (isOwnOrder) {
+                setBalance(prev => prev - totalCost);
+            }
+            showToast('Fout bij het plaatsen van de bestelling', 'error');
         }
     };
 
-    const handleArchiveSession = () => {
-        setFriesOrders(prev => prev.map(o => ({ ...o, status: 'completed' })));
-        setFriesSessionStatus('closed');
-        setFriesPickupTime(null);
+    const handleRemoveFryOrder = async (orderId: string) => {
+        const orderToRemove = friesOrders.find(o => o.id === orderId);
+        if (!orderToRemove) return;
+
+        setFriesOrders(prev => prev.filter(o => o.id !== orderId));
+
+        try {
+            await db.deleteFrituurBestelling(orderId);
+            showToast('Bestelling geannuleerd', 'info');
+        } catch (error) {
+            setFriesOrders(prev => [orderToRemove, ...prev]);
+            showToast('Fout bij het annuleren', 'error');
+        }
     };
 
-    const handleVoteQuote = (id: string, type: 'like' | 'dislike') => {
+    const handleArchiveFriesSession = async () => {
+        if (!frituurSessieId) return;
+
+        setFriesOrders(prev => prev.map(o => ({ ...o, status: 'completed' as const })));
+        setFriesSessionStatus('closed');
+        setFriesPickupTime(null);
+
+        try {
+            await db.archiveFrituurSessie(frituurSessieId);
+            setFrituurSessieId(null);
+            showToast('Frituursessie afgesloten!', 'success');
+        } catch (error) {
+            showToast('Fout bij het afsluiten van de sessie', 'error');
+        }
+    };
+
+    const handleVoteQuote = async (id: string, type: 'like' | 'dislike') => {
+        // Optimistic update
         setQuotes(prev => prev.map(q => {
             if (q.id === id) {
                 let newLikes = [...q.likes]; let newDislikes = [...q.dislikes];
@@ -243,22 +417,135 @@ function App() {
             }
             return q;
         }));
+
+        try {
+            await db.voteQuote(id, currentUser.id, type);
+        } catch (error) {
+            showToast('Fout bij het stemmen', 'error');
+            // Reload quotes to get correct state
+            const freshQuotes = await db.fetchQuotes();
+            setQuotes(freshQuotes);
+        }
     };
 
-    const handleAddQuote = (text: string, context: string, authorId: string) => {
+    const handleAddQuote = async (text: string, context: string, authorId: string) => {
         const author = users.find(u => u.id === authorId);
+        const authorName = author ? (author.naam || author.name || 'Onbekend') : authorId;
+
+        // Optimistic
+        const tempId = Date.now().toString();
         const newQuote: QuoteItem = {
-            id: Date.now().toString(), text, authorId, authorName: author ? (author.naam || author.name || 'Unknown') : 'Unknown',
-            context, date: new Date(), likes: [], dislikes: [], addedBy: currentUser.id
+            id: tempId, text, authorId, authorName,
+            context, date: new Date(), likes: [], dislikes: [], addedBy: currentUser.id,
         };
-        setQuotes([newQuote, ...quotes]);
+        setQuotes(prev => [newQuote, ...prev]);
+
+        try {
+            const realQuote = await db.addQuote(text, authorName, context, currentUser.id);
+            setQuotes(prev => prev.map(q => q.id === tempId ? realQuote : q));
+            showToast('Quote toegevoegd! 💬', 'success');
+        } catch (error) {
+            setQuotes(prev => prev.filter(q => q.id !== tempId));
+            showToast('Fout bij het toevoegen van de quote', 'error');
+        }
     };
 
-    const handleDeleteQuote = (id: string) => setQuotes(prev => prev.filter(q => q.id !== id));
-    const handleSaveEvent = (event: Event) => setEvents(prev => prev.find(e => e.id === event.id) ? prev.map(e => e.id === event.id ? event : e) : [...prev, event]);
-    const handleDeleteEvent = (id: string) => setEvents(prev => prev.filter(e => e.id !== id));
-    const handleAddNotification = (n: Omit<Notification, 'id'>) => setNotifications(prev => [{ ...n, id: Date.now() }, ...prev]);
-    const handleMarkNotificationAsRead = (id: number) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    const handleDeleteQuote = async (id: string) => {
+        const quote = quotes.find(q => q.id === id);
+        setQuotes(prev => prev.filter(q => q.id !== id));
+
+        try {
+            await db.deleteQuote(id);
+            showToast('Quote verwijderd', 'info');
+        } catch (error) {
+            if (quote) setQuotes(prev => [quote, ...prev]);
+            showToast('Fout bij het verwijderen. Alleen admins kunnen quotes verwijderen.', 'error');
+        }
+    };
+
+    const handleSaveEvent = async (event: Event) => {
+        // Optimistic update
+        setEvents(prev => {
+            const exists = prev.find(e => e.id === event.id);
+            return exists ? prev.map(e => e.id === event.id ? event : e) : [...prev, event];
+        });
+
+        try {
+            const savedEvent = await db.saveEvent(event);
+            setEvents(prev => prev.map(e => (e.id === event.id || e.id === savedEvent.id) ? savedEvent : e));
+            showToast('Evenement opgeslagen!', 'success');
+        } catch (error) {
+            showToast('Fout bij het opslaan van het evenement', 'error');
+            // Reload to get correct state
+            const freshEvents = await db.fetchEvents();
+            setEvents(freshEvents);
+        }
+    };
+
+    const handleDeleteEvent = async (id: string) => {
+        const event = events.find(e => e.id === id);
+        setEvents(prev => prev.filter(e => e.id !== id));
+
+        try {
+            await db.deleteEvent(id);
+            showToast('Evenement verwijderd', 'info');
+        } catch (error) {
+            if (event) setEvents(prev => [...prev, event]);
+            showToast('Fout bij het verwijderen', 'error');
+        }
+    };
+
+    const handleAddNotification = async (n: Omit<Notification, 'id'>) => {
+        // Optimistic
+        const tempNotif = { ...n, id: Date.now() };
+        setNotifications(prev => [tempNotif, ...prev]);
+
+        try {
+            await db.addNotificatie(currentUser.id, 'all', n.title, n.content);
+        } catch (error) {
+            console.error('Notification send error:', error);
+            // Keep the notification in UI anyway (it's not critical)
+        }
+    };
+
+    const handleMarkNotificationAsRead = async (id: number) => {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+
+        // The notification might have a _supabaseId for real Supabase rows
+        const notif = notifications.find(n => n.id === id);
+        const supabaseId = (notif as any)?._supabaseId;
+        if (supabaseId) {
+            try {
+                await db.markNotificatieGelezen(supabaseId);
+            } catch (error) {
+                console.error('Mark read error:', error);
+            }
+        }
+    };
+
+    const handleSaveCountdowns = async (newCountdowns: CountdownItem[]) => {
+        setCountdowns(newCountdowns);
+        try {
+            await db.saveCountdowns(newCountdowns);
+        } catch (error) {
+            showToast('Fout bij opslaan klokken', 'error');
+            const fresh = await db.fetchCountdowns();
+            setCountdowns(fresh);
+        }
+    };
+
+    const handleAddBierpongGame = async (playerIds: string[], winnerId: string) => {
+        try {
+            const newGame = await db.addBierpongGame(playerIds, winnerId);
+            setBierpongGames(prev => [...prev, newGame]);
+        } catch (error) {
+            console.error('Failed to add bierpong game:', error);
+            showToast('Fout bij opslaan bierpong match', 'error');
+            // Refresh to ensure sync
+            const fresh = await db.fetchBierpongGames();
+            setBierpongGames(fresh);
+        }
+    };
 
     if (loading) {
         return (
@@ -273,12 +560,25 @@ function App() {
         streaks, setStreaks, stockItems, setStockItems, balance, setBalance,
         friesOrders, setFriesOrders, friesSessionStatus, setFriesSessionStatus,
         friesPickupTime, setFriesPickupTime, countdowns, setCountdowns,
-        bierpongGames, setBierpongGames, quotes, setQuotes, events, setEvents,
+        bierpongGames, setBierpongGames, duoBierpongWinners, setDuoBierpongWinners,
+        quotes, setQuotes, events, setEvents,
         notifications, setNotifications,
         handleAddCost, handleDeleteStreak, handleQuickStreep, handlePlaceFryOrder,
-        handleRemoveFryOrder, handleArchiveSession, handleVoteQuote, handleAddQuote,
+        handleRemoveFryOrder, handleArchiveFriesSession, handleVoteQuote, handleAddQuote,
         handleDeleteQuote, handleSaveEvent, handleDeleteEvent, handleAddNotification,
-        handleMarkNotificationAsRead
+        handleMarkNotificationAsRead, handleSaveCountdowns, handleAddBierpongGame,
+        frituurSessieId,
+    };
+
+    // Scroll to top on route change
+    const ScrollToTop = () => {
+        const { pathname } = useLocation();
+        useEffect(() => {
+            window.scrollTo(0, 0);
+            const root = document.getElementById('root');
+            if (root) root.scrollTo(0, 0);
+        }, [pathname]);
+        return null;
     };
 
     // Layout with BottomNav
@@ -293,8 +593,11 @@ function App() {
 
     return (
         <BrowserRouter>
+            <ToastContainer />
+            <ScrollToTop />
             <Routes>
                 <Route path="/login" element={!session ? <CredentialsScreen /> : <Navigate to="/" />} />
+                <Route path="/credits" element={<CreditsScreen />} />
 
                 {/* Protected Routes */}
                 {session ? (
@@ -310,8 +613,11 @@ function App() {
 
                         <Route path="frituur" element={<FriesScreen />} />
                         <Route path="frituur/overzicht" element={<FriesOverviewScreen />} />
+                        <Route path="frituur/geschiedenis" element={<FriesHistoryScreen />} />
 
                         <Route path="strepen" element={<StrepenScreen />} />
+                        <Route path="strepen/geschiedenis" element={<StrepenHistoryScreen adminMode={false} />} />
+                        <Route path="strepen/geschiedenis-alle" element={<StrepenHistoryScreen adminMode={true} />} />
                         <Route path="strepen/dashboard" element={<TeamDrankDashboardScreen />} />
                         <Route path="strepen/voorraad" element={<TeamDrankStockScreen />} />
                         <Route path="strepen/streaks" element={<TeamDrankStreaksScreen />} />
@@ -319,11 +625,12 @@ function App() {
                         <Route path="strepen/facturatie/nieuw" element={<TeamDrankBillingScreen />} />
                         <Route path="strepen/facturatie/archief" element={<TeamDrankArchiveScreen />} />
                         <Route path="strepen/facturatie/excel" element={<TeamDrankExcelPreviewScreen />} />
-                        <Route path="strepen/facturatie/billing-excel" element={<TeamDrankBillingExcelPreviewScreen />} />
-                        <Route path="strepen/overzicht" element={<ConsumptionOverviewScreen />} />
+                        <Route path="strepen/facturatie/billing-excel" element={<TeamDrankBillingExcelPreviewScreen onBack={() => { }} />} />
+                        <Route path="strepen/overzicht" element={<ConsumptionOverviewScreen onBack={() => { }} users={users} drinks={drinks} streaks={streaks} />} />
 
-                        <Route path="mijn-factuur" element={<MyInvoiceScreen />} />
+                        <Route path="mijn-factuur" element={<MyInvoiceScreen onBack={() => { }} balance={balance} currentUser={currentUser} streaks={streaks} friesOrders={friesOrders} />} />
                         <Route path="bierpong" element={<BierpongScreen />} />
+                        <Route path="bierpong/beheer" element={<BierpongManageScreen />} />
                         <Route path="quotes" element={<QuotesScreen />} />
                         <Route path="quotes/beheer" element={<QuotesScreen />} />
 

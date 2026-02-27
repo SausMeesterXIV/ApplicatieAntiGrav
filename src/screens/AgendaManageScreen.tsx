@@ -12,7 +12,7 @@ export const AgendaManageScreen: React.FC = () => {
     handleSaveEvent: onSaveEvent,
     handleDeleteEvent: onDeleteEvent,
     countdowns,
-    setCountdowns: onSaveCountdowns
+    handleSaveCountdowns: onSaveCountdowns
   } = useOutletContext<AppContextType>();
   const roles = [
     'Hoofdleiding',
@@ -125,7 +125,7 @@ export const AgendaManageScreen: React.FC = () => {
     }
 
     const eventPayload: Event = {
-      id: editingId || Date.now().toString(),
+      id: editingId || '', // Empty string triggers INSERT in service
       title,
       date: eventDate,
       location: location || 'TBD',
@@ -212,7 +212,7 @@ export const AgendaManageScreen: React.FC = () => {
       {/* Header */}
       <header className="px-4 py-4 flex items-center gap-4 bg-gray-50/90 dark:bg-gray-900/90 backdrop-blur-sm z-10 transition-colors sticky top-0 border-b border-gray-100 dark:border-gray-800">
         <ChevronBack onClick={() => navigate(-1)} />
-        <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Agenda & Sfeer</h1>
+        <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Agenda & Aftelklok</h1>
       </header>
 
       <main className="flex-1 px-4 space-y-8 overflow-y-auto pb-32">
@@ -376,8 +376,8 @@ export const AgendaManageScreen: React.FC = () => {
             <button
               onClick={handleSave}
               className={`w-full text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 mt-2 transition-all active:scale-[0.98] ${editingId
-                  ? 'bg-orange-600 hover:bg-orange-500 shadow-orange-500/20'
-                  : 'bg-blue-600 hover:bg-blue-500 shadow-blue-500/20'
+                ? 'bg-orange-600 hover:bg-orange-500 shadow-orange-500/20'
+                : 'bg-blue-600 hover:bg-blue-500 shadow-blue-500/20'
                 }`}
             >
               <span className="material-icons-round text-xl">{editingId ? 'edit' : 'save'}</span>

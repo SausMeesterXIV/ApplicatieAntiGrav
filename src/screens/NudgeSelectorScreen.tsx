@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MOCK_USERS } from '../lib/data';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import { AppContextType } from '../App';
 
 export const NudgeSelectorScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { users } = useOutletContext<AppContextType>();
   const [search, setSearch] = useState('');
   const [nudgedIds, setNudgedIds] = useState<string[]>(['3']); // Thomas pre-nudged as per screenshot
   const [showToast, setShowToast] = useState(false);
 
-  // Using MOCK_USERS for consistent data
-  const leaders = MOCK_USERS;
+  // Users from Supabase via context
+  const leaders = users;
 
   const handleNudge = (id: string) => {
     if (nudgedIds.includes(id)) return;

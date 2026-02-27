@@ -4,15 +4,25 @@ import { ChevronBack } from '../components/ChevronBack';
 import { User } from '../types';
 import { AppContextType } from '../App';
 import { supabase } from '../lib/supabase';
+import * as db from '../lib/supabaseService';
+import { showToast } from '../components/Toast';
 
 export const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useOutletContext<AppContextType>();
 
-  const onUpdateUser = (user: User) => {
+  const onUpdateUser = async (user: User) => {
     setCurrentUser(user);
-    // In a real app we'd update Supabase here too
-    // supabase.from('profiles').update({ ... }).eq('id', user.id);
+    try {
+      await db.updateProfile(user.id, {
+        naam: user.naam,
+        rol: user.rol as string,
+        avatar_url: user.avatar,
+        nickname: user.nickname
+      });
+    } catch (e) {
+      console.error('Failed to sync profile:', e);
+    }
   };
   const [isDark, setIsDark] = useState(false);
   const [nickname, setNickname] = useState(currentUser.nickname || '');
@@ -25,20 +35,19 @@ export const SettingsScreen: React.FC = () => {
   }, [currentUser]);
 
   useEffect(() => {
-    // Check initial
-    if (document.documentElement.classList.contains('dark')) {
-      setIsDark(true);
-    }
+    // Sync local state with the actual class on html element (applied in App.tsx)
+    setIsDark(document.documentElement.classList.contains('dark'));
   }, []);
 
   const toggleDarkMode = () => {
-    if (isDark) {
-      document.documentElement.classList.remove('dark');
-      setIsDark(false);
-    } else {
+    const newIsDark = !isDark;
+    if (newIsDark) {
       document.documentElement.classList.add('dark');
-      setIsDark(true);
+    } else {
+      document.documentElement.classList.remove('dark');
     }
+    setIsDark(newIsDark);
+    localStorage.setItem('dark_mode', String(newIsDark));
   };
 
   const handleSaveNickname = () => {
@@ -46,16 +55,25 @@ export const SettingsScreen: React.FC = () => {
     alert('Bijnaam opgeslagen!');
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    try {
+      const publicUrl = await db.uploadAvatar(currentUser.id, file);
+      setAvatar(publicUrl);
+      setCurrentUser({ ...currentUser, avatar: publicUrl });
+      showToast('Profielfoto opgeslagen!', 'success');
+    } catch (error: any) {
+      console.error('Avatar upload error:', error);
+      // Fallback: show local preview even if upload fails
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
         setAvatar(result);
-        onUpdateUser({ ...currentUser, avatar: result });
       };
       reader.readAsDataURL(file);
+      showToast('Foto kon niet worden geüpload. Probeer opnieuw.', 'error');
     }
   };
 
@@ -78,7 +96,7 @@ export const SettingsScreen: React.FC = () => {
         {/* Profile Header */}
         <section className="p-6 flex flex-col items-center border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1e2330]/30 transition-colors">
           <div className="relative mb-4 group cursor-pointer" onClick={triggerFileInput}>
-            <div className="w-24 h-24 rounded-full border-4 border-blue-100 dark:border-blue-900/50 p-1 overflow-hidden">
+            <div className="w-24 h-24 rounded-full border-4 border-blue-100 dark:border-blue-900/50 p-1 overflow-hidden relative">
               <img src={avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
             </div>
             {/* Hidden Input */}
@@ -88,13 +106,14 @@ export const SettingsScreen: React.FC = () => {
               className="hidden"
               accept="image/*"
               onChange={handleImageUpload}
+              onClick={(e) => e.stopPropagation()}
             />
             <button className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full shadow-lg border-2 border-gray-50 dark:border-[#0f172a] transition-transform active:scale-95 group-hover:scale-110">
               <span className="material-icons-round text-sm block">edit</span>
             </button>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{currentUser.nickname || currentUser.name}</h2>
-          <p className="text-gray-500 dark:text-gray-400 font-medium">KSA Sint-Jan</p>
+          <p className="text-gray-500 dark:text-gray-400 font-medium">KSA Aalter</p>
         </section>
 
         {/* Profile Form */}
@@ -177,14 +196,14 @@ export const SettingsScreen: React.FC = () => {
                 <span className="material-icons-round text-gray-400">chevron_right</span>
               </button>
 
-              {/* Credentials */}
+              {/* Credits & Poem */}
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/credits')}
                 className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <span className="material-icons-round text-blue-600 dark:text-blue-500">key</span>
-                  <span className="font-medium text-gray-900 dark:text-white">Credentials</span>
+                  <span className="material-icons-round text-blue-600 dark:text-blue-500">auto_awesome</span>
+                  <span className="font-medium text-gray-900 dark:text-white">Credits</span>
                 </div>
                 <span className="material-icons-round text-gray-400">chevron_right</span>
               </button>

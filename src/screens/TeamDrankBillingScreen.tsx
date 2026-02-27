@@ -17,9 +17,9 @@ export const TeamDrankBillingScreen: React.FC = () => {
     setPaidUsers(parsed);
 
     // Snapshot initial state for "delayed move" logic
-    const initial = appUsers.map(u => {
-      const isPaid = (u.balance || 0) >= 0 || parsed.includes(u.id);
-      return isPaid ? u.id : null;
+    const initial = (appUsers || []).map(u => {
+      const isPaid = (u?.balance || 0) >= 0 || (parsed || []).includes(u?.id);
+      return isPaid ? u?.id : null;
     }).filter(Boolean) as string[];
     setInitialPaidUsers(initial);
   }, [appUsers]);
@@ -40,7 +40,7 @@ export const TeamDrankBillingScreen: React.FC = () => {
   };
 
   // Derive users with current status
-  const users = appUsers.map(user => {
+  const users = (appUsers || []).map(user => {
     const isPaidOverride = paidUsers.includes(user.id);
     const hasDebt = (user.balance || 0) < 0;
     // User is paid if they have no debt OR are explicitly marked as paid
@@ -146,13 +146,13 @@ export const TeamDrankBillingScreen: React.FC = () => {
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 overflow-hidden shadow-inner">
-                      <img src={user.avatar} alt={user.naam || user.name || 'Gebruiker'} className="w-full h-full object-cover" />
+                      <img src={user?.avatar} alt={user?.naam || user?.name || 'Gebruiker'} className="w-full h-full object-cover" />
                     </div>
                     {/* Status Dot */}
                     <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-[#1e293b] ${user.isPaid ? 'bg-green-500' : 'bg-red-500'}`}></div>
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white text-sm">{user.naam || user.name || 'Onbekend'}</h3>
+                    <h3 className="font-bold text-gray-900 dark:text-white text-sm">{user?.naam || user?.name || 'Onbekend'}</h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {user.isPaid ? 'Geen openstaand saldo' : 'Openstaande rekening'}
                     </p>

@@ -27,9 +27,9 @@ export const TeamDrankStockScreen: React.FC = () => {
     icon: 'inventory_2'
   });
 
-  const filteredItems = stockItems.filter(item => {
+  const filteredItems = (stockItems || []).filter(item => {
     const matchesFilter = item.category === activeFilter;
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (item.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
@@ -97,9 +97,9 @@ export const TeamDrankStockScreen: React.FC = () => {
   };
 
   // Prepare data for chart
-  const chartData = stockItems.map(item => ({
-    name: item.name.split(' ')[0], // Short name
-    count: item.count,
+  const chartData = (stockItems || []).map(item => ({
+    name: (item.name || '').split(' ')[0], // Short name
+    count: item.count || 0,
     full: item
   })).sort((a, b) => b.count - a.count).slice(0, 10); // Top 10
 
@@ -296,7 +296,7 @@ export const TeamDrankStockScreen: React.FC = () => {
       </main>
 
       {/* Footer Button */}
-      <footer className="fixed bottom-0 left-0 right-0 p-4 bg-gray-50/90 dark:bg-[#0f172a]/90 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 z-20 flex gap-3 transition-colors">
+      <footer className="fixed bottom-20 left-0 right-0 p-4 bg-gray-50/90 dark:bg-[#0f172a]/90 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 z-20 flex gap-3 transition-colors">
         <button
           onClick={() => handleOpenModal()}
           className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"

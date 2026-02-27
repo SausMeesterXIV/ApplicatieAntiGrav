@@ -4,7 +4,7 @@ import { Drink, User } from '../types';
 import { ChevronBack } from '../components/ChevronBack';
 import { supabase } from '../lib/supabase';
 import { AppContextType } from '../App';
-import { MOCK_USERS } from '../lib/data';
+// Users now come from context (useOutletContext)
 
 export const StrepenScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -193,8 +193,8 @@ export const StrepenScreen: React.FC = () => {
 
     const cost = countToAdd * selectedDrink.price;
 
-    // Update global balance
-    onAddCost(cost);
+    // Update global balance with quantity
+    onAddCost(selectedDrink.price, selectedDrink, countToAdd);
 
     // Optimistic update local
     setTotalToday(prev => prev + countToAdd);
@@ -236,6 +236,20 @@ export const StrepenScreen: React.FC = () => {
       </header>
 
       <main className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
+        {/* History Action */}
+        <div
+          onClick={() => navigate('/strepen/geschiedenis')}
+          className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:shadow-md transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+              <span className="material-icons-round text-sm">history</span>
+            </div>
+            <span className="font-bold text-gray-900 dark:text-white">Mijn geschiedenis</span>
+          </div>
+          <span className="material-icons-round text-gray-400">chevron_right</span>
+        </div>
+
         {/* Input Section */}
         <section>
           <div className="flex items-center justify-between mb-3">
@@ -426,7 +440,7 @@ export const StrepenScreen: React.FC = () => {
 
         {/* Nudge Banner */}
         <div
-          onClick={() => navigate('/strepen/nudge-selecteren')}
+          onClick={() => navigate('/nudges')}
           className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-4 shadow-lg shadow-indigo-500/20 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-all"
         >
           <div className="flex items-center gap-4">
@@ -452,7 +466,7 @@ export const StrepenScreen: React.FC = () => {
               <p className="text-[10px] text-gray-400 font-medium ml-8 mt-0.5">Sinds {resetDateStr}</p>
             </div>
             <button
-              onClick={() => navigate('/strepen/overview')}
+              onClick={() => navigate('/strepen/overzicht')}
               className="text-blue-600 dark:text-blue-400 text-sm font-semibold hover:underline"
             >
               Bekijk alles
@@ -506,13 +520,13 @@ export const StrepenScreen: React.FC = () => {
                 <button
                   key={`quick-${drink.id}`}
                   onClick={() => onUpdateUser({ ...currentUser, quickDrinkId: String(drink.id) })}
-                  className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center justify-between ${String(currentUser.quickDrinkId || '2') === String(drink.id)
+                  className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center justify-between ${String(currentUser.quickDrinkId || (drinks.length > 0 ? drinks[0].id : null)) === String(drink.id)
                     ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400'
                     : 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                 >
                   <span className="truncate">{drink.name}</span>
-                  {String(currentUser.quickDrinkId || '2') === String(drink.id) && (
+                  {String(currentUser.quickDrinkId || (drinks.length > 0 ? drinks[0].id : null)) === String(drink.id) && (
                     <span className="material-icons-round text-sm">check_circle</span>
                   )}
                 </button>

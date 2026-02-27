@@ -11,7 +11,7 @@ export const FriesOverviewScreen: React.FC = () => {
     setFriesSessionStatus: onSessionChange,
     friesPickupTime: pickupTime,
     setFriesPickupTime: onSetPickupTime,
-    handleArchiveSession: onArchiveSession,
+    handleArchiveFriesSession: onArchiveSession,
     handleAddNotification: onAddNotification,
     currentUser
   } = useOutletContext<AppContextType>();
@@ -246,7 +246,7 @@ export const FriesOverviewScreen: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 p-4 bg-gray-50 dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 z-20 transition-colors shadow-2xl">
+      <footer className="fixed bottom-20 left-0 right-0 p-4 bg-gray-50 dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 z-20 transition-colors shadow-2xl">
         <div className="space-y-3">
 
           {/* STEP 4: ORDERED (Final State) */}

@@ -16,14 +16,15 @@ export const HomeScreen: React.FC = () => {
 
   const navigate = useNavigate();
   // We use the same 'quickDrink' lookup that used to happen in App.tsx
-  const quickDrink = drinks.find(d => String(d.id) === String(currentUser.quickDrinkId || '2'));
+  const quickDrinkFallback = drinks.length > 0 ? String(drinks[0].id) : null;
+  const quickDrink = drinks.find(d => String(d.id) === String(currentUser.quickDrinkId || quickDrinkFallback));
 
   const displayName = currentUser.nickname || currentUser.name?.split(' ')[0] || 'Lid';
 
   // Logic to find next 2 upcoming events
   const now = new Date();
-  const upcomingEvents = events
-    .filter(e => new Date(e.date) >= new Date(now.setHours(0, 0, 0, 0))) // Filter past events (keep today)
+  const upcomingEvents = (events || [])
+    .filter(e => e && e.date && new Date(e.date) >= new Date(now.setHours(0, 0, 0, 0))) // Filter past events (keep today)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) // Sort by date ascending
     .slice(0, 2); // Take first 2
 
@@ -112,9 +113,9 @@ export const HomeScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen pb-24 relative">
+    <div className="flex flex-col min-h-screen pb-24 relative bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
       {/* Header */}
-      <header className="px-6 py-6 flex justify-between items-center bg-surface-light dark:bg-surface-dark shadow-sm">
+      <header className="px-6 py-6 flex justify-between items-center bg-gray-50 dark:bg-[#0f172a] shadow-sm transition-colors">
         <div className="flex flex-col justify-center">
           <span className="text-sm font-bold text-primary dark:text-blue-500 uppercase tracking-wider mb-1">KSA Aalter</span>
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white leading-none">Welkom, {displayName}</h1>
@@ -189,7 +190,7 @@ export const HomeScreen: React.FC = () => {
           {/* Strepen Module */}
           <div
             onClick={() => navigate('/strepen')}
-            className="col-span-2 sm:col-span-1 bg-surface-light dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow cursor-pointer group"
+            className="col-span-2 sm:col-span-1 bg-white dark:bg-[#1e2330] p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow cursor-pointer group"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
@@ -213,7 +214,10 @@ export const HomeScreen: React.FC = () => {
               )}
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded-lg group-hover:bg-blue-50 dark:group-hover:bg-gray-700 transition-colors">
+              <div
+                onClick={(e) => { e.stopPropagation(); navigate('/strepen'); }}
+                className="flex items-center justify-between text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors"
+              >
                 <span className="text-gray-700 dark:text-gray-300">Strepen zetten</span>
                 <span className="material-icons-round text-xs text-gray-400">arrow_forward_ios</span>
               </div>
@@ -223,7 +227,7 @@ export const HomeScreen: React.FC = () => {
           {/* Frieten Module */}
           <div
             onClick={() => navigate('/frituur')}
-            className="col-span-2 sm:col-span-1 bg-surface-light dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow cursor-pointer group"
+            className="col-span-2 sm:col-span-1 bg-white dark:bg-[#1e2330] p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow cursor-pointer group"
           >
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg text-yellow-600 dark:text-yellow-400">
@@ -240,6 +244,31 @@ export const HomeScreen: React.FC = () => {
           </div>
         </div>
 
+        {/* BIERPONG */}
+        <section>
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+              <span className="material-icons-round text-primary">sports_bar</span>
+              Bierpong
+            </h2>
+          </div>
+          <div
+            onClick={() => navigate('/bierpong')}
+            className="bg-white dark:bg-[#1e2330] rounded-2xl p-2 shadow-sm border border-gray-100 dark:border-gray-800 cursor-pointer hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center gap-4 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl transition-colors">
+              <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl h-14 w-14 flex flex-col items-center justify-center shrink-0 border border-gray-200 dark:border-gray-700">
+                <span className="text-2xl">🏓</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900 dark:text-white text-base">Leaderboard</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Bekijk de stand</p>
+              </div>
+              <span className="material-icons-round text-gray-300">chevron_right</span>
+            </div>
+          </div>
+        </section>
+
         {/* AGENDA (User View) */}
         <section>
           <div className="flex items-center justify-between mb-3 px-1">
@@ -255,7 +284,7 @@ export const HomeScreen: React.FC = () => {
             </button>
           </div>
 
-          <div className="bg-surface-light dark:bg-surface-dark rounded-2xl p-2 shadow-sm border border-gray-100 dark:border-gray-800 space-y-1">
+          <div className="bg-white dark:bg-[#1e2330] rounded-2xl p-2 shadow-sm border border-gray-100 dark:border-gray-800 space-y-1">
             {upcomingEvents.length > 0 ? (
               upcomingEvents.map((event, index) => {
                 const evtDate = new Date(event.date);
@@ -299,161 +328,167 @@ export const HomeScreen: React.FC = () => {
             )}
           </div>
 
-          {/* Bierpong Button */}
-          <div
-            onClick={() => navigate('/bierpong')}
-            className="flex items-center gap-4 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl transition-colors cursor-pointer"
-          >
-            <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl h-14 w-14 flex flex-col items-center justify-center shrink-0 border border-gray-200 dark:border-gray-700">
-              <span className="material-icons-round text-lg">sports_bar</span>
-            </div>
-            <div className="flex-1">
-              <h3 className="font-bold text-gray-900 dark:text-white text-base">Bierpong</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Bekijk de stand</p>
-            </div>
-            <span className="material-icons-round text-gray-300">chevron_right</span>
-          </div>
-
         </section>
 
-        {/* --- ADMIN SECTIONS BELOW --- */}
+        {/* --- ADMIN SECTIONS BELOW (Role-gated) --- */}
 
-        {/* Hoofdleiding Section */}
-        <section>
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <span className="material-icons-round text-primary text-sm">admin_panel_settings</span>
-            <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hoofdleiding</h2>
-          </div>
-          <div className="grid gap-3">
-            {/* Rollen & Beheer Card */}
-            <div
-              onClick={() => navigate('/admin/rollen')}
-              className="bg-white dark:bg-surface-dark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
-                  <span className="material-icons-round">manage_accounts</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Rollen & Beheer</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Rechten aanpassen</p>
-                </div>
-              </div>
-              <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+        {/* Hoofdleiding Section — Admin only */}
+        {currentUser.rol === 'admin' && (
+          <section>
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <span className="material-icons-round text-primary text-sm">admin_panel_settings</span>
+              <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hoofdleiding</h2>
             </div>
-
-            {/* Send Message Card */}
-            <div
-              onClick={() => navigate('/notificaties/nieuw')}
-              className="bg-white dark:bg-surface-dark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
-                  <span className="material-icons-round">send</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Bericht Versturen</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Naar leiding of groepen</p>
-                </div>
-              </div>
-              <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
-            </div>
-          </div>
-        </section>
-
-        {/* Team Drank Section */}
-        <section>
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <span className="material-icons-round text-primary text-sm">local_drink</span>
-            <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Team Drank</h2>
-          </div>
-          <div className="bg-surface-light dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3">
+              {/* Rollen & Beheer Card */}
               <div
-                onClick={() => navigate('/strepen/dashboard')}
-                className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+                onClick={() => navigate('/admin/rollen')}
+                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
               >
-                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 w-fit group-hover:scale-110 transition-transform origin-left">
-                  <span className="material-icons-round">dashboard</span>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
+                    <span className="material-icons-round">manage_accounts</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Rollen & Beheer</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Rechten aanpassen</p>
+                  </div>
                 </div>
-                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Dashboard</span>
+                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
               </div>
 
+              {/* Send Message Card */}
               <div
-                onClick={() => navigate('/strepen/voorraad')}
-                className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+                onClick={() => navigate('/notificaties/nieuw')}
+                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
               >
-                <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg text-orange-600 dark:text-orange-400 w-fit group-hover:scale-110 transition-transform origin-left">
-                  <span className="material-icons-round">inventory_2</span>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                    <span className="material-icons-round">send</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Bericht Versturen</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Naar leiding of groepen</p>
+                  </div>
                 </div>
-                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Voorraad</span>
-              </div>
-
-              <div
-                onClick={() => navigate('/strepen/facturatie/nieuw')}
-                className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
-              >
-                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-600 dark:text-green-400 w-fit group-hover:scale-110 transition-transform origin-left">
-                  <span className="material-icons-round">attach_money</span>
-                </div>
-                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Rekeningen</span>
-              </div>
-
-              <div
-                onClick={() => navigate('/strepen/facturatie')}
-                className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
-              >
-                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400 w-fit group-hover:scale-110 transition-transform origin-left">
-                  <span className="material-icons-round">receipt_long</span>
-                </div>
-                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Facturen</span>
+                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
-        {/* Sfeerbeheer Section (Admin Only) */}
-        <section>
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <span className="material-icons-round text-primary text-sm">celebration</span>
-            <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sfeerbeheer</h2>
-          </div>
-
-          <div className="grid gap-3">
-            <div
-              onClick={() => navigate('/agenda/beheer')}
-              className="bg-white dark:bg-surface-dark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
-                  <span className="material-icons-round">edit_calendar</span>
+        {/* Team Drank Section — Admin or team_drank */}
+        {(currentUser.rol === 'admin' || currentUser.rol === 'team_drank' || currentUser.rol === 'team drank' || (currentUser.roles || []).includes('Drank')) && (
+          <section>
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <span className="material-icons-round text-primary text-sm">local_drink</span>
+              <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Team Drank</h2>
+            </div>
+            <div className="bg-white dark:bg-[#1e2330] p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
+              <div className="grid grid-cols-2 gap-3">
+                <div
+                  onClick={() => navigate('/strepen/dashboard')}
+                  className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+                >
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 w-fit group-hover:scale-110 transition-transform origin-left">
+                    <span className="material-icons-round">dashboard</span>
+                  </div>
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Dashboard</span>
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Agenda & Aftelklok</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Events en sfeer beheren</p>
+
+                <div
+                  onClick={() => navigate('/strepen/voorraad')}
+                  className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+                >
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg text-orange-600 dark:text-orange-400 w-fit group-hover:scale-110 transition-transform origin-left">
+                    <span className="material-icons-round">inventory_2</span>
+                  </div>
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Voorraad</span>
+                </div>
+
+                <div
+                  onClick={() => navigate('/strepen/facturatie/nieuw')}
+                  className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+                >
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-600 dark:text-green-400 w-fit group-hover:scale-110 transition-transform origin-left">
+                    <span className="material-icons-round">attach_money</span>
+                  </div>
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Rekeningen</span>
+                </div>
+
+                <div
+                  onClick={() => navigate('/strepen/facturatie')}
+                  className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group col-span-2 sm:col-span-1"
+                >
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400 w-fit group-hover:scale-110 transition-transform origin-left">
+                    <span className="material-icons-round">receipt_long</span>
+                  </div>
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Facturen</span>
                 </div>
               </div>
-              <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+            </div>
+          </section>
+        )}
+
+        {/* Sfeerbeheer Section — Admin only */}
+        {(currentUser.rol === 'admin' || (currentUser.roles || []).includes('Sfeerbeheer')) && (
+          <section>
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <span className="material-icons-round text-primary text-sm">celebration</span>
+              <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sfeerbeheer</h2>
             </div>
 
-            {/* Quotes Button - Point to Management View */}
-            <div
-              onClick={() => navigate('/quotes/beheer')}
-              className="bg-white dark:bg-surface-dark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-pink-100 dark:bg-pink-900/30 rounded-xl text-pink-600 dark:text-pink-400 group-hover:scale-110 transition-transform">
-                  <span className="material-icons-round">format_quote</span>
+            <div className="grid gap-3">
+              <div
+                onClick={() => navigate('/agenda/beheer')}
+                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                    <span className="material-icons-round">edit_calendar</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Agenda & Aftelklok</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Events en sfeer beheren</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Quoteboek</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Wall of Shame / Fame</p>
-                </div>
+                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
               </div>
-              <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+
+              {/* Bierpong Champions Card */}
+              <div
+                onClick={() => navigate('/bierpong/beheer')}
+                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
+                    <span className="material-icons-round">emoji_events</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Bierpong</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Bierpongtoernooi kampioenen</p>
+                  </div>
+                </div>
+                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+              </div>
+              <div
+                onClick={() => navigate('/quotes/beheer')}
+                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-pink-100 dark:bg-pink-900/30 rounded-xl text-pink-600 dark:text-pink-400 group-hover:scale-110 transition-transform">
+                    <span className="material-icons-round">format_quote</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Quoteboek</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Wall of Shame / Fame</p>
+                  </div>
+                </div>
+                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
       </main>
     </div>

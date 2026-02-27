@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MOCK_USERS } from '../lib/data';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import { AppContextType } from '../App';
 
 export const TeamDrankArchiveScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { users } = useOutletContext<AppContextType>();
   const [activeTab, setActiveTab] = useState<'orders' | 'bills'>('orders');
   const [selectedPeriod, setSelectedPeriod] = useState('2023');
 
@@ -111,7 +112,7 @@ export const TeamDrankArchiveScreen: React.FC = () => {
             <div className="space-y-3">
               {filteredBills.length > 0 ? (
                 filteredBills.map((bill) => {
-                  const user = MOCK_USERS.find(u => u.id === bill.userId);
+                  const user = users.find(u => u.id === bill.userId);
                   return (
                     <div key={bill.id} className="bg-white dark:bg-[#1e293b] p-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center justify-between">
                       <div className="flex items-center gap-3">

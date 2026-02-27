@@ -22,7 +22,7 @@ export const TeamDrankDashboardScreen: React.FC = () => {
   const [tempDrinks, setTempDrinks] = React.useState<Drink[]>([]);
 
   // Calculate low stock items (urgent or count < 5)
-  const lowStockItems = stockItems.filter(item => item.urgent || item.count < 5);
+  const lowStockItems = (stockItems || []).filter(item => item.urgent || item.count < 5);
 
   React.useEffect(() => {
     const savedLink = localStorage.getItem('teamDrankExcelLink');
@@ -105,7 +105,7 @@ export const TeamDrankDashboardScreen: React.FC = () => {
           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3 px-1">Snelkoppelingen</h3>
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => navigate('team-drank-invoices')}
+              onClick={() => navigate('/strepen/facturatie')}
               className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
             >
               <div className="w-10 h-10 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -115,7 +115,7 @@ export const TeamDrankDashboardScreen: React.FC = () => {
             </button>
 
             <button
-              onClick={() => navigate('team-drank-stock')}
+              onClick={() => navigate('/strepen/voorraad')}
               className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
             >
               <div className="w-10 h-10 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -125,7 +125,7 @@ export const TeamDrankDashboardScreen: React.FC = () => {
             </button>
 
             <button
-              onClick={() => navigate('team-drank-billing')}
+              onClick={() => navigate('/strepen/facturatie/nieuw')}
               className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
             >
               <div className="w-10 h-10 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -135,7 +135,7 @@ export const TeamDrankDashboardScreen: React.FC = () => {
             </button>
 
             <button
-              onClick={() => navigate('team-drank-excel-preview')}
+              onClick={() => navigate('/strepen/facturatie/excel')}
               className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
             >
               <div className="w-10 h-10 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -145,7 +145,17 @@ export const TeamDrankDashboardScreen: React.FC = () => {
             </button>
 
             <button
-              onClick={() => navigate('team-drank-archive')}
+              onClick={() => navigate('/strepen/geschiedenis-alle')}
+              className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+            >
+              <div className="w-10 h-10 rounded-full bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <span className="material-icons-round">history</span>
+              </div>
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Alle gezette strepen</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/strepen/facturatie/archief')}
               className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
             >
               <div className="w-10 h-10 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -155,13 +165,23 @@ export const TeamDrankDashboardScreen: React.FC = () => {
             </button>
 
             <button
-              onClick={() => navigate('team-drank-streaks')}
+              onClick={() => navigate('/strepen/streaks')}
               className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
             >
               <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <span className="material-icons-round">format_list_numbered</span>
               </div>
               <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Alle Strepen</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/frituur/geschiedenis')}
+              className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+            >
+              <div className="w-10 h-10 rounded-full bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <span className="material-icons-round">fastfood</span>
+              </div>
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Frieten</span>
             </button>
 
             <button

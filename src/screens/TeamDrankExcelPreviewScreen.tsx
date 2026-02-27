@@ -1,28 +1,66 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import * as XLSX from 'xlsx';
+import { AppContextType } from '../App';
 
 export const TeamDrankExcelPreviewScreen: React.FC = () => {
    const navigate = useNavigate();
-   const [excelLink, setExcelLink] = useState('');
+   const { stockItems, drinks } = useOutletContext<AppContextType>();
+   const [isGenerating, setIsGenerating] = useState(false);
+   const [generated, setGenerated] = useState(false);
 
-   useEffect(() => {
-      const savedLink = localStorage.getItem('teamDrankExcelLink');
-      if (savedLink) {
-         setExcelLink(savedLink);
-      }
-   }, []);
-
-   const handleOpenRealExcel = () => {
-      if (excelLink) {
-         window.open(excelLink, '_blank');
-      } else {
-         alert('Geen link ingesteld. Ga naar instellingen.');
-      }
+   const getPriceForStockItem = (itemName: string) => {
+      const drink = drinks.find(d => d.name.toLowerCase() === itemName.toLowerCase() || d.name.toLowerCase().includes(itemName.toLowerCase()) || itemName.toLowerCase().includes(d.name.toLowerCase()));
+      return drink ? drink.price : 0;
    };
 
-   // Generate some dummy grid data for visual flair
-   const rows = Array.from({ length: 15 }, (_, i) => i + 1);
-   const cols = ['A', 'B', 'C', 'D', 'E'];
+   const handleGenerateExcel = () => {
+      setIsGenerating(true);
+
+      setTimeout(() => {
+         try {
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+
+            // === Sheet 1: Stock Overview ===
+            const overviewData = [
+               ['KSA Drankvoorraad', '', '', ''],
+               ['Gegenereerd op:', new Date().toLocaleDateString('nl-BE'), '', ''],
+               ['', '', '', ''],
+               ['Drank', 'Categorie', 'Huidige Voorraad', 'Waarde per stuk (€)', 'Totale Waarde (€)'],
+               ...stockItems.map(item => {
+                  const p = getPriceForStockItem(item.name);
+                  return [
+                     item.name,
+                     item.category || 'Algemeen',
+                     item.count,
+                     p.toFixed(2).replace('.', ','),
+                     (item.count * p).toFixed(2).replace('.', ',')
+                  ];
+               }),
+               ['', '', '', '', ''],
+               ['TOTAAL WAARDE', '', '', '',
+                  stockItems.reduce((sum, item) => sum + (item.count * getPriceForStockItem(item.name)), 0).toFixed(2).replace('.', ',')
+               ],
+            ];
+
+            const ws1 = XLSX.utils.aoa_to_sheet(overviewData);
+            // Set column widths
+            ws1['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
+            XLSX.utils.book_append_sheet(wb, ws1, 'Voorraad');
+
+            // Download
+            XLSX.writeFile(wb, `KSA_Voorraad_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+            setGenerated(true);
+         } catch (error) {
+            console.error('Excel generation error:', error);
+            alert('Fout bij het genereren van het Excel bestand.');
+         } finally {
+            setIsGenerating(false);
+         }
+      }, 300); // Small delay for UI feedback
+   };
 
    return (
       <div className="flex flex-col min-h-screen bg-white dark:bg-[#1e293b] text-gray-900 dark:text-white font-sans transition-colors duration-200">
@@ -39,85 +77,103 @@ export const TeamDrankExcelPreviewScreen: React.FC = () => {
             </div>
          </header>
 
-         {/* Excel-like Toolbar */}
-         <div className="bg-[#f3f2f1] dark:bg-[#0f172a] border-b border-gray-300 dark:border-gray-700 px-2 py-2 flex gap-4 overflow-x-auto">
-            <div className="flex gap-1 border-r border-gray-300 dark:border-gray-700 pr-4">
-               <div className="w-6 h-6 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 flex items-center justify-center rounded text-xs">
-                  <span className="material-icons-round text-sm">save</span>
-               </div>
-               <div className="w-6 h-6 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 flex items-center justify-center rounded text-xs">
-                  <span className="material-icons-round text-sm">undo</span>
-               </div>
-            </div>
-            <div className="flex gap-2 items-center">
-               <span className="font-sans text-xs font-bold text-gray-600 dark:text-gray-300">Arial</span>
-               <span className="font-sans text-xs text-gray-600 dark:text-gray-300">11</span>
-               <div className="flex gap-1">
-                  <span className="font-bold text-gray-700 dark:text-gray-300 px-1">B</span>
-                  <span className="italic text-gray-700 dark:text-gray-300 px-1">I</span>
-                  <span className="underline text-gray-700 dark:text-gray-300 px-1">U</span>
-               </div>
-            </div>
-         </div>
-
-         {/* Formula Bar */}
-         <div className="flex items-center gap-2 px-2 py-1 bg-white dark:bg-[#1e293b] border-b border-gray-300 dark:border-gray-700">
-            <div className="w-8 text-center text-xs text-gray-500 border-r border-gray-300 dark:border-gray-700">A1</div>
-            <div className="flex-1 text-xs text-gray-400 italic px-2">fx =SUM(B2:B10)</div>
-         </div>
-
          <main className="flex-1 relative overflow-hidden bg-gray-100 dark:bg-[#0f172a]">
-            {/* Background Grid (Visual Only) */}
-            <div className="absolute inset-0 overflow-auto opacity-50 pointer-events-none">
-               <table className="w-full border-collapse">
+            {/* Preview Table */}
+            <div className="absolute inset-0 overflow-auto">
+               <table className="w-full border-collapse text-xs">
                   <thead>
                      <tr>
-                        <th className="w-8 bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700"></th>
-                        {cols.map(col => (
-                           <th key={col} className="w-24 bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-xs font-normal text-gray-600 dark:text-gray-400 py-1">{col}</th>
-                        ))}
+                        <th className="w-8 bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 py-1"></th>
+                        <th className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 py-1 px-2 text-left font-medium text-gray-600 dark:text-gray-400">Drank</th>
+                        <th className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 py-1 px-2 text-right font-medium text-gray-600 dark:text-gray-400">Categorie</th>
+                        <th className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 py-1 px-2 text-right font-medium text-gray-600 dark:text-gray-400">Voorraad</th>
+                        <th className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 py-1 px-2 text-right font-medium text-gray-600 dark:text-gray-400">Actuele Waarde</th>
                      </tr>
                   </thead>
                   <tbody>
-                     {rows.map(row => (
-                        <tr key={row}>
-                           <td className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-center text-xs text-gray-500">{row}</td>
-                           {cols.map(col => (
-                              <td key={`${col}${row}`} className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 h-6"></td>
-                           ))}
+                     {stockItems.length > 0 ? (
+                        stockItems.map((item, i) => {
+                           const p = getPriceForStockItem(item.name);
+                           return (
+                              <tr key={i}>
+                                 <td className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-center text-gray-500">{i + 1}</td>
+                                 <td className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 font-medium">{item.name}</td>
+                                 <td className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 text-right">{item.category || 'Algemeen'}</td>
+                                 <td className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 text-right">{item.count}</td>
+                                 <td className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 text-right font-bold">€ {(item.count * p).toFixed(2).replace('.', ',')}</td>
+                              </tr>
+                           );
+                        })
+                     ) : (
+                        <tr>
+                           <td colSpan={5} className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-4 py-8 text-center text-gray-400">
+                              Geen voorraad gevonden.
+                           </td>
                         </tr>
-                     ))}
+                     )}
+                     {stockItems.length > 0 && (
+                        <tr className="font-bold">
+                           <td className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700"></td>
+                           <td colSpan={3} className="bg-yellow-50 dark:bg-yellow-900/20 border border-gray-300 dark:border-gray-700 px-2 py-1 text-right">TOTAAL WAARDE</td>
+                           <td className="bg-yellow-50 dark:bg-yellow-900/20 border border-gray-300 dark:border-gray-700 px-2 py-1 text-right text-green-700 dark:text-green-400">
+                              € {stockItems.reduce((sum, item) => sum + (item.count * getPriceForStockItem(item.name)), 0).toFixed(2).replace('.', ',')}
+                           </td>
+                        </tr>
+                     )}
                   </tbody>
                </table>
             </div>
 
-            {/* Overlay Card */}
-            <div className="absolute inset-0 flex items-center justify-center p-6 bg-black/5 backdrop-blur-[1px]">
-               <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-gray-200 dark:border-gray-700 text-center">
-                  <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                     <span className="material-icons-round text-3xl text-green-600 dark:text-green-400">table_view</span>
-                  </div>
-
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Excel Bestand Openen</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-                     Je wordt nu doorgestuurd naar het externe Excel bestand voor gedetailleerd voorraadbeheer.
-                  </p>
-
-                  <div className="space-y-3">
-                     <button
-                        onClick={handleOpenRealExcel}
-                        className="w-full py-3 bg-[#1D6F42] hover:bg-[#155230] text-white font-bold rounded-xl shadow-lg shadow-green-900/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                     >
-                        <span>Open in Excel / Sheets</span>
-                        <span className="material-icons-round text-sm">open_in_new</span>
-                     </button>
-                     <button
-                        onClick={() => navigate(-1)}
-                        className="w-full py-3 text-gray-500 dark:text-gray-400 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors"
-                     >
-                        Annuleren
-                     </button>
-                  </div>
+            {/* Download Card Overlay */}
+            <div className="absolute bottom-6 left-0 right-0 flex justify-center px-6 z-10">
+               <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-2xl p-5 max-w-sm w-full border border-gray-200 dark:border-gray-700">
+                  {generated ? (
+                     <div className="text-center">
+                        <div className="w-14 h-14 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                           <span className="material-icons-round text-3xl text-green-600 dark:text-green-400">check_circle</span>
+                        </div>
+                        <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-1">Excel gedownload!</h3>
+                        <p className="text-xs text-gray-500 mb-4">Waarde berekening toegevoegd.</p>
+                        <div className="flex gap-2">
+                           <button onClick={handleGenerateExcel} className="flex-1 py-2.5 bg-[#1D6F42] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-1.5">
+                              <span className="material-icons-round text-sm">refresh</span>
+                              Opnieuw
+                           </button>
+                           <button onClick={() => navigate(-1)} className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl text-sm">
+                              Terug
+                           </button>
+                        </div>
+                     </div>
+                  ) : (
+                     <div className="text-center">
+                        <div className="flex items-center justify-center gap-3 mb-3">
+                           <div className="w-10 h-10 bg-green-100 dark:bg-green-900/20 rounded-xl flex items-center justify-center">
+                              <span className="material-icons-round text-xl text-green-600 dark:text-green-400">download</span>
+                           </div>
+                           <div className="text-left">
+                              <h3 className="font-bold text-gray-900 dark:text-white text-sm">Exporteer Voorraad</h3>
+                              <p className="text-[10px] text-gray-500">{stockItems.length} producten in de frigo</p>
+                           </div>
+                        </div>
+                        <button
+                           onClick={handleGenerateExcel}
+                           disabled={isGenerating || stockItems.length === 0}
+                           className="w-full py-3 bg-[#1D6F42] hover:bg-[#155230] disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-bold rounded-xl shadow-lg shadow-green-900/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                        >
+                           {isGenerating ? (
+                              <>
+                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                 <span>Genereren...</span>
+                              </>
+                           ) : (
+                              <>
+                                 <span className="material-icons-round text-sm">table_view</span>
+                                 <span>Download .xlsx</span>
+                              </>
+                           )}
+                        </button>
+                     </div>
+                  )}
                </div>
             </div>
          </main>

@@ -1,9 +1,9 @@
 export interface User {
     id: string; // UUID from Supabase Auth
     naam: string;
-    name?: string; // Alias for naam
+    name: string; // Alias for naam, required for consistency
     email: string;
-    rol: 'admin' | 'team_drank' | 'standaard';
+    rol: 'admin' | 'team_drank' | 'standaard' | 'sfeerbeheer' | 'godmode' | 'team drank';
     actief: boolean;
     nickname?: string; // New field for display name
     role?: string; // Display role e.g. "Hoofdleiding"
@@ -98,7 +98,7 @@ export interface FryItem {
     id: string;
     name: string;
     price: number;
-    category: 'frieten' | 'snacks' | 'sauzen';
+    category: 'frieten' | 'snacks' | 'sauzen' | 'huisbereid' | 'burgers' | 'spaghetti';
     description?: string;
 }
 
@@ -190,6 +190,7 @@ export interface Streak {
     drinkId: string | number;
     drinkName: string;
     price: number;
+    amount: number;
     timestamp: Date;
 }
 

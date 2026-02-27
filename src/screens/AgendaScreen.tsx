@@ -60,10 +60,18 @@ export const AgendaScreen: React.FC = () => {
     handleMarkNotificationAsRead(id);
   };
 
-  // Filter events for current month display
+  // Filter events for current month display (calendar)
   const eventsThisMonth = events.filter(e => {
     const d = new Date(e.date);
     return d.getMonth() === month && d.getFullYear() === year;
+  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  // All upcoming events from today onwards (across all months)
+  const allUpcomingEvents = events.filter(e => {
+    const d = new Date(e.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return d >= today;
   }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return (
@@ -161,16 +169,16 @@ export const AgendaScreen: React.FC = () => {
               return (
                 <button
                   key={day}
-                  className={`h-9 w-9 mx-auto flex flex-col items-center justify-center rounded-lg transition-colors relative text-sm font-medium
+                  className={`h-9 w-9 mx-auto flex flex-col items-center justify-center rounded-lg transition-colors relative text-sm
                     ${isCurrentDay
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30 font-bold'
+                      : isEventDay
+                        ? 'text-blue-600 dark:text-blue-400 font-bold ring-2 ring-blue-500 dark:ring-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                        : 'text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-700'
                     }
                   `}
                 >
                   {day}
-                  {isEventDay && !isCurrentDay && <span className="w-1 h-1 bg-blue-500 rounded-full absolute bottom-1"></span>}
-                  {isEventDay && isCurrentDay && <span className="w-1 h-1 bg-white rounded-full absolute bottom-1"></span>}
                 </button>
               );
             })}
@@ -189,8 +197,8 @@ export const AgendaScreen: React.FC = () => {
       {/* Event List */}
       <div className="px-4 pb-24 pt-2 space-y-4">
 
-        {eventsThisMonth.length > 0 ? (
-          eventsThisMonth.map(event => {
+        {allUpcomingEvents.length > 0 ? (
+          allUpcomingEvents.map(event => {
             const d = new Date(event.date);
             const dateStr = d.toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'short' });
 
@@ -222,7 +230,7 @@ export const AgendaScreen: React.FC = () => {
         ) : (
           <div className="flex flex-col items-center justify-center py-10 text-gray-400">
             <span className="material-icons-round text-4xl mb-2 opacity-50">event_busy</span>
-            <p>Geen evenementen gepland voor deze maand.</p>
+            <p>Geen komende evenementen.</p>
           </div>
         )}
       </div>

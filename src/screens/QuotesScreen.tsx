@@ -3,7 +3,6 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { QuoteItem, User } from '../types';
 import { AppContextType } from '../App';
-import { MOCK_USERS, getCurrentUser } from '../lib/data';
 
 interface QuotesScreenProps {
   enableManagement?: boolean; // New prop to toggle delete functionality
@@ -18,7 +17,8 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
     handleVoteQuote: onVote,
     handleAddQuote: onAddQuote,
     handleDeleteQuote: onDeleteQuote,
-    currentUser
+    currentUser,
+    users
   } = useOutletContext<AppContextType>();
   const [isAdding, setIsAdding] = useState(false);
   const [newQuoteText, setNewQuoteText] = useState('');
@@ -31,15 +31,15 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
   const [selectedAuthor, setSelectedAuthor] = useState<{ id: string, name: string } | null>(null);
 
   // Filter users for search
-  const filteredAuthors = MOCK_USERS.filter(u =>
-    (u.nickname || u.name || u.naam || '').toLowerCase().includes(authorSearch.toLowerCase())
+  const filteredAuthors = (users || []).filter(u =>
+    (u?.nickname || u?.name || u?.naam || '').toLowerCase().includes(authorSearch.toLowerCase())
   );
 
   // View State: 'current' (Recent) or 'archive' (Top Quotes > 4 weeks)
   const [viewMode, setViewMode] = useState<'current' | 'archive'>('current');
 
   // Logic: User must have role AND management must be enabled via navigation source
-  const canDelete = enableManagement && ((currentUser?.roles || []).includes('Sfeerbeheer') || currentUser?.role === 'Hoofdleiding');
+  const canDelete = enableManagement && ((currentUser?.roles || []).includes('Sfeerbeheer') || currentUser?.rol === 'admin');
 
   const handleAdd = () => {
     if (!newQuoteText || !selectedAuthor) return;
@@ -58,8 +58,8 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
     }
   };
 
-  const handleSelectAuthor = (u: typeof MOCK_USERS[0]) => {
-    setSelectedAuthor({ id: u.id, name: u.nickname || u.name || u.naam });
+  const handleSelectAuthor = (u: User) => {
+    setSelectedAuthor({ id: u.id, name: u.nickname || u.naam });
     setAuthorSearch('');
 
     // Auto-focus the textarea immediately after selection for smooth UX
@@ -80,12 +80,12 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
   sixMonthsAgo.setMonth(today.getMonth() - 6);
 
   // 1. Current List: Newer than 4 weeks
-  const currentQuotes = quotes.filter(q => new Date(q.date) >= fourWeeksAgo);
+  const currentQuotes = (quotes || []).filter(q => q && q.date && new Date(q.date) >= fourWeeksAgo);
 
   // 2. Archive List: Older than 4 weeks AND Newer than 6 months AND "Top Quote"
   const archiveQuotes = quotes.filter(q => {
     const qDate = new Date(q.date);
-    const netScore = q.likes.length - q.dislikes.length;
+    const netScore = (q.likes?.length || 0) - (q.dislikes?.length || 0);
     // Archive shows older quotes with a positive score
     return qDate < fourWeeksAgo && qDate >= sixMonthsAgo && netScore > 0;
   });
@@ -97,8 +97,8 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
       // 1. Identify Top Quote (Highest Net Score)
       // Sort by Score DESC. Tie-breaker: Date DESC (Newest wins tie)
       const sortedByScore = [...currentQuotes].sort((a, b) => {
-        const scoreA = a.likes.length - a.dislikes.length;
-        const scoreB = b.likes.length - b.dislikes.length;
+        const scoreA = (a.likes?.length || 0) - (a.dislikes?.length || 0);
+        const scoreB = (b.likes?.length || 0) - (b.dislikes?.length || 0);
         if (scoreA !== scoreB) return scoreB - scoreA;
         return new Date(b.date).getTime() - new Date(a.date).getTime();
       });
@@ -115,7 +115,10 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
     }
   } else {
     // Archive View: Sort by Net Score (Best of All Time)
-    displayedQuotes = archiveQuotes.sort((a, b) => (b.likes.length - b.dislikes.length) - (a.likes.length - a.dislikes.length));
+    displayedQuotes = archiveQuotes.sort((a, b) =>
+      ((b.likes?.length || 0) - (b.dislikes?.length || 0)) -
+      ((a.likes?.length || 0) - (a.dislikes?.length || 0))
+    );
   }
 
   return (
@@ -159,8 +162,8 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
           </div>
         ) : (
           displayedQuotes.map((quote, index) => {
-            const author = MOCK_USERS.find(u => u.id === quote.authorId);
-            const netScore = quote.likes.length - quote.dislikes.length;
+            const author = users.find(u => u.id === quote.authorId);
+            const netScore = (quote.likes?.length || 0) - (quote.dislikes?.length || 0);
 
             // #1 Winner Styling (Only for current view)
             const isWinner = viewMode === 'current' && index === 0 && netScore > 0;
@@ -168,8 +171,8 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
             const isLegend = viewMode === 'archive' && index < 3;
 
             // Current User Vote State
-            const hasLiked = quote.likes.includes(currentUser.id);
-            const hasDisliked = quote.dislikes.includes(currentUser.id);
+            const hasLiked = (quote.likes || []).includes(currentUser.id);
+            const hasDisliked = (quote.dislikes || []).includes(currentUser.id);
 
             return (
               <div key={quote.id} className={`bg-white dark:bg-[#1e293b] rounded-2xl p-5 shadow-sm border relative transition-all 
@@ -209,7 +212,7 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
                       />
                       <div>
                         {/* Use Nickname if available */}
-                        <p className="text-sm font-bold text-gray-900 dark:text-white">{author?.nickname || quote.authorName}</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">{author?.nickname || author?.naam || quote.authorName}</p>
                       </div>
                     </div>
 
@@ -225,7 +228,7 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
                             }`}
                         >
                           <span className="material-icons-round text-base">thumb_up</span>
-                          <span className="text-xs font-bold">{quote.likes.length}</span>
+                          <span className="text-xs font-bold">{quote.likes?.length || 0}</span>
                         </button>
 
                         <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
@@ -238,7 +241,7 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
                             : 'hover:bg-white dark:hover:bg-gray-700 text-gray-500 hover:text-red-500'
                             }`}
                         >
-                          <span className="text-xs font-bold">{quote.dislikes.length}</span>
+                          <span className="text-xs font-bold">{quote.dislikes?.length || 0}</span>
                           <span className="material-icons-round text-base">thumb_down</span>
                         </button>
                       </div>
@@ -331,11 +334,11 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
                               className="p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer flex items-center gap-3 border-b last:border-0 border-gray-100 dark:border-gray-800"
                             >
                               <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden shrink-0">
-                                <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" />
+                                <img src={u.avatar} alt={u.naam} className="w-full h-full object-cover" />
                               </div>
                               <div>
-                                <span className="font-bold text-sm block text-gray-900 dark:text-white">{u.nickname || u.name}</span>
-                                {u.nickname && <span className="text-[10px] text-gray-500 block">{u.name}</span>}
+                                <span className="font-bold text-sm block text-gray-900 dark:text-white">{u.nickname || u.naam}</span>
+                                {u.nickname && <span className="text-[10px] text-gray-500 block">{u.naam}</span>}
                               </div>
                             </div>
                           ))
