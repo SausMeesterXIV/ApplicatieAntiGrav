@@ -34,6 +34,7 @@ import { BierpongManageScreen } from './screens/BierpongManageScreen';
 import { QuotesScreen } from './screens/QuotesScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { RolesManageScreen } from './screens/RolesManageScreen';
+import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
 
 // Export the context type so screens can use it
 export type AppContextType = {
@@ -60,7 +61,7 @@ export type AppContextType = {
     handleSaveCountdowns: (countdowns: CountdownItem[]) => void;
     bierpongGames: BierpongGame[];
     setBierpongGames: React.Dispatch<React.SetStateAction<BierpongGame[]>>;
-    handleAddBierpongGame: (playerIds: string[], winnerId: string) => void;
+    handleAddBierpongGame: (playerIds: string[], winnerIds: string[]) => void;
     duoBierpongWinners: string[];
     setDuoBierpongWinners: React.Dispatch<React.SetStateAction<string[]>>;
     quotes: QuoteItem[];
@@ -534,9 +535,9 @@ function App() {
         }
     };
 
-    const handleAddBierpongGame = async (playerIds: string[], winnerId: string) => {
+    const handleAddBierpongGame = async (playerIds: string[], winnerIds: string[]) => {
         try {
-            const newGame = await db.addBierpongGame(playerIds, winnerId);
+            const newGame = await db.addBierpongGame(playerIds, winnerIds);
             setBierpongGames(prev => [...prev, newGame]);
         } catch (error) {
             console.error('Failed to add bierpong game:', error);
@@ -584,7 +585,7 @@ function App() {
     // Layout with BottomNav
     const MainLayout = () => {
         return (
-            <div className="text-base min-h-screen pb-24">
+            <div className="text-base min-h-screen pb-nav-safe">
                 <Outlet context={contextValue} />
                 <BottomNav />
             </div>
@@ -597,6 +598,7 @@ function App() {
             <ScrollToTop />
             <Routes>
                 <Route path="/login" element={!session ? <CredentialsScreen /> : <Navigate to="/" />} />
+                <Route path="/reset-password" element={!session ? <ResetPasswordScreen /> : <Navigate to="/" />} />
                 <Route path="/credits" element={<CreditsScreen />} />
 
                 {/* Protected Routes */}
@@ -632,7 +634,8 @@ function App() {
                         <Route path="bierpong" element={<BierpongScreen />} />
                         <Route path="bierpong/beheer" element={<BierpongManageScreen />} />
                         <Route path="quotes" element={<QuotesScreen />} />
-                        <Route path="quotes/beheer" element={<QuotesScreen />} />
+                        <Route path="quotes-manage" element={<QuotesScreen enableManagement={true} />} />
+                        <Route path="quotes/beheer" element={<QuotesScreen enableManagement={true} />} />
 
                         <Route path="settings" element={<SettingsScreen />} />
                         <Route path="admin/rollen" element={<RolesManageScreen />} />

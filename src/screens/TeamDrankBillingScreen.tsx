@@ -179,7 +179,7 @@ export const TeamDrankBillingScreen: React.FC = () => {
       </main>
 
       {/* Footer Action Card */}
-      <div className="fixed bottom-24 left-0 right-0 px-6 z-20 flex justify-center pointer-events-none">
+      <div className="fixed left-0 right-0 px-6 z-20 flex justify-center pointer-events-none" style={{ bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
         <div className="bg-blue-600 rounded-full px-6 py-3 shadow-xl shadow-blue-900/20 text-white flex items-center gap-2 pointer-events-auto">
           <span className="text-sm font-medium text-blue-100">Openstaand saldo:</span>
           <span className="text-base font-bold">€ {totalOutstanding.toFixed(2).replace('.', ',')}</span>

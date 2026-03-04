@@ -14,11 +14,22 @@ export async function fetchProfiles(): Promise<User[]> {
   return (data || []).map(mapProfileToUser);
 }
 
+export async function fetchAllProfiles(): Promise<User[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('naam');
+
+  if (error) throw error;
+  return (data || []).map(mapProfileToUser);
+}
+
 export async function updateProfile(userId: string, updates: Partial<{
   naam: string;
   nickname: string;
   avatar_url: string;
   rol: string;
+  actief: boolean;
   quick_drink_id: string | null;
   roles: string[];
 }>): Promise<void> {
@@ -518,22 +529,22 @@ export async function fetchBierpongGames(): Promise<BierpongGame[]> {
   return (data || []).map(g => ({
     id: g.id,
     playerIds: g.player_ids || [],
-    winnerId: g.winner_id,
+    winnerIds: g.winner_ids || (g.winner_id ? [g.winner_id] : []), // Fallback just in case
     timestamp: new Date(g.created_at),
   }));
 }
 
-export async function addBierpongGame(playerIds: string[], winnerId: string): Promise<BierpongGame> {
+export async function addBierpongGame(playerIds: string[], winnerIds: string[]): Promise<BierpongGame> {
   const { data, error } = await supabase
     .from('bierpong_games')
-    .insert([{ player_ids: playerIds, winner_id: winnerId }])
+    .insert([{ player_ids: playerIds, winner_ids: winnerIds }])
     .select()
     .single();
   if (error) throw error;
   return {
     id: data.id,
     playerIds: data.player_ids,
-    winnerId: data.winner_id,
+    winnerIds: data.winner_ids,
     timestamp: new Date(data.created_at),
   };
 }
@@ -699,5 +710,29 @@ export async function saveCountdowns(countdowns: CountdownItem[]): Promise<void>
   });
 
   const { error } = await supabase.from('countdowns').insert(payload);
+  if (error) throw error;
+}
+
+// ==================== APP SETTINGS ====================
+
+export async function fetchAppSetting(key: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('app_settings')
+    .select('value')
+    .eq('key', key)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null; // Not found
+    throw error;
+  }
+  return data?.value || null;
+}
+
+export async function saveAppSetting(key: string, value: string): Promise<void> {
+  const { error } = await supabase
+    .from('app_settings')
+    .upsert({ key, value }, { onConflict: 'key' });
+
   if (error) throw error;
 }

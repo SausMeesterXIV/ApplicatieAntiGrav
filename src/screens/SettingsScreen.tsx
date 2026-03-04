@@ -82,7 +82,7 @@ export const SettingsScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] pb-24 transition-colors duration-200">
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] pb-nav-safe transition-colors duration-200">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-gray-50/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 px-4 py-4 flex items-center justify-between transition-colors">
         <div className="flex items-center gap-2">
@@ -207,6 +207,20 @@ export const SettingsScreen: React.FC = () => {
                 </div>
                 <span className="material-icons-round text-gray-400">chevron_right</span>
               </button>
+
+              {/* Quotes Beheer (Admin & Sfeerbeheer) */}
+              {(currentUser?.rol === 'admin' || (currentUser?.roles || []).includes('Sfeerbeheer')) && (
+                <button
+                  onClick={() => navigate('/quotes-manage')}
+                  className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-t border-gray-100 dark:border-gray-800/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="material-icons-round text-pink-600 dark:text-pink-500">format_quote</span>
+                    <span className="font-medium text-gray-900 dark:text-white">Quotes Beheer</span>
+                  </div>
+                  <span className="material-icons-round text-gray-400">chevron_right</span>
+                </button>
+              )}
             </div>
           </div>
 

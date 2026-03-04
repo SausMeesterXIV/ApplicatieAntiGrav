@@ -43,7 +43,7 @@ export const FriesHistoryScreen: React.FC = () => {
                 </div>
             </header>
 
-            <main className="flex-1 px-4 pb-24 overflow-y-auto space-y-6 pt-4">
+            <main className="flex-1 px-4 pb-nav-safe overflow-y-auto space-y-6 pt-4">
                 {groupedByDate.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                         <span className="material-icons-round text-5xl mb-3 opacity-40">receipt_long</span>

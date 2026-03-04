@@ -55,7 +55,7 @@ export const NudgeSelectorScreen: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 px-4 pb-24 overflow-y-auto">
+      <main className="flex-1 px-4 pb-nav-safe overflow-y-auto">
         <div className="flex justify-between items-center mb-4 mt-2">
           <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Alle Leiding</h2>
           <span className="text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900/50">{leaders.length} Actief</span>
@@ -107,7 +107,7 @@ export const NudgeSelectorScreen: React.FC = () => {
 
       {/* Success Toast */}
       {showToast && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
+        <div className="fixed left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300" style={{ bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
           <div className="bg-white text-gray-900 px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 min-w-[300px] border border-gray-100">
             <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center shrink-0">
               <span className="material-icons-round text-white text-lg">check</span>

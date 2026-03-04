@@ -113,7 +113,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen pb-24 relative bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
+    <div className="flex flex-col min-h-screen pb-nav-safe relative bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
       {/* Header */}
       <header className="px-6 py-6 flex justify-between items-center bg-gray-50 dark:bg-[#0f172a] shadow-sm transition-colors">
         <div className="flex flex-col justify-center">

@@ -197,6 +197,6 @@ export interface Streak {
 export interface BierpongGame {
     id: string;
     playerIds: string[];
-    winnerId: string;
+    winnerIds: string[];
     timestamp: Date;
 }

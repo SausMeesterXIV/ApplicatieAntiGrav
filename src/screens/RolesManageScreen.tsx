@@ -10,15 +10,32 @@ export const RolesManageScreen: React.FC = () => {
   const { users, setUsers: setUsersContext } = useOutletContext<AppContextType>();
 
   // Data from Supabase via context
-  const [localUsers, setLocalUsers] = useState<User[]>(users);
+  const [localUsers, setLocalUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // New state for "Quick Assign Mode"
   const [activeAssignRole, setActiveAssignRole] = useState<string | null>(null);
 
   const [search, setSearch] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
 
-  const filteredUsers = localUsers.filter(u => (u.naam || '').toLowerCase().includes(search.toLowerCase()));
+  React.useEffect(() => {
+    // Fetch ALL profiles including inactive ones for the admin screen
+    db.fetchAllProfiles().then(allUsers => {
+      setLocalUsers(allUsers);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      showToast('Fout bij ophalen gebruikers', 'error');
+      setLoading(false);
+    });
+  }, []);
+
+  const filteredUsers = localUsers.filter(u => {
+    if (!showInactive && !u.actief) return false;
+    return (u.naam || '').toLowerCase().includes(search.toLowerCase());
+  });
 
   // Role toggles state (for the modal)
   const [toggles, setToggles] = useState({
@@ -134,6 +151,34 @@ export const RolesManageScreen: React.FC = () => {
     }
   };
 
+  const toggleUserActief = async (user: User) => {
+    if (!window.confirm(`Weet je zeker dat je het account van ${user.naam} wilt ${user.actief ? 'deactiveren' : 'activeren'}?`)) return;
+
+    const updatedUser = { ...user, actief: !user.actief };
+    setLocalUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
+
+    // Auto close modal if the user was selected and we just disabled them
+    if (selectedUser?.id === user.id) {
+      setSelectedUser(updatedUser);
+    }
+
+    try {
+      await db.updateProfile(user.id, { actief: !user.actief });
+      showToast(`Account ${!user.actief ? 'geactiveerd' : 'gedeactiveerd'}`, 'success');
+    } catch (error) {
+      setLocalUsers(prev => prev.map(u => u.id === user.id ? user : u)); // Rollback
+      showToast('Fout bij het aanpassen van account status', 'error');
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-[#0f172a]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans relative transition-colors duration-200">
       {/* Header */}
@@ -153,7 +198,7 @@ export const RolesManageScreen: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 px-4 pb-24 overflow-y-auto">
+      <main className="flex-1 px-4 pb-nav-safe overflow-y-auto">
 
         {/* QUICK ASSIGN TOOLBAR */}
         <section className="mb-6">
@@ -205,7 +250,14 @@ export const RolesManageScreen: React.FC = () => {
 
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Leiding ({filteredUsers.length})</h2>
-          <button className="text-blue-600 dark:text-blue-400 text-sm font-medium hover:text-blue-500">Filter</button>
+
+          <label className="flex items-center gap-2 cursor-pointer group">
+            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${showInactive ? 'bg-blue-600 border-blue-600' : 'bg-transparent border-gray-300 dark:border-gray-600'}`}>
+              {showInactive && <span className="material-icons-round text-white" style={{ fontSize: '10px' }}>check</span>}
+            </div>
+            <input type="checkbox" className="hidden" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
+            <span className="text-xs font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">Toon inactief</span>
+          </label>
         </div>
 
         <div className="space-y-3">
@@ -253,6 +305,11 @@ export const RolesManageScreen: React.FC = () => {
                           </span>
                         ))}
                       </div>
+                    )}
+                    {!user.actief && (
+                      <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded border bg-red-50 text-red-600 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">
+                        Inactief
+                      </span>
                     )}
                   </div>
                 </div>
@@ -353,6 +410,29 @@ export const RolesManageScreen: React.FC = () => {
                     {toggles.finance && <span className="absolute inset-0 flex items-center justify-center"><span className="material-icons-round text-[10px] text-blue-600">check</span></span>}
                   </span>
                 </button>
+              </div>
+
+              {/* Account Status Toggle */}
+              <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="bg-red-50 dark:bg-red-900/10 rounded-xl p-4 flex items-center justify-between transition-colors border border-red-100 dark:border-red-900/30">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                      <span className="material-icons-round text-lg">no_accounts</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-red-700 dark:text-red-400 block text-sm">Account Deactiveren</span>
+                      <span className="text-xs text-red-600/70 dark:text-red-400/70">Ontneem toegang tot de app</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => toggleUserActief(selectedUser)}
+                    className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${!selectedUser.actief ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                  >
+                    <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${!selectedUser.actief ? 'translate-x-6' : 'translate-x-0'}`}>
+                      {!selectedUser.actief && <span className="absolute inset-0 flex items-center justify-center"><span className="material-icons-round text-[10px] text-red-600">close</span></span>}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
 

@@ -132,3 +132,36 @@
     inset 0 0 15px rgba(168, 85, 247, 0.05);
   border: 1px solid rgba(168, 85, 247, 0.4);
 }
+
+/* === SAFE AREA UTILITIES === */
+/* Use env(safe-area-inset-bottom) for devices with home bars (iPhone X+, etc.) */
+
+/* BottomNav: add the safe area inset as extra bottom padding */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Fixed footers that sit above the BottomNav: account for safe area */
+.bottom-nav-offset {
+  bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); /* 80px nav + safe area */
+}
+
+/* Content padding: ensures content doesn't hide behind BottomNav + safe area */
+.pb-nav-safe {
+  padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px)); /* 112px + safe area */
+}
+
+/* Custom scrollbar styling */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5);
+}

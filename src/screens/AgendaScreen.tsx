@@ -195,7 +195,7 @@ export const AgendaScreen: React.FC = () => {
       </div>
 
       {/* Event List */}
-      <div className="px-4 pb-24 pt-2 space-y-4">
+      <div className="px-4 pb-nav-safe pt-2 space-y-4">
 
         {allUpcomingEvents.length > 0 ? (
           allUpcomingEvents.map(event => {

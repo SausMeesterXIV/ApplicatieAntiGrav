@@ -153,7 +153,7 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-6 overflow-y-auto pb-24 space-y-4">
+      <main className="flex-1 px-4 py-6 overflow-y-auto pb-nav-safe space-y-4">
 
         {displayedQuotes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
@@ -268,7 +268,8 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
       {viewMode === 'current' && (
         <button
           onClick={() => setIsAdding(true)}
-          className="fixed bottom-32 right-6 w-14 h-14 bg-pink-600 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-20"
+          className="fixed right-6 w-14 h-14 bg-pink-600 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-20"
+          style={{ bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}
         >
           <span className="material-icons-round text-3xl">add</span>
         </button>

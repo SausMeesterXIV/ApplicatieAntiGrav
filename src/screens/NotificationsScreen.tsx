@@ -42,7 +42,7 @@ export const NotificationsScreen: React.FC = () => {
       </div>
 
       {/* List */}
-      <main className="flex-1 overflow-y-auto px-4 pb-24 space-y-6">
+      <main className="flex-1 overflow-y-auto px-4 pb-nav-safe space-y-6">
 
         {/* Today Section */}
         <div>

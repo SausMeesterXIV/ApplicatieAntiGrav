@@ -10,6 +10,26 @@ export const CredentialsScreen: React.FC = () => {
   const [naam, setNaam] = useState('');
   const [loading, setLoading] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      showToast('Vul eerst je email in om een reset link te ontvangen.', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      showToast('Wachtwoord reset link verstuurd naar je email!', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Fout bij het versturen van de reset link', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,6 +147,27 @@ export const CredentialsScreen: React.FC = () => {
                 minLength={6}
               />
             </div>
+
+            {!isRegister && (
+              <div className="flex items-center justify-between pt-2 px-1">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${rememberMe ? 'bg-blue-600 border-blue-600' : 'bg-transparent border-gray-300 dark:border-gray-600'}`}>
+                    {rememberMe && <span className="material-icons-round text-white text-xs">check</span>}
+                  </div>
+                  <input type="checkbox" className="hidden" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Blijf ingelogd</span>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                >
+                  Wachtwoord vergeten?
+                </button>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}

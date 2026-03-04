@@ -63,7 +63,7 @@ export const TeamDrankArchiveScreen: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-4 pb-24 overflow-y-auto">
+      <main className="flex-1 px-4 py-4 pb-nav-safe overflow-y-auto">
 
         {activeTab === 'orders' ? (
           <div className="space-y-4">

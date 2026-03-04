@@ -61,7 +61,7 @@ export const TeamDrankStreaksScreen: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 px-4 pb-24 overflow-y-auto space-y-6">
+      <main className="flex-1 px-4 pb-nav-safe overflow-y-auto space-y-6">
         {/* Week Navigation */}
         <div className="flex items-center justify-between bg-white dark:bg-[#1e293b] p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 mt-4">
           <button

@@ -1106,7 +1106,7 @@ export const FriesScreen: React.FC = () => {
 
       {/* Floating Bottom Bar - Only visible if items in cart AND not admin AND Open */}
       {cart.length > 0 && !isAdmin && isOrderingOpen && (
-        <footer className={`fixed bottom-20 left-4 right-4 z-50 animate-in slide-in-from-bottom-4 duration-300`}>
+        <footer className={`fixed bottom-nav-offset left-4 right-4 z-50 animate-in slide-in-from-bottom-4 duration-300`}>
           <div className={`border rounded-2xl p-4 shadow-2xl transition-colors ${orderingFor ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800' : 'bg-white dark:bg-[#1e2330] border-gray-200 dark:border-gray-700'}`}>
             <div className="flex justify-between items-end mb-3">
               <div>

@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Drink } from '../types';
 import { AppContextType } from '../App';
+import { fetchAppSetting, saveAppSetting } from '../lib/supabaseService';
+import { showToast } from '../components/Toast';
+import { supabase } from '../lib/supabase';
 
 export const TeamDrankDashboardScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -12,11 +15,12 @@ export const TeamDrankDashboardScreen: React.FC = () => {
     drinks,
     setDrinks: onUpdateDrinks
   } = useOutletContext<AppContextType>();
-  const [excelLink, setExcelLink] = React.useState('');
-  const [billingExcelLink, setBillingExcelLink] = React.useState('');
-  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
-  const [tempLink, setTempLink] = React.useState('');
-  const [tempBillingLink, setTempBillingLink] = React.useState('');
+  const [excelLink, setExcelLink] = useState('');
+  const [billingExcelLink, setBillingExcelLink] = useState('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [tempLink, setTempLink] = useState('');
+  const [tempBillingLink, setTempBillingLink] = useState('');
+  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
 
   // Local state for editing drink prices in the modal
   const [tempDrinks, setTempDrinks] = React.useState<Drink[]>([]);
@@ -24,36 +28,56 @@ export const TeamDrankDashboardScreen: React.FC = () => {
   // Calculate low stock items (urgent or count < 5)
   const lowStockItems = (stockItems || []).filter(item => item.urgent || item.count < 5);
 
-  React.useEffect(() => {
-    const savedLink = localStorage.getItem('teamDrankExcelLink');
-    if (savedLink) {
-      setExcelLink(savedLink);
-      setTempLink(savedLink);
-    }
-    const savedBillingLink = localStorage.getItem('teamDrankBillingExcelLink');
-    if (savedBillingLink) {
-      setBillingExcelLink(savedBillingLink);
-      setTempBillingLink(savedBillingLink);
-    }
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const link = await fetchAppSetting('teamDrankExcelLink');
+        const billingLink = await fetchAppSetting('teamDrankBillingExcelLink');
+
+        if (link) {
+          setExcelLink(link);
+          setTempLink(link);
+        }
+        if (billingLink) {
+          setBillingExcelLink(billingLink);
+          setTempBillingLink(billingLink);
+        }
+      } catch (err) {
+        console.error("Failed to load settings from DB:", err);
+      }
+    };
+    loadSettings();
   }, []);
 
   // Initialize tempDrinks when modal opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (isSettingsOpen) {
       setTempDrinks([...drinks]);
     }
   }, [isSettingsOpen, drinks]);
 
-  const handleSaveLink = () => {
-    localStorage.setItem('teamDrankExcelLink', tempLink);
-    setExcelLink(tempLink);
-    localStorage.setItem('teamDrankBillingExcelLink', tempBillingLink);
-    setBillingExcelLink(tempBillingLink);
+  const handleSaveLink = async () => {
+    setIsLoadingSettings(true);
+    try {
+      await saveAppSetting('teamDrankExcelLink', tempLink);
+      await saveAppSetting('teamDrankBillingExcelLink', tempBillingLink);
 
-    // Save updated drink prices
-    onUpdateDrinks(tempDrinks);
+      setExcelLink(tempLink);
+      setBillingExcelLink(tempBillingLink);
 
-    setIsSettingsOpen(false);
+      // Save updated drink prices
+      if (onUpdateDrinks) {
+        onUpdateDrinks(tempDrinks);
+      }
+
+      showToast('Instellingen opgeslagen', 'success');
+      setIsSettingsOpen(false);
+    } catch (err) {
+      console.error("Failed to save settings to DB:", err);
+      showToast('Kon instellingen niet opslaan', 'error');
+    } finally {
+      setIsLoadingSettings(false);
+    }
   };
 
   const handleUpdateTempDrinkPrice = (id: string | number, price: string) => {
@@ -77,7 +101,7 @@ export const TeamDrankDashboardScreen: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 px-4 pb-24 overflow-y-auto space-y-6">
+      <main className="flex-1 px-4 pb-nav-safe overflow-y-auto space-y-6">
         {/* Alerts Section */}
         {lowStockItems.length > 0 && (
           <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/30 rounded-2xl p-4 flex gap-4 items-start relative overflow-hidden">
@@ -255,7 +279,20 @@ export const TeamDrankDashboardScreen: React.FC = () => {
                 <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-3">Reset & Archief</label>
                 <div className="space-y-4">
                   <div>
-                    <button className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group">
+                    <button
+                      onClick={async () => {
+                        if (window.confirm('Weet je zeker dat je deze periode wilt archiveren? Alle streepjes worden gefactureerd.')) {
+                          try {
+                            const { error } = await supabase.rpc('archive_consumpties_period');
+                            if (error) throw error;
+                            showToast('Periode succesvol gearchiveerd!', 'success');
+                          } catch (err: any) {
+                            showToast('Fout bij archiveren: ' + err.message, 'error');
+                          }
+                        }
+                      }}
+                      className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                    >
                       <div className="flex items-center gap-3">
                         <span className="material-icons-round text-gray-400 group-hover:text-blue-500">inventory_2</span>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Periode Archiveren</span>
@@ -268,7 +305,20 @@ export const TeamDrankDashboardScreen: React.FC = () => {
                   </div>
 
                   <div>
-                    <button className="w-full flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-left group">
+                    <button
+                      onClick={async () => {
+                        if (window.confirm('Weet je ZEKER dat je alle stock wilt resetten naar 0? Dit kan niet ongedaan worden gemaakt.')) {
+                          try {
+                            const { error } = await supabase.from('stock_items').update({ count: 0 }).neq('id', 0);
+                            if (error) throw error;
+                            showToast('Stock succesvol gereset!', 'success');
+                          } catch (err: any) {
+                            showToast('Fout bij resetten stock: ' + err.message, 'error');
+                          }
+                        }
+                      }}
+                      className="w-full flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-left group"
+                    >
                       <div className="flex items-center gap-3">
                         <span className="material-icons-round text-red-400 group-hover:text-red-600">restart_alt</span>
                         <span className="text-sm font-medium text-red-700 dark:text-red-400">Stock Resetten</span>
@@ -292,9 +342,14 @@ export const TeamDrankDashboardScreen: React.FC = () => {
               </button>
               <button
                 onClick={handleSaveLink}
-                className="flex-1 py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20"
+                disabled={isLoadingSettings}
+                className="flex-1 py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                Opslaan
+                {isLoadingSettings ? (
+                  <span className="material-icons-round animate-spin">refresh</span>
+                ) : (
+                  'Opslaan'
+                )}
               </button>
             </div>
           </div>

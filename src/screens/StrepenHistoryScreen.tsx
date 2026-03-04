@@ -174,7 +174,7 @@ export const StrepenHistoryScreen: React.FC<Props> = ({ adminMode = false }) => 
                 </div>
             </header>
 
-            <main className="flex-1 overflow-y-auto px-4 py-6 pb-24 space-y-6">
+            <main className="flex-1 overflow-y-auto px-4 py-6 pb-nav-safe space-y-6">
                 {displayStreaks.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                         <span className="material-icons-round text-5xl mb-4 opacity-20">history</span>

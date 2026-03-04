@@ -16,7 +16,7 @@ export const CreditsScreen: React.FC = () => {
                 </div>
             </header>
 
-            <main className="flex-1 px-6 py-8 overflow-y-auto pb-24">
+            <main className="flex-1 px-6 py-8 overflow-y-auto pb-nav-safe">
 
                 {/* App Info */}
                 <div className="flex flex-col items-center mb-12 text-center">

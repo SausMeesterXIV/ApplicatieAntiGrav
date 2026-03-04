@@ -92,7 +92,7 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
         </button>
       </header>
 
-      <main className="flex-1 px-4 pb-24 overflow-y-auto space-y-6">
+      <main className="flex-1 px-4 pb-nav-safe overflow-y-auto space-y-6">
 
         {/* Total Card */}
         <div className="bg-white dark:bg-[#1e2330] rounded-3xl p-8 flex flex-col items-center justify-center border border-gray-200 dark:border-gray-800 shadow-xl dark:shadow-2xl relative overflow-hidden mt-2 transition-colors duration-200">
@@ -179,7 +179,7 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
       </main>
 
       {/* Footer */}
-      <footer className="fixed bottom-20 left-0 right-0 p-6 bg-gray-50 dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 z-20 transition-colors duration-200">
+      <footer className="fixed bottom-nav-offset left-0 right-0 p-6 bg-gray-50 dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 z-20 transition-colors duration-200">
         <div className="flex justify-between items-center">
           <span className="text-gray-500 text-sm font-medium">Huidige Periode</span>
           <div className="flex items-center gap-2">

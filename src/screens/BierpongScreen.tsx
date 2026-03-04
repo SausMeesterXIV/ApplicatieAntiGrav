@@ -24,46 +24,10 @@ export const BierpongScreen: React.FC = () => {
   const [sortBy, setSortBy] = useState<'gamesPlayed' | 'winRatio' | 'score'>('gamesPlayed');
   const leaderboardRef = useRef<HTMLElement>(null);
 
-  const [demoMode, setDemoMode] = useState(false);
-
-  const activeUsers = useMemo(() => {
-    if (!demoMode) return users;
-    const fakes = Array.from({ length: 20 }).map((_, i) => ({
-      id: `demo-user-${i}`,
-      name: `Demo Speler ${i + 1}`,
-      naam: `Demo Speler ${i + 1}`,
-      rol: 'standaard',
-      actief: true,
-      avatar: `https://i.pravatar.cc/150?u=demo-user-${i}`,
-      email: `speler${i}@ksa.be`,
-      roles: []
-    } as any));
-    return [...users, ...fakes];
-  }, [users, demoMode]);
-
-  const activeGames = useMemo(() => {
-    if (!demoMode) return bierpongGames;
-    const fakes: any[] = [];
-    for (let i = 0; i < 150; i++) {
-      const u1 = `demo-user-${Math.floor(Math.random() * 20)}`;
-      let u2 = `demo-user-${Math.floor(Math.random() * 20)}`;
-      while (u2 === u1) u2 = `demo-user-${Math.floor(Math.random() * 20)}`;
-      const winner = Math.random() > 0.5 ? u1 : u2;
-      fakes.push({
-        id: `demo-game-${i}`,
-        timestamp: new Date(Date.now() - Math.random() * 10000000000).toISOString(),
-        playerIds: [u1, u2],
-        winnerId: winner,
-        gameMode: '1v1'
-      });
-    }
-    return [...bierpongGames, ...fakes];
-  }, [bierpongGames, demoMode]);
-
   // Score modal state
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
-  const [selectedWinner, setSelectedWinner] = useState<string | null>(null);
+  const [selectedWinnerIds, setSelectedWinnerIds] = useState<string[]>([]);
   const [playerSearch, setPlayerSearch] = useState('');
   const [scoreSaved, setScoreSaved] = useState(false);
   const [gameMode, setGameMode] = useState<'1v1' | '2v2'>('1v1');
@@ -89,7 +53,7 @@ export const BierpongScreen: React.FC = () => {
     };
 
     // 2. Sort games chronologically (oldest first)
-    const sortedGames = [...activeGames].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    const sortedGames = [...bierpongGames].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     // 3. Calculate stats
     sortedGames.forEach(game => {
@@ -105,15 +69,19 @@ export const BierpongScreen: React.FC = () => {
         p1Stats.gamesPlayed++;
         p2Stats.gamesPlayed++;
 
-        const p1Won = game.winnerId === p1Id;
-        const p2Won = game.winnerId === p2Id;
+        const p1Won = game.winnerIds.includes(p1Id);
+        const p2Won = game.winnerIds.includes(p2Id);
 
         if (p1Won) p1Stats.wins++;
         if (p2Won) p2Stats.wins++;
       } else if (is2v2) {
-        game.playerIds.forEach((id: string) => getStats(id).gamesPlayed++);
-        // Find winners
-        const winners = [game.winnerId];
+        game.playerIds.forEach((id: string) => {
+          const stats = getStats(id);
+          stats.gamesPlayed++;
+          if (game.winnerIds.includes(id)) {
+            stats.wins++;
+          }
+        });
       }
     });
 
@@ -131,7 +99,7 @@ export const BierpongScreen: React.FC = () => {
     const remainingLeaders = calculatedLeaderboard.slice(10).sort((a, b) => b.gamesPlayed - a.gamesPlayed);
 
     return [...top10ByGamesPlayed, ...remainingLeaders];
-  }, [activeGames]);
+  }, [bierpongGames]);
 
   // The original ranking order — used for medals/emojis/gold styling
   const originalRankMap = useMemo(() => {
@@ -156,7 +124,7 @@ export const BierpongScreen: React.FC = () => {
     });
   }, [leaderboard, showAllLeaders, sortBy]);
 
-  const getUser = (userId: string) => activeUsers.find((u: any) => u.id === userId);
+  const getUser = (userId: string) => users.find((u: any) => u.id === userId);
   const getUserName = (userId: string) => {
     const u = getUser(userId);
     return u?.nickname || u?.name || u?.naam || 'Onbekend';
@@ -182,14 +150,7 @@ export const BierpongScreen: React.FC = () => {
           <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Leaderboard & Kampioenen</p>
         </div>
         <button
-          onClick={() => setDemoMode(!demoMode)}
-          className={`flex items-center justify-center w-10 h-10 rounded-xl transition-colors ${demoMode ? 'bg-indigo-600 text-white shadow-sm hover:bg-indigo-700' : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'}`}
-          title="Toggle Demo Data 🧪"
-        >
-          <span className="material-icons-round text-lg">science</span>
-        </button>
-        <button
-          onClick={() => { setShowScoreModal(true); setSelectedPlayers([currentUser.id]); setSelectedWinner(null); setPlayerSearch(''); setScoreSaved(false); setGameMode('1v1'); }}
+          onClick={() => { setShowScoreModal(true); setSelectedPlayers([currentUser.id]); setSelectedWinnerIds([]); setPlayerSearch(''); setScoreSaved(false); setGameMode('1v1'); }}
           className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl flex items-center gap-2 text-sm shadow-sm transition-colors"
         >
           <span className="material-icons-round text-lg">add</span>
@@ -197,7 +158,7 @@ export const BierpongScreen: React.FC = () => {
         </button>
       </header>
 
-      <main className="flex-1 px-4 pb-24 overflow-y-auto space-y-6 pt-2">
+      <main className="flex-1 px-4 pb-nav-safe overflow-y-auto space-y-6 pt-2">
 
         {/* ===== TOP 3 PODIUM ===== */}
         {leaderboard.length >= 3 && (
@@ -451,7 +412,7 @@ export const BierpongScreen: React.FC = () => {
                   if (!is1v1) return null; // Simplified history view for 1v1 for now
                   const p1 = game.playerIds[0];
                   const p2 = game.playerIds[1];
-                  const winner = game.winnerId;
+                  const winner = game.winnerIds[0];
                   const loser = p1 === winner ? p2 : p1;
 
                   const winnerUser = getUser(winner);
@@ -493,7 +454,7 @@ export const BierpongScreen: React.FC = () => {
       {/* ===== SCORE INVULLEN MODAL ===== */}
       {showScoreModal && (() => {
         const allSelected = gameMode === '1v1' ? selectedPlayers.length === 2 : (team1.length === 2 && team2.length === 2);
-        const hasWinner = gameMode === '1v1' ? !!selectedWinner : !!winningTeam;
+        const hasWinner = gameMode === '1v1' ? selectedWinnerIds.length > 0 : !!winningTeam;
         const needsMorePlayers = gameMode === '1v1'
           ? 2 - selectedPlayers.length
           : (team1.length < 2 ? 2 - team1.length : 2 - team2.length);
@@ -557,13 +518,13 @@ export const BierpongScreen: React.FC = () => {
                 {!scoreSaved && (
                   <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
                     <button
-                      onClick={() => { setGameMode('1v1'); setSelectedPlayers([currentUser.id]); setSelectedWinner(null); setTeam1([]); setTeam2([]); setWinningTeam(null); }}
+                      onClick={() => { setGameMode('1v1'); setSelectedPlayers([currentUser.id]); setSelectedWinnerIds([]); setTeam1([]); setTeam2([]); setWinningTeam(null); }}
                       className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${gameMode === '1v1' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}
                     >
                       1 vs 1
                     </button>
                     <button
-                      onClick={() => { setGameMode('2v2'); setSelectedPlayers([]); setSelectedWinner(null); setTeam1([currentUser.id]); setTeam2([]); setWinningTeam(null); }}
+                      onClick={() => { setGameMode('2v2'); setSelectedPlayers([]); setSelectedWinnerIds([]); setTeam1([currentUser.id]); setTeam2([]); setWinningTeam(null); }}
                       className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${gameMode === '2v2' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}
                     >
                       2 vs 2
@@ -578,17 +539,17 @@ export const BierpongScreen: React.FC = () => {
                     {selectedPlayers.length > 0 && (
                       <div>
                         <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                          {selectedWinner ? '🏆 Tik om winnaar te wijzigen' : '👆 Tik op de winnaar'}
+                          {selectedWinnerIds.length > 0 ? '🏆 Tik om winnaar te wijzigen' : '👆 Tik op de winnaar'}
                         </p>
                         <div className="flex flex-wrap gap-2 justify-center">
                           {selectedPlayers.map(pid => {
                             const u = getUser(pid);
                             const isMe = pid === currentUser.id;
-                            const isWinner = selectedWinner === pid;
+                            const isWinner = selectedWinnerIds.includes(pid);
                             return (
                               <div
                                 key={pid}
-                                onClick={() => setSelectedWinner(pid)}
+                                onClick={() => setSelectedWinnerIds([pid])}
                                 className={`flex items-center gap-2.5 py-2 px-3 rounded-xl cursor-pointer transition-all ${isWinner ? 'bg-green-50 dark:bg-green-900/20 ring-2 ring-green-500' : 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                               >
                                 <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-600 shrink-0">
@@ -608,7 +569,7 @@ export const BierpongScreen: React.FC = () => {
                                 </div>
                                 {!isMe && (
                                   <button
-                                    onClick={e => { e.stopPropagation(); setSelectedPlayers(prev => prev.filter(p => p !== pid)); if (selectedWinner === pid) setSelectedWinner(null); }}
+                                    onClick={e => { e.stopPropagation(); setSelectedPlayers(prev => prev.filter(p => p !== pid)); if (selectedWinnerIds.includes(pid)) setSelectedWinnerIds([]); }}
                                     className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center shrink-0 hover:bg-red-100 transition-colors"
                                   >
                                     <span className="material-icons-round text-gray-400 hover:text-red-500 text-sm">close</span>
@@ -765,13 +726,12 @@ export const BierpongScreen: React.FC = () => {
                   <button
                     onClick={() => {
                       if (gameMode === '1v1') {
-                        handleAddBierpongGame(selectedPlayers, selectedWinner!);
+                        handleAddBierpongGame(selectedPlayers, selectedWinnerIds);
                       } else {
-                        // 2v2: save as 2 paired games so both winning team members get credit
+                        // 2v2: save as 1 match with both winners
                         const winners = winningTeam === 'team1' ? team1 : team2;
-                        const losers = winningTeam === 'team1' ? team2 : team1;
-                        handleAddBierpongGame([winners[0], losers[0]], winners[0]);
-                        handleAddBierpongGame([winners[1], losers[1]], winners[1]);
+                        const allPlayersDuo = [...team1, ...team2];
+                        handleAddBierpongGame(allPlayersDuo, winners);
                       }
                       setScoreSaved(true);
                       setTimeout(() => setShowScoreModal(false), 1200);

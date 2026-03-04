@@ -48,7 +48,7 @@ export const BierpongManageScreen: React.FC = () => {
                 </div>
             </header>
 
-            <main className="flex-1 px-4 pb-24 overflow-y-auto space-y-4 pt-4">
+            <main className="flex-1 px-4 pb-nav-safe overflow-y-auto space-y-4 pt-4">
 
                 {/* Selected winners preview */}
                 <div className="bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 rounded-2xl p-4 shadow-lg shadow-purple-500/20">
@@ -147,7 +147,7 @@ export const BierpongManageScreen: React.FC = () => {
             </main>
 
             {/* Sticky save button */}
-            <div className="fixed bottom-20 left-0 right-0 px-4 pb-4 bg-gradient-to-t from-gray-50 dark:from-[#0f172a] pt-6">
+            <div className="fixed bottom-nav-offset left-0 right-0 px-4 pb-4 bg-gradient-to-t from-gray-50 dark:from-[#0f172a] pt-6">
                 <button
                     onClick={saveWinners}
                     disabled={selectedWinners.length !== 2}
