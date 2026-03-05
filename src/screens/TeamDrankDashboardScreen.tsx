@@ -4,7 +4,7 @@ import { ChevronBack } from '../components/ChevronBack';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Drink } from '../types';
 import { AppContextType } from '../App';
-import { fetchAppSetting, saveAppSetting } from '../lib/supabaseService';
+import { fetchAppSetting, saveAppSetting, updateBillingPeriod, updateGeschatteKost, archiveConsumptiesPeriod, fetchBillingPeriods, fetchOpenBillingPeriod } from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
 import { supabase } from '../lib/supabase';
 
@@ -13,7 +13,12 @@ export const TeamDrankDashboardScreen: React.FC = () => {
   const {
     stockItems,
     drinks,
-    setDrinks: onUpdateDrinks
+    setDrinks: onUpdateDrinks,
+    activePeriod,
+    setActivePeriod,
+    billingPeriods,
+    setBillingPeriods,
+    streaks
   } = useOutletContext<AppContextType>();
   const [excelLink, setExcelLink] = useState('');
   const [billingExcelLink, setBillingExcelLink] = useState('');
@@ -274,62 +279,124 @@ export const TeamDrankDashboardScreen: React.FC = () => {
                 </div>
               </div>
 
-              {/* Reset & Archive Section */}
+              {/* Period Management Section */}
               <div className="mb-6">
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-3">Reset & Archief</label>
-                <div className="space-y-4">
-                  <div>
-                    <button
-                      onClick={async () => {
-                        if (window.confirm('Weet je zeker dat je deze periode wilt archiveren? Alle streepjes worden gefactureerd.')) {
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-3">Huidige Periode Beheer</label>
+                {activePeriod ? (
+                  <div className="space-y-4">
+                    {/* Period Name */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Naam huidige periode</label>
+                      <input
+                        type="text"
+                        value={activePeriod.naam}
+                        onChange={(e) => setActivePeriod({ ...activePeriod, naam: e.target.value })}
+                        onBlur={async () => {
                           try {
-                            const { error } = await supabase.rpc('archive_consumpties_period');
-                            if (error) throw error;
-                            showToast('Periode succesvol gearchiveerd!', 'success');
-                          } catch (err: any) {
-                            showToast('Fout bij archiveren: ' + err.message, 'error');
-                          }
-                        }
-                      }}
-                      className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="material-icons-round text-gray-400 group-hover:text-blue-500">inventory_2</span>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Periode Archiveren</span>
-                      </div>
-                      <span className="material-icons-round text-gray-400 text-sm">chevron_right</span>
-                    </button>
-                    <p className="text-[10px] text-gray-400 mt-1.5 px-1 leading-relaxed">
-                      Slaat de huidige tellingen en verbruik op in de historiek en zet de tellers op nul voor de nieuwe periode.
-                    </p>
-                  </div>
+                            await updateBillingPeriod(activePeriod.id, { naam: activePeriod.naam });
+                          } catch (err) { console.error(err); }
+                        }}
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
 
-                  <div>
+                    {/* Geschatte Kost */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Factuurkosten Brouwer (€)</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-3 text-gray-500 text-sm">€</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={activePeriod.geschatte_kost || ''}
+                          onChange={(e) => setActivePeriod({ ...activePeriod, geschatte_kost: parseFloat(e.target.value) || 0 })}
+                          onBlur={async () => {
+                            try {
+                              await updateGeschatteKost(activePeriod.id, activePeriod.geschatte_kost);
+                              showToast('Factuurkosten opgeslagen', 'success');
+                            } catch (err) { showToast('Fout bij opslaan', 'error'); }
+                          }}
+                          placeholder="0.00"
+                          className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-7 pr-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Realtime Calculation */}
+                    {(() => {
+                      const periodStreaks = streaks.filter(s => s.period_id === activePeriod.id);
+                      const totalStrepen = periodStreaks.reduce((sum, s) => sum + s.amount, 0);
+                      const prijsPerStreep = totalStrepen > 0 ? activePeriod.geschatte_kost / totalStrepen : 0;
+                      return (
+                        <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-500 dark:text-gray-400">Totaal strepen deze periode</span>
+                            <span className="font-bold text-gray-900 dark:text-white">{totalStrepen}</span>
+                          </div>
+                          <div className="flex justify-between text-xs mt-1">
+                            <span className="text-gray-500 dark:text-gray-400">Berekende prijs per streep</span>
+                            <span className="font-bold text-blue-600 dark:text-blue-400">
+                              {totalStrepen > 0 ? `€ ${prijsPerStreep.toFixed(2).replace('.', ',')}` : 'N.v.t. (0 strepen)'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Close Period Button */}
                     <button
                       onClick={async () => {
-                        if (window.confirm('Weet je ZEKER dat je alle stock wilt resetten naar 0? Dit kan niet ongedaan worden gemaakt.')) {
-                          try {
-                            const { error } = await supabase.from('stock_items').update({ count: 0 }).neq('id', 0);
-                            if (error) throw error;
-                            showToast('Stock succesvol gereset!', 'success');
-                          } catch (err: any) {
-                            showToast('Fout bij resetten stock: ' + err.message, 'error');
-                          }
+                        if (!window.confirm(`Weet je zeker dat je "${activePeriod.naam}" wilt afsluiten? Dit maakt een nieuwe periode aan.`)) return;
+                        try {
+                          const result = await archiveConsumptiesPeriod();
+                          showToast(`"${activePeriod.naam}" afgesloten! Nieuwe periode aangemaakt.`, 'success');
+                          // Refresh periods
+                          const [newOpen, allPeriods] = await Promise.all([
+                            fetchOpenBillingPeriod(),
+                            fetchBillingPeriods()
+                          ]);
+                          setActivePeriod(newOpen);
+                          setBillingPeriods(allPeriods);
+                        } catch (err: any) {
+                          showToast('Fout bij afsluiten: ' + err.message, 'error');
                         }
                       }}
                       className="w-full flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-left group"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="material-icons-round text-red-400 group-hover:text-red-600">restart_alt</span>
-                        <span className="text-sm font-medium text-red-700 dark:text-red-400">Stock Resetten</span>
+                        <span className="material-icons-round text-red-400 group-hover:text-red-600">lock</span>
+                        <span className="text-sm font-medium text-red-700 dark:text-red-400">Periode Afsluiten</span>
                       </div>
-                      <span className="material-icons-round text-red-300 text-sm">warning</span>
+                      <span className="material-icons-round text-red-300 text-sm">chevron_right</span>
                     </button>
-                    <p className="text-[10px] text-gray-400 mt-1.5 px-1 leading-relaxed">
-                      Zet alle voorraadaantallen volledig op nul. Gebruik dit enkel na een grote fout of bij een volledige herstart.
+                    <p className="text-[10px] text-gray-400 px-1 leading-relaxed">
+                      Sluit de huidige periode af, koppelt alle losse strepen, en maakt automatisch een nieuwe periode aan.
                     </p>
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center py-4 text-gray-400 text-sm">
+                    <p>Geen open periode gevonden.</p>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const result = await archiveConsumptiesPeriod();
+                          const [newOpen, allPeriods] = await Promise.all([
+                            fetchOpenBillingPeriod(),
+                            fetchBillingPeriods()
+                          ]);
+                          setActivePeriod(newOpen);
+                          setBillingPeriods(allPeriods);
+                          showToast('Nieuwe periode aangemaakt!', 'success');
+                        } catch (err: any) {
+                          showToast('Fout: ' + err.message, 'error');
+                        }
+                      }}
+                      className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold"
+                    >
+                      Nieuwe Periode Starten
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 

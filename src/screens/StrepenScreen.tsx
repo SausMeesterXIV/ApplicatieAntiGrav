@@ -15,7 +15,8 @@ export const StrepenScreen: React.FC = () => {
     setCurrentUser: onUpdateUser,
     drinks,
     setDrinks: onUpdateDrinks,
-    users
+    users,
+    activePeriod
   } = useOutletContext<AppContextType>();
   // State to store count PER drink ID. Key = drinkId (string), Value = count (number)
   // Value 0 represents an empty input (user cleared it)
@@ -228,7 +229,9 @@ export const StrepenScreen: React.FC = () => {
           className="bg-blue-600 dark:bg-blue-600 text-white p-4 rounded-xl flex items-center justify-between shadow-lg shadow-blue-600/20 cursor-pointer active:scale-[0.98] transition-transform group"
         >
           <div>
-            <p className="text-xs font-medium text-blue-100 uppercase tracking-wider">Voorlopige Drankrekening</p>
+            <p className="text-xs font-medium text-blue-100 uppercase tracking-wider">
+              {activePeriod ? `Voorlopige Rekening (${activePeriod.naam})` : 'Voorlopige Rekening'}
+            </p>
             <p className="text-2xl font-bold">€ {currentBalance.toFixed(2).replace('.', ',')}</p>
           </div>
           <span className="material-icons-round text-white/70">chevron_right</span>

@@ -190,7 +190,7 @@ export const CredentialsScreen: React.FC = () => {
             >
               Bekijk Credits
             </button>
-            <p className="text-[10px] text-gray-300 dark:text-gray-600">Versie 1.0.0 (Build 2024.10)</p>
+            <p className="text-[10px] text-gray-300 dark:text-gray-600">Versie 1.0.0 (Build 2026.03)</p>
           </div>
         </div>
       </main>

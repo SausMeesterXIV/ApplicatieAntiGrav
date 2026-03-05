@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { User, Drink, Streak, StockItem, Order, QuoteItem, Notification, Event, BierpongGame, CountdownItem } from '../types';
+import { User, Drink, Streak, StockItem, Order, QuoteItem, Notification, Event, BierpongGame, CountdownItem, BillingPeriod, BillingCorrection } from '../types';
 
 // ==================== PROFILES ====================
 
@@ -129,17 +129,18 @@ export async function fetchConsumpties(userId?: string): Promise<Streak[]> {
     id: c.id,
     userId: c.user_id,
     drinkId: c.drank_id,
-    drinkName: c.dranken?.naam || 'Onbekend',
-    price: Number(c.dranken?.prijs || 0) * c.aantal,
+    drinkName: (c as any).dranken?.naam || 'Onbekend',
+    price: Number((c as any).dranken?.prijs || 0) * c.aantal,
     amount: c.aantal,
     timestamp: new Date(c.datum),
+    period_id: c.period_id || undefined,
   }));
 }
 
-export async function addConsumptie(userId: string, drankId: string, aantal: number = 1): Promise<string> {
+export async function addConsumptie(userId: string, drankId: string, aantal: number = 1, periodId?: string): Promise<string> {
   const { data, error } = await supabase
     .from('consumpties')
-    .insert([{ user_id: userId, drank_id: drankId, aantal }])
+    .insert([{ user_id: userId, drank_id: drankId, aantal, period_id: periodId }])
     .select('id')
     .single();
   if (error) throw error;
@@ -479,7 +480,8 @@ export async function addFrituurBestelling(
   userName: string,
   sessieId: string | null,
   items: any[],
-  totaalPrijs: number
+  totaalPrijs: number,
+  periodId?: string
 ): Promise<string> {
   const { data, error } = await supabase
     .from('frituur_bestellingen')
@@ -491,6 +493,7 @@ export async function addFrituurBestelling(
       items: items,
       totaal_prijs: totaalPrijs,
       status: 'open',
+      period_id: periodId,
     }])
     .select('id')
     .single();
@@ -736,3 +739,141 @@ export async function saveAppSetting(key: string, value: string): Promise<void> 
 
   if (error) throw error;
 }
+
+// ==================== BILLING PERIODS ====================
+
+export async function fetchBillingPeriods(): Promise<BillingPeriod[]> {
+  const { data, error } = await supabase
+    .from('billing_periods')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data || []).map(mapBillingPeriod);
+}
+
+export async function fetchOpenBillingPeriod(): Promise<BillingPeriod | null> {
+  const { data, error } = await supabase
+    .from('billing_periods')
+    .select('*')
+    .eq('is_closed', false)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (error) throw error;
+  if (!data || data.length === 0) return null;
+  return mapBillingPeriod(data[0]);
+}
+
+export async function createBillingPeriod(payload: {
+  naam: string;
+  start_datum?: string;
+  geschatte_kost?: number;
+}): Promise<BillingPeriod> {
+  const { data, error } = await supabase
+    .from('billing_periods')
+    .insert([{
+      naam: payload.naam,
+      start_datum: payload.start_datum || new Date().toISOString(),
+      is_closed: false,
+      geschatte_kost: payload.geschatte_kost || 0,
+    }])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapBillingPeriod(data);
+}
+
+export async function updateBillingPeriod(id: string, updates: Partial<{
+  naam: string;
+  start_datum: string;
+  eind_datum: string | null;
+  is_closed: boolean;
+  geschatte_kost: number;
+}>): Promise<void> {
+  const { error } = await supabase
+    .from('billing_periods')
+    .update(updates)
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function updateGeschatteKost(periodId: string, bedrag: number): Promise<void> {
+  const { error } = await supabase
+    .from('billing_periods')
+    .update({ geschatte_kost: bedrag })
+    .eq('id', periodId);
+
+  if (error) throw error;
+}
+
+export async function archiveConsumptiesPeriod(): Promise<{ closed_period_id: string | null; new_period_id: string }> {
+  const { data, error } = await supabase.rpc('archive_consumpties_period');
+  if (error) throw error;
+  return data;
+}
+
+function mapBillingPeriod(p: any): BillingPeriod {
+  return {
+    id: p.id,
+    naam: p.naam || p.name || '',
+    start_datum: p.start_datum || p.start_date || '',
+    eind_datum: p.eind_datum || p.end_date || null,
+    is_closed: p.is_closed || false,
+    geschatte_kost: Number(p.geschatte_kost || 0),
+    created_at: p.created_at,
+  };
+}
+
+// ==================== BILLING CORRECTIONS ====================
+
+export async function fetchBillingCorrections(periodId: string): Promise<BillingCorrection[]> {
+  const { data, error } = await supabase
+    .from('billing_corrections')
+    .select('*')
+    .eq('period_id', periodId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data || []).map((c: any) => ({
+    id: c.id,
+    user_id: c.user_id,
+    period_id: c.period_id,
+    correctie_bedrag: Number(c.correctie_bedrag || 0),
+    notitie: c.notitie || undefined,
+    created_at: c.created_at,
+  }));
+}
+
+export async function addBillingCorrection(
+  userId: string,
+  periodId: string,
+  bedrag: number,
+  notitie?: string
+): Promise<BillingCorrection> {
+  const { data, error } = await supabase
+    .from('billing_corrections')
+    .insert([{
+      user_id: userId,
+      period_id: periodId,
+      correctie_bedrag: bedrag,
+      notitie: notitie || null,
+    }])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return {
+    id: data.id,
+    user_id: data.user_id,
+    period_id: data.period_id,
+    correctie_bedrag: Number(data.correctie_bedrag),
+    notitie: data.notitie || undefined,
+    created_at: data.created_at,
+  };
+}
+
+// Keep backward compat alias
+export const fetchActiveBillingPeriod = fetchOpenBillingPeriod;

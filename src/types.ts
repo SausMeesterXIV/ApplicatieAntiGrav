@@ -14,6 +14,25 @@ export interface User {
     quickDrinkId?: string;
 }
 
+export interface BillingPeriod {
+    id: string;
+    naam: string;
+    start_datum: string;
+    eind_datum: string | null;
+    is_closed: boolean;
+    geschatte_kost: number;
+    created_at: string;
+}
+
+export interface BillingCorrection {
+    id: string;
+    user_id: string;
+    period_id: string;
+    correctie_bedrag: number;
+    notitie?: string;
+    created_at: string;
+}
+
 export interface AgendaEvent {
     id: string;
     titel: string;
@@ -29,6 +48,7 @@ export interface Consumptie {
     drank_id: string;
     aantal: number;
     datum: string; // ISO date string
+    period_id?: string;
 }
 
 export interface Drank {
@@ -54,6 +74,7 @@ export interface FrituurBestelling {
     saus: string;
     opmerking?: string;
     status: 'open' | 'besteld' | 'geleverd';
+    period_id?: string;
 }
 
 export interface Quote {
@@ -192,6 +213,7 @@ export interface Streak {
     price: number;
     amount: number;
     timestamp: Date;
+    period_id?: string;
 }
 
 export interface BierpongGame {

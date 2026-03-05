@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
-import { User, Drink, Streak, StockItem, Order, CountdownItem, BierpongGame, QuoteItem, Notification, Event } from './types';
+import { User, Drink, Streak, StockItem, Order, CountdownItem, BierpongGame, QuoteItem, Notification, Event, BillingPeriod } from './types';
 import * as db from './lib/supabaseService';
 import { showToast, ToastContainer } from './components/Toast';
 
@@ -35,6 +35,7 @@ import { QuotesScreen } from './screens/QuotesScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { RolesManageScreen } from './screens/RolesManageScreen';
 import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
+import { BillingPeriodsManageScreen } from './screens/BillingPeriodsManageScreen';
 
 // Export the context type so screens can use it
 export type AppContextType = {
@@ -42,6 +43,10 @@ export type AppContextType = {
     setCurrentUser: React.Dispatch<React.SetStateAction<User>>;
     users: User[];
     setUsers: React.Dispatch<React.SetStateAction<User[]>>;
+    activePeriod: BillingPeriod | null;
+    setActivePeriod: React.Dispatch<React.SetStateAction<BillingPeriod | null>>;
+    billingPeriods: BillingPeriod[];
+    setBillingPeriods: React.Dispatch<React.SetStateAction<BillingPeriod[]>>;
     drinks: Drink[];
     setDrinks: React.Dispatch<React.SetStateAction<Drink[]>>;
     streaks: Streak[];
@@ -117,6 +122,8 @@ function App() {
     const [quotes, setQuotes] = useState<QuoteItem[]>([]);
     const [events, setEvents] = useState<Event[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [activePeriod, setActivePeriod] = useState<BillingPeriod | null>(null);
+    const [billingPeriods, setBillingPeriods] = useState<BillingPeriod[]>([]);
 
     // ==================== AUTH & INITIAL DATA LOAD ====================
 
@@ -186,7 +193,6 @@ function App() {
 
     async function loadAllData(userId: string) {
         try {
-            // Load all data in parallel
             const [
                 profilesData,
                 drinksData,
@@ -200,6 +206,8 @@ function App() {
                 stockData,
                 frituurSessieData,
                 countdownsData,
+                activeBillingPeriod,
+                allBillingPeriods,
             ] = await Promise.all([
                 db.fetchProfiles(),
                 db.fetchDranken(),
@@ -213,9 +221,10 @@ function App() {
                 db.fetchStockItems(),
                 db.fetchActiveFrituurSessie(),
                 db.fetchCountdowns(),
+                db.fetchActiveBillingPeriod(),
+                db.fetchBillingPeriods(),
             ]);
 
-            // Set current user from profiles
             const me = profilesData.find(p => p.id === userId);
             if (me) {
                 setCurrentUser(me as User);
@@ -236,14 +245,14 @@ function App() {
             setDuoBierpongWinners(kampioenenData);
             setStockItems(stockData);
             setCountdowns(countdownsData);
+            setActivePeriod(activeBillingPeriod);
+            setBillingPeriods(allBillingPeriods);
 
-            // Load frituur session
             if (frituurSessieData) {
                 setFrituurSessieId(frituurSessieData.id);
                 setFriesSessionStatus(frituurSessieData.status as any);
                 setFriesPickupTime(frituurSessieData.pickupTime);
             }
-            // Always load ALL orders (for history + active session display)
             const allOrders = await db.fetchFrituurBestellingen();
             setFriesOrders(allOrders);
         } catch (error) {
@@ -274,7 +283,7 @@ function App() {
         setBalance(prev => prev + (amount * quantity));
 
         try {
-            const realId = await db.addConsumptie(currentUser.id, String(drink.id), quantity);
+            const realId = await db.addConsumptie(currentUser.id, String(drink.id), quantity, activePeriod?.id);
             // Replace temp ID with the real one
             setStreaks(prev => prev.map(s => s.id === tempId ? { ...s, id: realId } : s));
             showToast(`${quantity}x ${drink.name} gestreept! (+€${(amount * quantity).toFixed(2)})`, 'success');
@@ -357,7 +366,8 @@ function App() {
                 orderForUser.naam || orderForUser.name || 'Onbekend',
                 frituurSessieId,
                 items,
-                totalCost
+                totalCost,
+                activePeriod?.id
             );
             setFriesOrders(prev => prev.map(o => o.id === tempId ? { ...o, id: realId } : o));
             showToast('Bestelling geplaatst! 🍟', 'success');
@@ -569,6 +579,8 @@ function App() {
         handleDeleteQuote, handleSaveEvent, handleDeleteEvent, handleAddNotification,
         handleMarkNotificationAsRead, handleSaveCountdowns, handleAddBierpongGame,
         frituurSessieId,
+        activePeriod, setActivePeriod,
+        billingPeriods, setBillingPeriods
     };
 
     // Scroll to top on route change
@@ -626,6 +638,7 @@ function App() {
                         <Route path="strepen/facturatie" element={<TeamDrankInvoicesScreen />} />
                         <Route path="strepen/facturatie/nieuw" element={<TeamDrankBillingScreen />} />
                         <Route path="strepen/facturatie/archief" element={<TeamDrankArchiveScreen />} />
+                        <Route path="strepen/facturatie/periodes" element={<BillingPeriodsManageScreen />} />
                         <Route path="strepen/facturatie/excel" element={<TeamDrankExcelPreviewScreen />} />
                         <Route path="strepen/facturatie/billing-excel" element={<TeamDrankBillingExcelPreviewScreen />} />
                         <Route path="strepen/overzicht" element={<ConsumptionOverviewScreen users={users} drinks={drinks} streaks={streaks} />} />

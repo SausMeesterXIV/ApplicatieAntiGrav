@@ -31,9 +31,18 @@ export const TeamDrankInvoicesScreen: React.FC = () => {
             <h1 className="text-xl font-bold leading-tight">Facturen & Controle</h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">Periode: Sept - Okt</p>
           </div>
-          <button className="bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-100 dark:border-blue-600/30">
-            Periode sluiten
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/strepen/facturatie/periodes')}
+              className="p-2 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition-colors text-blue-600"
+              title="Periodebeheer"
+            >
+              <span className="material-icons-round">event_note</span>
+            </button>
+            <button className="bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-100 dark:border-blue-600/30">
+              Periode sluiten
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}

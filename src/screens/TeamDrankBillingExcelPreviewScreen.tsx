@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { AppContextType } from '../App';
+import { BillingCorrection } from '../types';
+import * as db from '../lib/supabaseService';
 
 export interface TeamDrankBillingExcelPreviewScreenProps {
    onBack?: () => void;
@@ -9,145 +11,165 @@ export interface TeamDrankBillingExcelPreviewScreenProps {
 
 export const TeamDrankBillingExcelPreviewScreen: React.FC<TeamDrankBillingExcelPreviewScreenProps> = ({ onBack }) => {
    const navigate = useNavigate();
-   const { users, drinks, streaks, balance } = useOutletContext<AppContextType>();
+   const location = useLocation();
+   const { users, drinks, streaks: allStreaks, billingPeriods, activePeriod } = useOutletContext<AppContextType>();
    const [isGenerating, setIsGenerating] = useState(false);
    const [generated, setGenerated] = useState(false);
+   const [corrections, setCorrections] = useState<BillingCorrection[]>([]);
 
-   // Build billing data from real Supabase data
+   // Get periodId from URL query
+   const queryParams = new URLSearchParams(location.search);
+   const periodId = queryParams.get('periodId');
+
+   // Auto-select period
+   const selectedPeriod = useMemo(() => {
+      if (periodId) return billingPeriods.find(p => p.id === periodId) || null;
+      return activePeriod;
+   }, [periodId, billingPeriods, activePeriod]);
+
+   // Load corrections for the selected period
+   useEffect(() => {
+      if (!selectedPeriod) return;
+      db.fetchBillingCorrections(selectedPeriod.id)
+         .then(setCorrections)
+         .catch(err => console.error(err));
+   }, [selectedPeriod]);
+
+   // Filter streaks for period
+   const filteredStreaks = useMemo(() => {
+      if (!selectedPeriod) return allStreaks;
+      return allStreaks.filter(s => s.period_id === selectedPeriod.id);
+   }, [allStreaks, selectedPeriod]);
+
+   // Dynamic pricing
+   const totalStrepen = useMemo(() => filteredStreaks.reduce((sum, s) => sum + s.amount, 0), [filteredStreaks]);
+   const geschatteKost = selectedPeriod?.geschatte_kost || 0;
+   const prijsPerStreep = totalStrepen > 0 ? geschatteKost / totalStrepen : 0;
+
+   // Build billing data with dynamic pricing
    const billingData = useMemo(() => {
-      // Group consumptions by user
-      const userConsumptions: Record<string, { drinkName: string; count: number; unitPrice: number }[]> = {};
-
-      streaks.forEach(streak => {
-         if (!userConsumptions[streak.userId]) {
-            userConsumptions[streak.userId] = [];
-         }
-         const existing = userConsumptions[streak.userId].find(c => c.drinkName === streak.drinkName);
-         if (existing) {
-            existing.count += 1;
-         } else {
-            const drink = drinks.find(d => d.name === streak.drinkName);
-            userConsumptions[streak.userId].push({
-               drinkName: streak.drinkName,
-               count: 1,
-               unitPrice: drink?.price || streak.price,
-            });
-         }
-      });
-
-      // Build rows per user
       return users.map(user => {
-         const consumptions = userConsumptions[user.id] || [];
-         const totalAmount = consumptions.reduce((sum, c) => sum + (c.count * c.unitPrice), 0);
+         const userStreaks = filteredStreaks.filter(s => s.userId === user.id);
+         const userStrepen = userStreaks.reduce((sum, s) => sum + s.amount, 0);
+         const berekendBedrag = Number((userStrepen * prijsPerStreep).toFixed(2));
+
+         const userCorrections = corrections.filter(c => c.user_id === user.id);
+         const totalCorrection = userCorrections.reduce((sum, c) => sum + c.correctie_bedrag, 0);
+
+         const totaalSchuld = Number((berekendBedrag + totalCorrection).toFixed(2));
+
+         // Detailed drink breakdown
+         const drinkBreakdown: Record<string, number> = {};
+         userStreaks.forEach(s => {
+            drinkBreakdown[s.drinkName] = (drinkBreakdown[s.drinkName] || 0) + s.amount;
+         });
+
          return {
             name: user.naam || user.name || 'Onbekend',
-            consumptions,
-            totalAmount,
+            userStrepen,
+            berekendBedrag,
+            totalCorrection,
+            totaalSchuld,
+            drinkBreakdown,
          };
-      }).filter(u => u.totalAmount > 0) // Only users with consumptions
-         .sort((a, b) => b.totalAmount - a.totalAmount); // Highest debt first
-   }, [users, drinks, streaks]);
+      }).filter(u => u.userStrepen > 0 || u.totalCorrection !== 0)
+         .sort((a, b) => b.totaalSchuld - a.totaalSchuld);
+   }, [users, filteredStreaks, corrections, prijsPerStreep]);
 
-   const totalOutstanding = billingData.reduce((sum, u) => sum + u.totalAmount, 0);
+   const totalOutstanding = billingData.reduce((sum, u) => sum + u.totaalSchuld, 0);
 
    const handleGenerateExcel = () => {
       setIsGenerating(true);
 
       setTimeout(() => {
          try {
-            // Create workbook
             const wb = XLSX.utils.book_new();
+            const periodName = selectedPeriod?.naam || 'Alle';
 
-            // === Sheet 1: Overview ===
-            const headerRow = [{ v: 'KSA Drankrekeningen', t: 's' }, '', '', ''];
-            const dateRow = [{ v: 'Gegenereerd op:', t: 's' }, { v: new Date().toLocaleDateString('nl-BE'), t: 's' }, '', ''];
-            const spacerRow = ['', '', '', ''];
+            // === Sheet 1: Overview with dynamic pricing ===
+            const headerRow = [{ v: `KSA Drankrekeningen — ${periodName}`, t: 's' }, '', '', '', '', ''];
+            const dateRow = [{ v: 'Gegenereerd op:', t: 's' }, { v: new Date().toLocaleDateString('nl-BE'), t: 's' }, '', '', '', ''];
+            const kostRow = [
+               { v: 'Factuurkosten:', t: 's' },
+               { v: `€ ${geschatteKost.toFixed(2)}`, t: 's' },
+               { v: 'Prijs/streep:', t: 's' },
+               { v: prijsPerStreep > 0 ? `€ ${prijsPerStreep.toFixed(2)}` : 'N.v.t.', t: 's' },
+               '', ''
+            ];
+            const spacerRow = ['', '', '', '', '', ''];
             const labelsRow = [
                { v: 'Naam', t: 's' },
-               { v: 'Totaal Strepen', t: 's' },
-               { v: 'Totaal Bedrag (€)', t: 's' },
-               { v: 'Status', t: 's' }
+               { v: 'Strepen', t: 's' },
+               { v: 'Berekend (€)', t: 's' },
+               { v: 'Correctie (€)', t: 's' },
+               { v: 'Totaal (€)', t: 's' },
+               { v: 'Status', t: 's' },
             ];
 
             const userRows = billingData.map(u => [
                { v: u.name, t: 's' },
-               { v: u.consumptions.reduce((s, c) => s + c.count, 0), t: 'n' },
-               { v: u.totalAmount, t: 'n', z: '#,##0.00" €"' },
+               { v: u.userStrepen, t: 'n' },
+               { v: u.berekendBedrag, t: 'n', z: '#,##0.00' },
+               { v: u.totalCorrection, t: 'n', z: '#,##0.00' },
+               { v: u.totaalSchuld, t: 'n', z: '#,##0.00' },
                { v: 'Onbetaald', t: 's' },
             ]);
-
-            const totalStrepen = billingData.reduce((s, u) => s + u.consumptions.reduce((ss, c) => ss + c.count, 0), 0);
 
             const footerRow = [
                { v: 'TOTAAL', t: 's' },
                { v: totalStrepen, t: 'n' },
-               { v: totalOutstanding, t: 'n', z: '#,##0.00" €"' },
-               ''
+               { v: billingData.reduce((s, u) => s + u.berekendBedrag, 0), t: 'n', z: '#,##0.00' },
+               { v: billingData.reduce((s, u) => s + u.totalCorrection, 0), t: 'n', z: '#,##0.00' },
+               { v: totalOutstanding, t: 'n', z: '#,##0.00' },
+               '',
             ];
 
-            const ws1Data = [
-               headerRow,
-               dateRow,
-               spacerRow,
-               labelsRow,
-               ...userRows,
-               ['', '', '', ''],
-               footerRow
-            ];
-
+            const ws1Data = [headerRow, dateRow, kostRow, spacerRow, labelsRow, ...userRows, ['', '', '', '', '', ''], footerRow];
             const ws1 = XLSX.utils.aoa_to_sheet(ws1Data);
-            // Set column widths
-            ws1['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 18 }, { wch: 12 }];
-            // Freeze top rows
-            ws1['!freeze'] = { xSplit: 0, ySplit: 4 };
+            ws1['!cols'] = [{ wch: 25 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 12 }];
             XLSX.utils.book_append_sheet(wb, ws1, 'Overzicht');
 
             // === Sheet 2: Detail per drank ===
-            const drinkColumns = [...new Set(streaks.map(s => s.drinkName))].sort();
+            const drinkColumns = [...new Set(filteredStreaks.map(s => s.drinkName))].sort();
             const detailHeader = [
                { v: 'Naam', t: 's' },
                ...drinkColumns.map(d => ({ v: d, t: 's' })),
-               { v: 'TOTAAL (€)', t: 's' }
+               { v: 'Correctie (€)', t: 's' },
+               { v: 'TOTAAL (€)', t: 's' },
             ];
 
             const detailRows = billingData.map(u => {
-               const drinkCounts = drinkColumns.map(dName => {
-                  const c = u.consumptions.find(cc => cc.drinkName === dName);
-                  return { v: c ? c.count : 0, t: 'n' };
-               });
+               const drinkCounts = drinkColumns.map(dName => ({
+                  v: u.drinkBreakdown[dName] || 0, t: 'n'
+               }));
                return [
                   { v: u.name, t: 's' },
                   ...drinkCounts,
-                  { v: u.totalAmount, t: 'n', z: '#,##0.00" €"' }
+                  { v: u.totalCorrection, t: 'n', z: '#,##0.00' },
+                  { v: u.totaalSchuld, t: 'n', z: '#,##0.00' },
                ];
             });
 
-            // Totals row
-            const drinkTotals = drinkColumns.map(dName => {
-               const total = billingData.reduce((sum, u) => {
-                  const c = u.consumptions.find(cc => cc.drinkName === dName);
-                  return sum + (c ? c.count : 0);
-               }, 0);
-               return { v: total, t: 'n' };
-            });
+            const drinkTotals = drinkColumns.map(dName => ({
+               v: billingData.reduce((sum, u) => sum + (u.drinkBreakdown[dName] || 0), 0), t: 'n'
+            }));
 
             const detailFooterRow = [
                { v: 'TOTAAL', t: 's' },
                ...drinkTotals,
-               { v: totalOutstanding, t: 'n', z: '#,##0.00" €"' }
+               { v: billingData.reduce((s, u) => s + u.totalCorrection, 0), t: 'n', z: '#,##0.00' },
+               { v: totalOutstanding, t: 'n', z: '#,##0.00' },
             ];
 
             const ws2Data = [detailHeader, ...detailRows, detailFooterRow];
             const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
-
-            ws2['!cols'] = [{ wch: 25 }, ...drinkColumns.map(() => ({ wch: 12 })), { wch: 15 }];
-            // Freeze header row
-            ws2['!freeze'] = { xSplit: 0, ySplit: 1 };
-
+            ws2['!cols'] = [{ wch: 25 }, ...drinkColumns.map(() => ({ wch: 12 })), { wch: 15 }, { wch: 15 }];
             XLSX.utils.book_append_sheet(wb, ws2, 'Detail per Drank');
 
             // Download
-            XLSX.writeFile(wb, `KSA_Drankrekeningen_${new Date().toISOString().split('T')[0]}.xlsx`);
+            const safeName = (selectedPeriod?.naam || 'Alle').replace(/[^a-zA-Z0-9]/g, '_');
+            const fileName = `KSA_Rekeningen_${safeName}_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
 
             setGenerated(true);
          } catch (error) {
@@ -156,7 +178,7 @@ export const TeamDrankBillingExcelPreviewScreen: React.FC<TeamDrankBillingExcelP
          } finally {
             setIsGenerating(false);
          }
-      }, 300); // Small delay for UI feedback
+      }, 300);
    };
 
    return (
@@ -167,23 +189,38 @@ export const TeamDrankBillingExcelPreviewScreen: React.FC<TeamDrankBillingExcelP
                <button onClick={onBack || (() => navigate(-1))} className="p-1 hover:bg-white/10 rounded-full transition-colors">
                   <span className="material-icons-round text-xl">arrow_back</span>
                </button>
-               <div className="flex items-center gap-2">
+               <div className="flex items-center gap-2 flex-1">
                   <span className="material-icons-round">table_view</span>
-                  <h1 className="font-bold text-lg">Excel Drankrekeningen</h1>
+                  <div>
+                     <h1 className="font-bold text-lg leading-tight">Excel Drankrekeningen</h1>
+                     {selectedPeriod && (
+                        <p className="text-[10px] text-green-200 leading-tight">{selectedPeriod.naam}</p>
+                     )}
+                  </div>
                </div>
             </div>
          </header>
 
          <main className="flex-1 relative overflow-hidden bg-gray-100 dark:bg-[#0f172a]">
+            {/* Period Info */}
+            {selectedPeriod && (
+               <div className="bg-green-50 dark:bg-green-900/10 border-b border-green-200 dark:border-green-800 px-4 py-2 text-xs flex justify-between">
+                  <span className="text-gray-500">Factuurkosten: <strong className="text-gray-900 dark:text-white">€ {geschatteKost.toFixed(2).replace('.', ',')}</strong></span>
+                  <span className="text-gray-500">Prijs/streep: <strong className="text-green-700 dark:text-green-400">{prijsPerStreep > 0 ? `€ ${prijsPerStreep.toFixed(2).replace('.', ',')}` : 'N.v.t.'}</strong></span>
+               </div>
+            )}
+
             {/* Preview Table */}
-            <div className="absolute inset-0 overflow-auto">
+            <div className="absolute inset-0 overflow-auto" style={{ top: selectedPeriod ? '2rem' : 0 }}>
                <table className="w-full border-collapse text-xs">
                   <thead>
                      <tr>
                         <th className="w-8 bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 py-1"></th>
                         <th className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 py-1 px-2 text-left font-medium text-gray-600 dark:text-gray-400">Naam</th>
                         <th className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 py-1 px-2 text-right font-medium text-gray-600 dark:text-gray-400">Strepen</th>
-                        <th className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 py-1 px-2 text-right font-medium text-gray-600 dark:text-gray-400">Bedrag</th>
+                        <th className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 py-1 px-2 text-right font-medium text-gray-600 dark:text-gray-400">Berekend</th>
+                        <th className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 py-1 px-2 text-right font-medium text-gray-600 dark:text-gray-400">Correctie</th>
+                        <th className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 py-1 px-2 text-right font-medium text-gray-600 dark:text-gray-400">Totaal</th>
                      </tr>
                   </thead>
                   <tbody>
@@ -192,14 +229,18 @@ export const TeamDrankBillingExcelPreviewScreen: React.FC<TeamDrankBillingExcelP
                            <tr key={i}>
                               <td className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-center text-gray-500">{i + 1}</td>
                               <td className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 font-medium">{user.name}</td>
-                              <td className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 text-right">{user.consumptions.reduce((s, c) => s + c.count, 0)}</td>
-                              <td className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 text-right font-bold">€ {user.totalAmount.toFixed(2).replace('.', ',')}</td>
+                              <td className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 text-right">{user.userStrepen}</td>
+                              <td className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 text-right">€ {user.berekendBedrag.toFixed(2).replace('.', ',')}</td>
+                              <td className={`bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 text-right ${user.totalCorrection !== 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400'}`}>
+                                 {user.totalCorrection !== 0 ? `€ ${user.totalCorrection.toFixed(2).replace('.', ',')}` : '—'}
+                              </td>
+                              <td className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 text-right font-bold">€ {user.totaalSchuld.toFixed(2).replace('.', ',')}</td>
                            </tr>
                         ))
                      ) : (
                         <tr>
-                           <td colSpan={4} className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-4 py-8 text-center text-gray-400">
-                              Geen consumpties gevonden
+                           <td colSpan={6} className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-4 py-8 text-center text-gray-400">
+                              Geen consumpties gevonden voor deze periode
                            </td>
                         </tr>
                      )}
@@ -207,8 +248,12 @@ export const TeamDrankBillingExcelPreviewScreen: React.FC<TeamDrankBillingExcelP
                         <tr className="font-bold">
                            <td className="bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700"></td>
                            <td className="bg-yellow-50 dark:bg-yellow-900/20 border border-gray-300 dark:border-gray-700 px-2 py-1">TOTAAL</td>
+                           <td className="bg-yellow-50 dark:bg-yellow-900/20 border border-gray-300 dark:border-gray-700 px-2 py-1 text-right">{totalStrepen}</td>
                            <td className="bg-yellow-50 dark:bg-yellow-900/20 border border-gray-300 dark:border-gray-700 px-2 py-1 text-right">
-                              {billingData.reduce((s, u) => s + u.consumptions.reduce((ss, c) => ss + c.count, 0), 0)}
+                              € {billingData.reduce((s, u) => s + u.berekendBedrag, 0).toFixed(2).replace('.', ',')}
+                           </td>
+                           <td className="bg-yellow-50 dark:bg-yellow-900/20 border border-gray-300 dark:border-gray-700 px-2 py-1 text-right text-orange-600">
+                              € {billingData.reduce((s, u) => s + u.totalCorrection, 0).toFixed(2).replace('.', ',')}
                            </td>
                            <td className="bg-yellow-50 dark:bg-yellow-900/20 border border-gray-300 dark:border-gray-700 px-2 py-1 text-right text-green-700 dark:text-green-400">
                               € {totalOutstanding.toFixed(2).replace('.', ',')}
