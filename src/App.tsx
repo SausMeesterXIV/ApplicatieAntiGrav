@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase';
 import { User, Drink, Streak, StockItem, Order, CountdownItem, BierpongGame, QuoteItem, Notification, Event, BillingPeriod } from './types';
 import * as db from './lib/supabaseService';
 import { showToast, ToastContainer } from './components/Toast';
+import { Analytics } from '@vercel/analytics/react';
 
 import { BottomNav } from './components/BottomNav';
 import { CredentialsScreen } from './screens/CredentialsScreen';
@@ -606,6 +607,7 @@ function App() {
 
     return (
         <BrowserRouter>
+            <Analytics />
             <ToastContainer />
             <ScrollToTop />
             <Routes>
