@@ -23,30 +23,69 @@ export const TeamDrankExcelPreviewScreen: React.FC = () => {
             const wb = XLSX.utils.book_new();
 
             // === Sheet 1: Stock Overview ===
-            const overviewData = [
-               ['KSA Drankvoorraad', '', '', ''],
-               ['Gegenereerd op:', new Date().toLocaleDateString('nl-BE'), '', ''],
-               ['', '', '', ''],
-               ['Drank', 'Categorie', 'Huidige Voorraad', 'Waarde per stuk (€)', 'Totale Waarde (€)'],
-               ...stockItems.map(item => {
-                  const p = getPriceForStockItem(item.name);
-                  return [
-                     item.name,
-                     item.category || 'Algemeen',
-                     item.count,
-                     p.toFixed(2).replace('.', ','),
-                     (item.count * p).toFixed(2).replace('.', ',')
-                  ];
-               }),
-               ['', '', '', '', ''],
-               ['TOTAAL WAARDE', '', '', '',
-                  stockItems.reduce((sum, item) => sum + (item.count * getPriceForStockItem(item.name)), 0).toFixed(2).replace('.', ',')
-               ],
+            // Using Cell Objects instead of just values to allow for formatting
+            const headerRow = [
+               { v: 'KSA Drankvoorraad', t: 's' }, '', '', ''
+            ];
+            const dateRow = [
+               { v: 'Gegenereerd op:', t: 's' }, { v: new Date().toLocaleDateString('nl-BE'), t: 's' }, '', ''
+            ];
+            const spacerRow = ['', '', '', ''];
+
+            const labelsRow = [
+               { v: 'Drank', t: 's' },
+               { v: 'Categorie', t: 's' },
+               { v: 'Huidige Voorraad', t: 's' },
+               { v: 'Waarde per stuk (€)', t: 's' },
+               { v: 'Totale Waarde (€)', t: 's' }
             ];
 
-            const ws1 = XLSX.utils.aoa_to_sheet(overviewData);
+            const stockRows = stockItems.map(item => {
+               // Prefer matching by ID if available (from drinks data)
+               const drink = drinks.find(d =>
+                  String(d.id) === String(item.id) ||
+                  d.name.toLowerCase() === item.name.toLowerCase()
+               );
+               const unitPrice = drink ? drink.price : 0;
+               const totalPrice = item.count * unitPrice;
+
+               return [
+                  { v: item.name, t: 's' },
+                  { v: item.category || 'Algemeen', t: 's' },
+                  { v: item.count, t: 'n' }, // 'n' for number
+                  { v: unitPrice, t: 'n', z: '#,##0.00" €"' }, // 'z' for number format
+                  { v: totalPrice, t: 'n', z: '#,##0.00" €"' }
+               ];
+            });
+
+            const totalStockValue = stockItems.reduce((sum, item) => {
+               const drink = drinks.find(d => String(d.id) === String(item.id) || d.name.toLowerCase() === item.name.toLowerCase());
+               return sum + (item.count * (drink?.price || 0));
+            }, 0);
+
+            const footerRow = [
+               { v: 'TOTAAL WAARDE', t: 's' }, '', '', '',
+               { v: totalStockValue, t: 'n', z: '#,##0.00" €"' }
+            ];
+
+            const ws1Data = [
+               headerRow,
+               dateRow,
+               spacerRow,
+               labelsRow,
+               ...stockRows,
+               ['', '', '', '', ''],
+               footerRow
+            ];
+
+            const ws1 = XLSX.utils.aoa_to_sheet(ws1Data);
+
             // Set column widths
             ws1['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
+
+            // Freeze top rows (header up to labels)
+            ws1['!freeze'] = { xSplit: 0, ySplit: 4 };
+
             XLSX.utils.book_append_sheet(wb, ws1, 'Voorraad');
 
             // Download

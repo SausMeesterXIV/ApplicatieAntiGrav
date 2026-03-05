@@ -59,47 +59,91 @@ export const TeamDrankBillingExcelPreviewScreen: React.FC<TeamDrankBillingExcelP
             const wb = XLSX.utils.book_new();
 
             // === Sheet 1: Overview ===
-            const overviewData = [
-               ['KSA Drankrekeningen', '', '', ''],
-               ['Gegenereerd op:', new Date().toLocaleDateString('nl-BE'), '', ''],
-               ['', '', '', ''],
-               ['Naam', 'Totaal Strepen', 'Totaal Bedrag (€)', 'Status'],
-               ...billingData.map(u => [
-                  u.name,
-                  u.consumptions.reduce((s, c) => s + c.count, 0),
-                  u.totalAmount.toFixed(2).replace('.', ','),
-                  'Onbetaald',
-               ]),
-               ['', '', '', ''],
-               ['TOTAAL', billingData.reduce((s, u) => s + u.consumptions.reduce((ss, c) => ss + c.count, 0), 0), totalOutstanding.toFixed(2).replace('.', ','), ''],
+            const headerRow = [{ v: 'KSA Drankrekeningen', t: 's' }, '', '', ''];
+            const dateRow = [{ v: 'Gegenereerd op:', t: 's' }, { v: new Date().toLocaleDateString('nl-BE'), t: 's' }, '', ''];
+            const spacerRow = ['', '', '', ''];
+            const labelsRow = [
+               { v: 'Naam', t: 's' },
+               { v: 'Totaal Strepen', t: 's' },
+               { v: 'Totaal Bedrag (€)', t: 's' },
+               { v: 'Status', t: 's' }
             ];
 
-            const ws1 = XLSX.utils.aoa_to_sheet(overviewData);
+            const userRows = billingData.map(u => [
+               { v: u.name, t: 's' },
+               { v: u.consumptions.reduce((s, c) => s + c.count, 0), t: 'n' },
+               { v: u.totalAmount, t: 'n', z: '#,##0.00" €"' },
+               { v: 'Onbetaald', t: 's' },
+            ]);
+
+            const totalStrepen = billingData.reduce((s, u) => s + u.consumptions.reduce((ss, c) => ss + c.count, 0), 0);
+
+            const footerRow = [
+               { v: 'TOTAAL', t: 's' },
+               { v: totalStrepen, t: 'n' },
+               { v: totalOutstanding, t: 'n', z: '#,##0.00" €"' },
+               ''
+            ];
+
+            const ws1Data = [
+               headerRow,
+               dateRow,
+               spacerRow,
+               labelsRow,
+               ...userRows,
+               ['', '', '', ''],
+               footerRow
+            ];
+
+            const ws1 = XLSX.utils.aoa_to_sheet(ws1Data);
             // Set column widths
             ws1['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 18 }, { wch: 12 }];
+            // Freeze top rows
+            ws1['!freeze'] = { xSplit: 0, ySplit: 4 };
             XLSX.utils.book_append_sheet(wb, ws1, 'Overzicht');
 
             // === Sheet 2: Detail per drank ===
             const drinkColumns = [...new Set(streaks.map(s => s.drinkName))].sort();
-            const detailHeader = ['Naam', ...drinkColumns, 'TOTAAL (€)'];
+            const detailHeader = [
+               { v: 'Naam', t: 's' },
+               ...drinkColumns.map(d => ({ v: d, t: 's' })),
+               { v: 'TOTAAL (€)', t: 's' }
+            ];
+
             const detailRows = billingData.map(u => {
                const drinkCounts = drinkColumns.map(dName => {
                   const c = u.consumptions.find(cc => cc.drinkName === dName);
-                  return c ? c.count : 0;
+                  return { v: c ? c.count : 0, t: 'n' };
                });
-               return [u.name, ...drinkCounts, u.totalAmount.toFixed(2).replace('.', ',')];
+               return [
+                  { v: u.name, t: 's' },
+                  ...drinkCounts,
+                  { v: u.totalAmount, t: 'n', z: '#,##0.00" €"' }
+               ];
             });
+
             // Totals row
-            const drinkTotals = drinkColumns.map(dName =>
-               billingData.reduce((sum, u) => {
+            const drinkTotals = drinkColumns.map(dName => {
+               const total = billingData.reduce((sum, u) => {
                   const c = u.consumptions.find(cc => cc.drinkName === dName);
                   return sum + (c ? c.count : 0);
-               }, 0)
-            );
-            detailRows.push(['TOTAAL', ...drinkTotals, totalOutstanding.toFixed(2).replace('.', ',')]);
+               }, 0);
+               return { v: total, t: 'n' };
+            });
 
-            const ws2 = XLSX.utils.aoa_to_sheet([detailHeader, ...detailRows]);
+            const detailFooterRow = [
+               { v: 'TOTAAL', t: 's' },
+               ...drinkTotals,
+               { v: totalOutstanding, t: 'n', z: '#,##0.00" €"' }
+            ];
+
+            const ws2Data = [detailHeader, ...detailRows, detailFooterRow];
+            const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
+
             ws2['!cols'] = [{ wch: 25 }, ...drinkColumns.map(() => ({ wch: 12 })), { wch: 15 }];
+            // Freeze header row
+            ws2['!freeze'] = { xSplit: 0, ySplit: 1 };
+
             XLSX.utils.book_append_sheet(wb, ws2, 'Detail per Drank');
 
             // Download

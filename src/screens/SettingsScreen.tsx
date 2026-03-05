@@ -208,19 +208,6 @@ export const SettingsScreen: React.FC = () => {
                 <span className="material-icons-round text-gray-400">chevron_right</span>
               </button>
 
-              {/* Quotes Beheer (Admin & Sfeerbeheer) */}
-              {(currentUser?.rol === 'admin' || (currentUser?.roles || []).includes('Sfeerbeheer')) && (
-                <button
-                  onClick={() => navigate('/quotes-manage')}
-                  className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-t border-gray-100 dark:border-gray-800/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="material-icons-round text-pink-600 dark:text-pink-500">format_quote</span>
-                    <span className="font-medium text-gray-900 dark:text-white">Quotes Beheer</span>
-                  </div>
-                  <span className="material-icons-round text-gray-400">chevron_right</span>
-                </button>
-              )}
             </div>
           </div>
 

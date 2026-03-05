@@ -627,10 +627,10 @@ function App() {
                         <Route path="strepen/facturatie/nieuw" element={<TeamDrankBillingScreen />} />
                         <Route path="strepen/facturatie/archief" element={<TeamDrankArchiveScreen />} />
                         <Route path="strepen/facturatie/excel" element={<TeamDrankExcelPreviewScreen />} />
-                        <Route path="strepen/facturatie/billing-excel" element={<TeamDrankBillingExcelPreviewScreen onBack={() => { }} />} />
-                        <Route path="strepen/overzicht" element={<ConsumptionOverviewScreen onBack={() => { }} users={users} drinks={drinks} streaks={streaks} />} />
+                        <Route path="strepen/facturatie/billing-excel" element={<TeamDrankBillingExcelPreviewScreen />} />
+                        <Route path="strepen/overzicht" element={<ConsumptionOverviewScreen users={users} drinks={drinks} streaks={streaks} />} />
 
-                        <Route path="mijn-factuur" element={<MyInvoiceScreen onBack={() => { }} balance={balance} currentUser={currentUser} streaks={streaks} friesOrders={friesOrders} />} />
+                        <Route path="mijn-factuur" element={<MyInvoiceScreen balance={balance} currentUser={currentUser} streaks={streaks} friesOrders={friesOrders} />} />
                         <Route path="bierpong" element={<BierpongScreen />} />
                         <Route path="bierpong/beheer" element={<BierpongManageScreen />} />
                         <Route path="quotes" element={<QuotesScreen />} />
