@@ -121,7 +121,8 @@ export const TeamDrankBillingScreen: React.FC = () => {
         correctionModal.userId,
         selectedPeriodId,
         bedrag,
-        correctionNote || undefined
+        correctionNote || undefined,
+        correctionModal.userName
       );
       setCorrections(prev => [newCorrection, ...prev]);
       showToast(`Correctie van €${bedrag.toFixed(2)} toegevoegd`, 'success');

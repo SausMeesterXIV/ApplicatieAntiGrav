@@ -24,26 +24,9 @@ export const StrepenHistoryScreen: React.FC<Props> = ({ adminMode = false }) => 
 
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
-    // DEMO DATA - Enkel voor visualisatie als er geen echte strepen in de database zitten
-    const generateDemoStreaks = (): Streak[] => {
-        const now = new Date();
-        const yesterday = new Date(now);
-        yesterday.setDate(yesterday.getDate() - 1);
-
-        return [
-            { id: 'demo1', userId: currentUser?.id || '1', drinkId: 'd1', drinkName: 'Bier', price: 1.5, amount: 1, timestamp: now },
-            { id: 'demo2', userId: currentUser?.id || '1', drinkId: 'd2', drinkName: 'Cola', price: 1.5, amount: 1, timestamp: new Date(now.getTime() - 1000 * 60 * 30) },
-            { id: 'demo3', userId: currentUser?.id || '1', drinkId: 'd1', drinkName: 'Bier', price: 1.5, amount: 1, timestamp: new Date(now.getTime() - 1000 * 60 * 60 * 2) },
-            { id: 'demo4', userId: 'another-user', drinkId: 'd3', drinkName: 'Kriek', price: 2.0, amount: 1, timestamp: yesterday },
-            { id: 'demo5', userId: 'another-user-2', drinkId: 'd1', drinkName: 'Bier', price: 1.5, amount: 1, timestamp: yesterday },
-        ];
-    };
-
     // Filter and sort streaks
     const displayStreaks = useMemo(() => {
-        // Fallback to demo data if streaks is totally empty to "visualize" as requested
-        const actualStreaks = (streaks || []).length > 0 ? streaks : generateDemoStreaks();
-        let filtered = [...actualStreaks];
+        let filtered = [...(streaks || [])];
         if (!adminMode && currentUser) {
             filtered = filtered.filter(s => s.userId === currentUser.id);
         }

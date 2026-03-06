@@ -159,7 +159,7 @@ function App() {
                     showToast(`Netwerk hersteld. ${pendingStreaks.length} offline strepen synchroniseren...`, 'info');
                     for (const streak of pendingStreaks) {
                         try {
-                            const realId = await db.addConsumptie(streak.userId, streak.drinkId, streak.quantity);
+                            const realId = await db.addConsumptie(streak.userId, streak.drinkId, streak.quantity, undefined, streak.userName);
                             // Replace in UI state if still there (usually user refreshed though)
                             setStreaks(prev => prev.map(s => s.id === streak.tempId ? { ...s, id: realId } : s));
                         } catch (e) {
@@ -285,7 +285,7 @@ function App() {
         setBalance(prev => prev + (amount * quantity));
 
         try {
-            const realId = await db.addConsumptie(currentUser.id, String(drink.id), quantity, activePeriod?.id);
+            const realId = await db.addConsumptie(currentUser.id, String(drink.id), quantity, activePeriod?.id, currentUser.naam);
             // Replace temp ID with the real one
             setStreaks(prev => prev.map(s => s.id === tempId ? { ...s, id: realId } : s));
             showToast(`${quantity}x ${drink.name} gestreept! (+€${(amount * quantity).toFixed(2)})`, 'success');
@@ -432,7 +432,7 @@ function App() {
         }));
 
         try {
-            await db.voteQuote(id, currentUser.id, type);
+            await db.voteQuote(id, currentUser.id, type, currentUser.naam);
         } catch (error) {
             showToast('Fout bij het stemmen', 'error');
             // Reload quotes to get correct state
@@ -514,7 +514,7 @@ function App() {
         setNotifications(prev => [tempNotif, ...prev]);
 
         try {
-            await db.addNotificatie(currentUser.id, 'all', n.title, n.content);
+            await db.addNotificatie(currentUser.id, 'all', n.title, n.content, currentUser.naam);
         } catch (error) {
             console.error('Notification send error:', error);
             // Keep the notification in UI anyway (it's not critical)

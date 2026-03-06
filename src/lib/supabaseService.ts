@@ -137,10 +137,10 @@ export async function fetchConsumpties(userId?: string): Promise<Streak[]> {
   }));
 }
 
-export async function addConsumptie(userId: string, drankId: string, aantal: number = 1, periodId?: string): Promise<string> {
+export async function addConsumptie(userId: string, drankId: string, aantal: number = 1, periodId?: string, userNaam?: string): Promise<string> {
   const { data, error } = await supabase
     .from('consumpties')
-    .insert([{ user_id: userId, drank_id: drankId, aantal, period_id: periodId }])
+    .insert([{ user_id: userId, drank_id: drankId, aantal, period_id: periodId, user_naam: userNaam || null }])
     .select('id')
     .single();
   if (error) throw error;
@@ -347,7 +347,7 @@ export async function deleteQuote(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function voteQuote(quoteId: string, userId: string, voteType: 'like' | 'dislike'): Promise<void> {
+export async function voteQuote(quoteId: string, userId: string, voteType: 'like' | 'dislike', userNaam?: string): Promise<void> {
   // Check existing vote
   const { data: existing } = await supabase
     .from('quote_votes')
@@ -368,7 +368,7 @@ export async function voteQuote(quoteId: string, userId: string, voteType: 'like
     // New vote
     const { error } = await supabase
       .from('quote_votes')
-      .insert([{ quote_id: quoteId, user_id: userId, vote_type: voteType }]);
+      .insert([{ quote_id: quoteId, user_id: userId, vote_type: voteType, user_naam: userNaam || null }]);
     if (error) throw error;
   }
 }
@@ -384,7 +384,7 @@ export async function fetchNotificaties(userId: string): Promise<Notification[]>
 
   if (error) throw error;
   return (data || []).map((n, index) => ({
-    id: n.id ? n.id.hashCode?.() || index : index, // Use a numeric ID
+    id: n.id ? stableNumericId(n.id) : index, // Stable numeric ID from UUID
     type: 'official' as const,
     sender: (n as any).profiles?.naam || 'Systeem',
     role: '',
@@ -403,11 +403,12 @@ export async function addNotificatie(
   zenderId: string,
   ontvangerId: string,
   titel: string,
-  bericht: string
+  bericht: string,
+  zenderNaam?: string
 ): Promise<void> {
   const { error } = await supabase
     .from('notificaties')
-    .insert([{ zender_id: zenderId, ontvanger_id: ontvangerId, titel, bericht }]);
+    .insert([{ zender_id: zenderId, ontvanger_id: ontvangerId, titel, bericht, zender_naam: zenderNaam || null }]);
   if (error) throw error;
 }
 
@@ -651,10 +652,10 @@ export async function fetchFacturen(userId?: string): Promise<any[]> {
   return data || [];
 }
 
-export async function createFactuur(userId: string, totaalBedrag: number, periode: string): Promise<string> {
+export async function createFactuur(userId: string, totaalBedrag: number, periode: string, userNaam?: string): Promise<string> {
   const { data, error } = await supabase
     .from('facturen')
-    .insert([{ user_id: userId, totaal_bedrag: totaalBedrag, periode }])
+    .insert([{ user_id: userId, totaal_bedrag: totaalBedrag, periode, user_naam: userNaam || null }])
     .select('id')
     .single();
   if (error) throw error;
@@ -685,6 +686,17 @@ function formatTimeAgo(date: Date): string {
   return date.toLocaleDateString('nl-BE');
 }
 
+/** Generate a stable numeric ID from a UUID string (for React keys) */
+function stableNumericId(uuid: string): number {
+  let hash = 0;
+  for (let i = 0; i < uuid.length; i++) {
+    const char = uuid.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+}
+
 // ==================== COUNTDOWNS ====================
 
 export async function fetchCountdowns(): Promise<CountdownItem[]> {
@@ -698,11 +710,6 @@ export async function fetchCountdowns(): Promise<CountdownItem[]> {
 }
 
 export async function saveCountdowns(countdowns: CountdownItem[]): Promise<void> {
-  // Clear existing
-  await supabase.from('countdowns').delete().neq('id', 'random_never_match');
-
-  if (countdowns.length === 0) return;
-
   const payload = countdowns.map(c => {
     const targetStr = c.targetDate instanceof Date ? `${c.targetDate.getFullYear()}-${String(c.targetDate.getMonth() + 1).padStart(2, '0')}-${String(c.targetDate.getDate()).padStart(2, '0')}` : String(c.targetDate);
     return {
@@ -712,8 +719,22 @@ export async function saveCountdowns(countdowns: CountdownItem[]): Promise<void>
     };
   });
 
-  const { error } = await supabase.from('countdowns').insert(payload);
-  if (error) throw error;
+  // Fetch existing IDs to determine which ones to remove
+  const { data: existing } = await supabase.from('countdowns').select('id');
+  const existingIds = (existing || []).map((r: any) => r.id);
+  const newIds = countdowns.map(c => c.id);
+  const toDelete = existingIds.filter((id: string) => !newIds.includes(id));
+
+  // Delete removed countdowns
+  if (toDelete.length > 0) {
+    await supabase.from('countdowns').delete().in('id', toDelete);
+  }
+
+  // Upsert remaining (insert or update)
+  if (payload.length > 0) {
+    const { error } = await supabase.from('countdowns').upsert(payload, { onConflict: 'id' });
+    if (error) throw error;
+  }
 }
 
 // ==================== APP SETTINGS ====================
@@ -851,7 +872,8 @@ export async function addBillingCorrection(
   userId: string,
   periodId: string,
   bedrag: number,
-  notitie?: string
+  notitie?: string,
+  userNaam?: string
 ): Promise<BillingCorrection> {
   const { data, error } = await supabase
     .from('billing_corrections')
@@ -860,6 +882,7 @@ export async function addBillingCorrection(
       period_id: periodId,
       correctie_bedrag: bedrag,
       notitie: notitie || null,
+      user_naam: userNaam || null,
     }])
     .select()
     .single();

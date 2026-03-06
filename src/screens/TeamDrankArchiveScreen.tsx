@@ -9,26 +9,14 @@ export const TeamDrankArchiveScreen: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('2023');
 
   // Mock Data for Past Orders
-  const archivedOrders = [
-    { id: 101, date: '12 Dec 2023', supplier: 'Bierhandel Peeters', items: '20 bakken Jupiler, 5 Cola', amount: 840.50 },
-    { id: 102, date: '15 Nov 2023', supplier: 'Colruyt', items: 'Chips, Nootjes, Wijn', amount: 156.20 },
-    { id: 103, date: '02 Okt 2023', supplier: 'Bierhandel Peeters', items: 'Startdag levering', amount: 1250.00 },
-    { id: 104, date: '28 Sep 2023', supplier: 'Prik & Tik', items: 'Speciale bieren', amount: 320.10 },
-  ];
+  const archivedOrders: any[] = [];
 
   // Mock Data for Past Drink Bills
   // Structure: Period -> User -> Bill
-  const archivedBills = [
-    { id: 1, period: 'Nov 2023', userId: '4', amount: 24.50, paid: true },
-    { id: 2, period: 'Nov 2023', userId: '2', amount: 12.80, paid: true },
-    { id: 3, period: 'Nov 2023', userId: '5', amount: 45.00, paid: true },
-    { id: 4, period: 'Okt 2023', userId: '4', amount: 32.10, paid: true },
-    { id: 5, period: 'Okt 2023', userId: '2', amount: 18.50, paid: true },
-    { id: 6, period: 'Okt 2023', userId: '5', amount: 55.20, paid: true },
-  ];
+  const archivedBills: any[] = [];
 
-  const periods = ['Nov 2023', 'Okt 2023', 'Sep 2023'];
-  const [billPeriod, setBillPeriod] = useState('Nov 2023');
+  const periods: string[] = [];
+  const [billPeriod, setBillPeriod] = useState('');
 
   const filteredBills = archivedBills.filter(b => b.period === billPeriod);
 
@@ -80,7 +68,7 @@ export const TeamDrankArchiveScreen: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              {archivedOrders.map((order) => (
+              {archivedOrders.length > 0 ? archivedOrders.map((order) => (
                 <div key={order.id} className="bg-white dark:bg-[#1e293b] p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-2">
                   <div className="flex justify-between items-start">
                     <div>
@@ -93,7 +81,11 @@ export const TeamDrankArchiveScreen: React.FC = () => {
                     {order.items}
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8 text-gray-400 text-sm">
+                  Geen bestellingen gevonden voor dit jaar.
+                </div>
+              )}
             </div>
           </div>
         ) : (

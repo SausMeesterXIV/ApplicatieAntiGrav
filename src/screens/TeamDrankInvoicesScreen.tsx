@@ -6,18 +6,9 @@ export const TeamDrankInvoicesScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'vergelijking' | 'facturen'>('vergelijking');
 
   // Mock data for comparison logic
-  const comparisonData = [
-    { id: 1, name: 'Bier (Jupiler/Stella)', purchased: 1200, consumed: 1142, unit: 'stuks', warning: true },
-    { id: 2, name: 'Frisdrank (Cola/Fanta)', purchased: 450, consumed: 448, unit: 'stuks', warning: false },
-    { id: 3, name: 'Speciale Bieren', purchased: 120, consumed: 95, unit: 'stuks', warning: true },
-    { id: 4, name: 'Chips & Snacks', purchased: 200, consumed: 198, unit: 'stuks', warning: false },
-  ];
+  const comparisonData: any[] = [];
 
-  const invoices = [
-    { id: 1, supplier: 'Bierhandel Peeters', date: '14 Okt 2023', amount: 452.20, items: '10 bakken Jupiler, 5 Cola' },
-    { id: 2, supplier: 'Colruyt', date: '02 Okt 2023', amount: 124.50, items: 'Chips, Snacks, Water' },
-    { id: 3, supplier: 'Bierhandel Peeters', date: '18 Sep 2023', amount: 850.00, items: 'Startdag levering' },
-  ];
+  const invoices: any[] = [];
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200">
@@ -71,23 +62,23 @@ export const TeamDrankInvoicesScreen: React.FC = () => {
               <h2 className="text-sm font-bold text-indigo-100 dark:text-indigo-200 uppercase tracking-wide mb-4">Periode Overzicht</h2>
               <div className="flex justify-between items-center relative">
                 <div className="text-center flex-1">
-                  <div className="text-2xl font-bold text-white">1.970</div>
+                  <div className="text-2xl font-bold text-white">0</div>
                   <div className="text-[10px] text-indigo-100 dark:text-indigo-300 uppercase">Ingekocht</div>
                 </div>
                 <div className="w-px h-10 bg-indigo-300 dark:bg-indigo-500/30"></div>
                 <div className="text-center flex-1">
-                  <div className="text-2xl font-bold text-white">1.883</div>
+                  <div className="text-2xl font-bold text-white">0</div>
                   <div className="text-[10px] text-indigo-100 dark:text-indigo-300 uppercase">Gestreept</div>
                 </div>
                 <div className="w-px h-10 bg-indigo-300 dark:bg-indigo-500/30"></div>
                 <div className="text-center flex-1">
-                  <div className="text-2xl font-bold text-red-200 dark:text-red-400">-87</div>
-                  <div className="text-[10px] text-red-100 dark:text-red-300/70 uppercase">Verschil</div>
+                  <div className="text-2xl font-bold text-white">0</div>
+                  <div className="text-[10px] text-indigo-100 dark:text-indigo-300 uppercase">Verschil</div>
                 </div>
               </div>
               <div className="mt-4 bg-white/10 dark:bg-indigo-950/50 rounded-lg p-3 border border-white/20 dark:border-indigo-500/20 text-xs text-indigo-50 dark:text-indigo-200 flex items-start gap-2">
                 <span className="material-icons-round text-sm mt-0.5">info</span>
-                <span>Er zijn <strong>87 consumpties</strong> meer ingekocht dan er gestreept zijn deze periode. Controleer de stock of breng in rekening als verlies.</span>
+                <span>Selecteer een periode om de vergelijking tussen inkoop en verbruik te zien.</span>
               </div>
             </div>
 
@@ -95,7 +86,7 @@ export const TeamDrankInvoicesScreen: React.FC = () => {
             <div>
               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">Details per categorie</h3>
               <div className="space-y-3">
-                {comparisonData.map((item) => {
+                {comparisonData.length > 0 ? comparisonData.map((item) => {
                   const diff = item.consumed - item.purchased;
                   return (
                     <div key={item.id} className="bg-white dark:bg-[#1e293b] p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-colors">
@@ -120,7 +111,9 @@ export const TeamDrankInvoicesScreen: React.FC = () => {
                       </div>
                     </div>
                   );
-                })}
+                }) : (
+                  <div className="text-center py-6 text-gray-400 text-xs italic">Geen categoriegegevens beschikbaar.</div>
+                )}
               </div>
             </div>
           </div>
@@ -139,7 +132,7 @@ export const TeamDrankInvoicesScreen: React.FC = () => {
             {/* Invoices List */}
             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-1 mt-6">Verwerkte Facturen</h3>
             <div className="space-y-3">
-              {invoices.map((inv) => (
+              {invoices.length > 0 ? invoices.map((inv) => (
                 <div key={inv.id} className="bg-white dark:bg-[#1e293b] p-4 rounded-xl border border-gray-100 dark:border-gray-800 flex justify-between items-center shadow-sm hover:shadow-md transition-all cursor-pointer group">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400 dark:text-gray-500 group-hover:text-blue-500 transition-colors">
@@ -158,7 +151,9 @@ export const TeamDrankInvoicesScreen: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-6 text-gray-400 text-xs italic">Geen facturen gevonden.</div>
+              )}
             </div>
           </div>
         )}

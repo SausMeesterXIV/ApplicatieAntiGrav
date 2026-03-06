@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Drink, User } from '../types';
 import { ChevronBack } from '../components/ChevronBack';
@@ -16,6 +16,7 @@ export const StrepenScreen: React.FC = () => {
     drinks,
     setDrinks: onUpdateDrinks,
     users,
+    streaks,
     activePeriod
   } = useOutletContext<AppContextType>();
   // State to store count PER drink ID. Key = drinkId (string), Value = count (number)
@@ -109,19 +110,8 @@ export const StrepenScreen: React.FC = () => {
         alert('Drank succesvol toegevoegd!');
       }
     } catch (error) {
-      console.log('Demo mode: Adding drink locally');
-      // Fallback for demo without backend
-      const mockId = Math.random().toString(36).substr(2, 9);
-      const newMockDrink: Drink = {
-        id: mockId,
-        name: newDrinkName,
-        price: parseFloat(newDrinkPrice.replace(',', '.')),
-        isTemporary: isTemporary,
-        validUntil: isTemporary ? validUntil : undefined
-      };
-      onUpdateDrinks([...drinks, newMockDrink]);
-      resetForm();
-      alert('Drank toegevoegd (Demo modus)');
+      console.error('Error adding drink:', error);
+      alert('Fout bij het toevoegen van de drank. Controleer je verbinding.');
     } finally {
       setIsSubmitting(false);
     }
@@ -173,17 +163,53 @@ export const StrepenScreen: React.FC = () => {
 
   const resetDateStr = getResetDateString();
 
-  // Generate Leaderboard based on users prop
-  // In a real app, this would come from a query aggregation where timestamp >= resetDate
-  const leaderboard = users.map((user, index) => ({
-    id: user.id,
-    name: user.nickname || user.name, // Use nickname if available
-    avatar: user.avatar,
-    status: user.status,
-    // Mock random beer counts for display purposes
-    beerCount: Math.floor(Math.random() * 40) + 5,
-    lastActive: index % 3 === 0 ? 'Zonet' : `${index + 1}u geleden`
-  })).sort((a, b) => b.beerCount - a.beerCount).slice(0, 10);
+  // Calculate real leaderboard based on current week streaks
+  const leaderboard = useMemo(() => {
+    const counts: { [userId: string]: number } = {};
+    const lastSeen: { [userId: string]: string } = {};
+
+    // Use actual streaks from the context (this week only)
+    const now = new Date();
+    const saturdayReset = new Date(now);
+    const day = now.getDay();
+    const hour = now.getHours();
+    let daysToSubtract = (day === 6 && hour >= 8) ? 0 : day + 1;
+    saturdayReset.setDate(now.getDate() - daysToSubtract);
+    saturdayReset.setHours(8, 0, 0, 0);
+
+    const thisWeekStreaks = streaks.filter((s: any) => new Date(s.timestamp) >= saturdayReset);
+
+    thisWeekStreaks.forEach((s: any) => {
+      counts[s.userId] = (counts[s.userId] || 0) + (s.amount || 1);
+
+      const sDate = new Date(s.timestamp);
+      const diffMs = now.getTime() - sDate.getTime();
+      const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+
+      let timeStr = 'Lang geleden';
+      if (diffMins < 60) timeStr = diffMins <= 1 ? 'Zonet' : `${diffMins}m geleden`;
+      else if (diffHrs < 24) timeStr = `${diffHrs}u geleden`;
+      else timeStr = `${Math.floor(diffHrs / 24)}d geleden`;
+
+      // Keep newest
+      if (!lastSeen[s.userId] || sDate > new Date(s.timestamp)) {
+        lastSeen[s.userId] = timeStr;
+      }
+    });
+
+    return users.map((user: User) => ({
+      id: user.id,
+      name: user.nickname || user.name,
+      avatar: user.avatar,
+      status: user.status,
+      beerCount: counts[user.id] || 0,
+      lastActive: lastSeen[user.id] || 'Koud'
+    }))
+      .filter(item => item.beerCount > 0)
+      .sort((a, b) => b.beerCount - a.beerCount)
+      .slice(0, 10);
+  }, [users, streaks]);
 
   const handleAddStripe = () => {
     if (!selectedDrink) return;

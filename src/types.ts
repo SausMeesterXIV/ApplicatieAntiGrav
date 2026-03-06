@@ -33,78 +33,10 @@ export interface BillingCorrection {
     created_at: string;
 }
 
-export interface AgendaEvent {
-    id: string;
-    titel: string;
-    datum: string; // ISO date string
-    tijd: string;
-    beschrijving: string;
-    locatie: string;
-}
-
-export interface Consumptie {
-    id: string;
-    user_id: string;
-    drank_id: string;
-    aantal: number;
-    datum: string; // ISO date string
-    period_id?: string;
-}
-
-export interface Drank {
-    id: string;
-    naam: string;
-    prijs: number;
-    huidige_voorraad: number;
-    categorie: string;
-}
-
-export interface Factuur {
-    id: string;
-    user_id: string;
-    totaal_bedrag: number;
-    periode: string; // e.g., '2024-03'
-    status: 'betaald' | 'onbetaald';
-}
-
-export interface FrituurBestelling {
-    id: string;
-    user_id: string;
-    snack_naam: string;
-    saus: string;
-    opmerking?: string;
-    status: 'open' | 'besteld' | 'geleverd';
-    period_id?: string;
-}
-
-export interface Quote {
-    id: string;
-    tekst: string;
-    auteur: string;
-    datum: string;
-    upvotes: number;
-}
-
-export interface BierpongMatch {
-    id: string;
-    team1_ids: string[]; // Array of User IDs
-    team2_ids: string[]; // Array of User IDs
-    score1: number;
-    score2: number;
-    datum: string;
-}
-
-export interface Notificatie {
-    id: string;
-    zender_id: string;
-    ontvanger_id: string; // 'all' optionally for general
-    titel: string;
-    bericht: string;
-    gelezen: boolean;
-    datum: string;
-}
-
-// PROTOTYPE TYPES (Merged)
+// ==================== CANONICAL TYPES ====================
+// These are the active types used throughout the app.
+// Dead/unused interfaces (AgendaEvent, Consumptie, Drank, Factuur,
+// FrituurBestelling, Quote, BierpongMatch, Notificatie) have been removed.
 
 export interface Drink {
     id: string | number;

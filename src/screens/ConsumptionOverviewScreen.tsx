@@ -65,8 +65,7 @@ export const ConsumptionOverviewScreen: React.FC<ConsumptionOverviewScreenProps>
     setCurrentDate(newDate);
   };
 
-  // Use MOCK_USERS to generate table data
-  // Wrapped in useMemo with currentDate dependency to simulate "fetching new data" for different weeks
+  // Calculate table data based on streaks
   const { sortedData, totals, dynamicColumns } = useMemo(() => {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(startOfWeek.getDate() - (startOfWeek.getDay() === 0 ? 6 : startOfWeek.getDay() - 1)); // Monday
