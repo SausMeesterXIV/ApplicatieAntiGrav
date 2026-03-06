@@ -110,7 +110,10 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
         </button>
       </header>
 
-      <main className="flex-1 px-4 pb-nav-safe overflow-y-auto space-y-6">
+      <main
+        className="flex-1 px-4 overflow-y-auto space-y-6"
+        style={{ paddingBottom: 'calc(12rem + env(safe-area-inset-bottom, 0px))' }}
+      >
 
         {/* Total Card */}
         <div className="bg-white dark:bg-[#1e2330] rounded-3xl p-8 flex flex-col items-center justify-center border border-gray-200 dark:border-gray-800 shadow-xl dark:shadow-2xl relative overflow-hidden mt-2 transition-colors duration-200">
@@ -200,7 +203,7 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
           <span className="material-icons-round text-blue-500 dark:text-blue-400 mt-0.5">info</span>
           <p className="text-xs text-blue-700 dark:text-blue-200/70 leading-relaxed">
             Dit bedrag is dynamisch berekend op basis van de factuurkosten van de brouwer.
-            Eventuele correcties kunnen nog worden doorgevoerd door de hoofdleiding.
+            Eventuele correcties kunnen later nog worden doorgevoerd.
           </p>
         </div>
 

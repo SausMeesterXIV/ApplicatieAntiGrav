@@ -3,11 +3,12 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { BillingPeriod, BillingCorrection } from '../types';
 import { AppContextType } from '../App';
 import * as db from '../lib/supabaseService';
+import { archiveConsumptiesPeriod, fetchBillingPeriods, fetchOpenBillingPeriod } from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
 
 export const TeamDrankBillingScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { users: appUsers, streaks, activePeriod, billingPeriods, drinks } = useOutletContext<AppContextType>();
+  const { users: appUsers, streaks, activePeriod, setActivePeriod, billingPeriods, setBillingPeriods, drinks } = useOutletContext<AppContextType>();
 
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>('');
   const [corrections, setCorrections] = useState<BillingCorrection[]>([]);
@@ -56,7 +57,7 @@ export const TeamDrankBillingScreen: React.FC = () => {
     // Filter streaks for this period
     const periodStreaks = streaks.filter(s => s.period_id === selectedPeriod.id);
     const totalStrepen = periodStreaks.reduce((sum, s) => sum + s.amount, 0);
-    const prijsPerStreep = totalStrepen > 0 ? selectedPeriod.geschatte_kost / totalStrepen : 0;
+    const prijsPerStreep = totalStrepen > 0 ? (selectedPeriod.geschatte_kost || 0) / totalStrepen : 0;
 
     return (appUsers || []).map(user => {
       const userStreaks = periodStreaks.filter(s => s.userId === user.id);
@@ -86,7 +87,7 @@ export const TeamDrankBillingScreen: React.FC = () => {
   const prijsPerStreep = useMemo(() => {
     if (!selectedPeriod) return 0;
     const totalStrepen = streaks.filter(s => s.period_id === selectedPeriod.id).reduce((sum, s) => sum + s.amount, 0);
-    return totalStrepen > 0 ? selectedPeriod.geschatte_kost / totalStrepen : 0;
+    return totalStrepen > 0 ? (selectedPeriod.geschatte_kost || 0) / totalStrepen : 0;
   }, [streaks, selectedPeriod]);
 
   const togglePayment = (id: string, currentPaidStatus: boolean) => {
@@ -174,7 +175,7 @@ export const TeamDrankBillingScreen: React.FC = () => {
           <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl p-3 mb-4">
             <div className="flex justify-between text-xs">
               <span className="text-gray-500 dark:text-gray-400">Factuurkosten</span>
-              <span className="font-bold text-gray-900 dark:text-white">€ {selectedPeriod.geschatte_kost.toFixed(2).replace('.', ',')}</span>
+              <span className="font-bold text-gray-900 dark:text-white">€ {(selectedPeriod.geschatte_kost || 0).toFixed(2).replace('.', ',')}</span>
             </div>
             <div className="flex justify-between text-xs mt-1">
               <span className="text-gray-500 dark:text-gray-400">Prijs per streep</span>
@@ -182,6 +183,33 @@ export const TeamDrankBillingScreen: React.FC = () => {
                 {prijsPerStreep > 0 ? `€ ${prijsPerStreep.toFixed(2).replace('.', ',')}` : 'N.v.t.'}
               </span>
             </div>
+
+            {/* Close Period Button if it's the active period */}
+            {!selectedPeriod.is_closed && activePeriod?.id === selectedPeriod.id && (
+              <button
+                onClick={async () => {
+                  if (!window.confirm(`Weet je zeker dat je "${activePeriod.naam}" wilt afsluiten? Dit maakt een nieuwe periode aan.`)) return;
+                  try {
+                    await archiveConsumptiesPeriod();
+                    showToast(`"${activePeriod.naam}" afgesloten! Nieuwe periode aangemaakt.`, 'success');
+                    // Refresh periods
+                    const [newOpen, allPeriods] = await Promise.all([
+                      fetchOpenBillingPeriod(),
+                      fetchBillingPeriods()
+                    ]);
+                    setActivePeriod(newOpen);
+                    setBillingPeriods(allPeriods);
+                    setSelectedPeriodId(newOpen?.id || '');
+                  } catch (err: any) {
+                    showToast('Fout bij afsluiten: ' + err.message, 'error');
+                  }
+                }}
+                className="w-full mt-3 flex items-center justify-center gap-2 p-2 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-300 rounded-lg text-xs font-bold transition-colors"
+              >
+                <span className="material-icons-round text-sm">lock</span>
+                Periode Afsluiten & Nieuwe Starten
+              </button>
+            )}
           </div>
         )}
 
@@ -279,7 +307,7 @@ export const TeamDrankBillingScreen: React.FC = () => {
       </main>
 
       {/* Footer Action Card */}
-      <div className="fixed left-0 right-0 px-6 z-20 flex justify-center pointer-events-none" style={{ bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="fixed left-0 right-0 px-6 z-40 flex justify-center pointer-events-none" style={{ bottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
         <div className="bg-blue-600 rounded-full px-6 py-3 shadow-xl shadow-blue-900/20 text-white flex items-center gap-2 pointer-events-auto">
           <span className="text-sm font-medium text-blue-100">Openstaand saldo:</span>
           <span className="text-base font-bold">€ {totalOutstanding.toFixed(2).replace('.', ',')}</span>

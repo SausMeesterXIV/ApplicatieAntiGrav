@@ -225,7 +225,7 @@ export const StrepenScreen: React.FC = () => {
           </div>
         </div>
         <div
-          onClick={() => navigate('/strepen/mijn-rekening')}
+          onClick={() => navigate('/mijn-factuur')}
           className="bg-blue-600 dark:bg-blue-600 text-white p-4 rounded-xl flex items-center justify-between shadow-lg shadow-blue-600/20 cursor-pointer active:scale-[0.98] transition-transform group"
         >
           <div>

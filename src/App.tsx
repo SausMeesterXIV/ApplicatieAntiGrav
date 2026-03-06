@@ -7,6 +7,7 @@ import { showToast, ToastContainer } from './components/Toast';
 import { Analytics } from '@vercel/analytics/react';
 
 import { BottomNav } from './components/BottomNav';
+import { SplashScreen } from './components/SplashScreen';
 import { CredentialsScreen } from './screens/CredentialsScreen';
 import { CreditsScreen } from './screens/CreditsScreen';
 import { HomeScreen } from './screens/HomeScreen';
@@ -560,11 +561,7 @@ function App() {
     };
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-ksa-blue">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-            </div>
-        );
+        return <SplashScreen />;
     }
 
     const contextValue: AppContextType = {
