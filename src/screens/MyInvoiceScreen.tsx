@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import QRCode from 'react-qr-code';
 import { ChevronBack } from '../components/ChevronBack';
 
 import { User, Streak, Drink, Order } from '../types';
@@ -29,8 +28,6 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
   const allStreaks = propStreaks || context?.streaks || [];
   const allFriesOrders = propFriesOrders || context?.friesOrders || [];
   const activePeriod = context?.activePeriod;
-
-  const [showPayconiq, setShowPayconiq] = useState(false);
 
   // ========== DYNAMIC PRICING ==========
   // Filter streaks for the active (open) period
@@ -91,9 +88,6 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
   const dynamicBalance = Number((totalConsumptions + totalFries).toFixed(2));
   const displayBalance = propBalance ?? dynamicBalance;
 
-  // Generate Payconiq QR
-  const payconiqQrValue = `https://payconiq.com/pay?amount=${displayBalance.toFixed(2)}&message=KSA_Bar_${currentUser?.naam?.replace(/\s+/g, '_')}`;
-
   const handleBack = () => {
     if (propOnBack) propOnBack();
     else navigate(-1);
@@ -133,12 +127,6 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
           )}
 
           <div className="flex flex-col items-center gap-3 w-full relative z-10 mt-2">
-            <button
-              onClick={() => setShowPayconiq(true)}
-              className="bg-[#FF0066] hover:bg-[#e6005c] w-full text-white font-bold py-3 rounded-xl shadow-lg shadow-[#FF0066]/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
-              <span className="material-icons-round text-sm">qr_code_scanner</span>
-              Betaal met Payconiq
-            </button>
             <div className="inline-flex items-center gap-2 bg-gray-50 dark:bg-[#191e2b] border border-blue-100 dark:border-blue-900/30 px-3 py-1.5 rounded-full">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
               <span className="text-xs text-blue-600 dark:text-blue-200 font-medium">Dynamisch berekend</span>
@@ -179,7 +167,8 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Frieten</h3>
           </div>
 
-          <div className="bg-white dark:bg-[#1e2330] rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800/50 divide-y divide-gray-100 dark:divide-gray-800/50 shadow-sm transition-colors duration-200">
+          <div className="bg-white dark:bg-[#1e2330] rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800/50 divide-y divide-gray-100 dark:divide-gray-800/50 shadow-sm transition-colors duration-200"
+          >
             {friesList.length > 0 ? (
               friesList.map((item, index) => (
                 <div key={index} className="p-4 flex justify-between items-center">
@@ -220,45 +209,6 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
         </div>
       </footer>
 
-      {/* Payconiq Modal */}
-      {showPayconiq && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-gray-900/60 backdrop-blur-sm transition-opacity">
-          <div className="bg-white dark:bg-[#1e2330] rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 border border-gray-200 dark:border-gray-800">
-            <div className="bg-[#FF0066] p-6 text-center text-white relative">
-              <button
-                onClick={() => setShowPayconiq(false)}
-                className="absolute top-4 right-4 p-2 bg-black/10 hover:bg-black/20 rounded-full transition-colors"
-              >
-                <span className="material-icons-round text-xl">close</span>
-              </button>
-              <h3 className="font-bold text-xl mb-1 mt-2">Payconiq</h3>
-              <p className="text-sm font-medium opacity-90">Betaal je openstaande saldo</p>
-            </div>
-
-            <div className="p-8 flex flex-col items-center">
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 w-full aspect-square flex items-center justify-center">
-                <QRCode
-                  value={payconiqQrValue}
-                  size={200}
-                  style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                  viewBox={`0 0 256 256`}
-                  fgColor="#000000"
-                  bgColor="#ffffff"
-                />
-              </div>
-
-              <div className="text-center w-full bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
-                <p className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-widest font-bold mb-1">Te Betalen</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">€ {displayBalance.toFixed(2).replace('.', ',')}</p>
-              </div>
-
-              <p className="text-center text-xs text-gray-400 mt-6 max-w-[200px] leading-relaxed">
-                Scan deze code met je Payconiq by Bancontact app of je bank-app.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

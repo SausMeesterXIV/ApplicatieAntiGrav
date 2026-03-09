@@ -35,6 +35,10 @@ export const StrepenScreen: React.FC = () => {
   const [newDrinkName, setNewDrinkName] = useState('');
   const [newDrinkPrice, setNewDrinkPrice] = useState('');
 
+  const [editingDrinkId, setEditingDrinkId] = useState<string | number | null>(null);
+  const [editDrinkName, setEditDrinkName] = useState('');
+  const [editDrinkPrice, setEditDrinkPrice] = useState('');
+
   // Temporary Drink State
   const [isTemporary, setIsTemporary] = useState(false);
   const [validUntil, setValidUntil] = useState('');
@@ -114,6 +118,49 @@ export const StrepenScreen: React.FC = () => {
       alert('Fout bij het toevoegen van de drank. Controleer je verbinding.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateDrink = async (id: string | number) => {
+    try {
+      const priceNum = parseFloat(editDrinkPrice.replace(',', '.'));
+      if (isNaN(priceNum)) {
+        alert('Ongeldige prijs');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('dranken')
+        .update({ naam: editDrinkName, prijs: priceNum })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      onUpdateDrinks(drinks.map(d => d.id === id ? { ...d, name: editDrinkName, price: priceNum } : d));
+      setEditingDrinkId(null);
+    } catch (error) {
+      console.error('Error updating drink:', error);
+      alert('Fout bij het updaten van de drank.');
+    }
+  };
+
+  const handleDeleteDrink = async (id: string | number) => {
+    if (!window.confirm('Weet je zeker dat je deze drank wilt verwijderen? Het is veiliger om het gewoon niet meer te gebruiken, verwijderen kan kapotte facturen veroorzaken als de drank al gestreept is.')) return;
+    try {
+      const { error } = await supabase
+        .from('dranken')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      onUpdateDrinks(drinks.filter(d => d.id !== id));
+      if (selectedDrink?.id === id && drinks.length > 0) {
+        setSelectedDrink(drinks[0]);
+      }
+    } catch (error) {
+      console.error('Error deleting drink:', error);
+      alert('Fout bij het verwijderen van de drank. Mogelijk zijn er al consumpties aan gekoppeld waardoor het niet gewist kan worden.');
     }
   };
 
@@ -300,7 +347,7 @@ export const StrepenScreen: React.FC = () => {
             </div>
 
             {/* Drink Selector */}
-            <div className="mb-8">
+            <div className="mb-6">
               <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2.5">Kies Drank</p>
               <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                 {drinks.map(drink => (
@@ -316,6 +363,32 @@ export const StrepenScreen: React.FC = () => {
                     {drink.isTemporary && <span className="material-icons-round text-[10px] opacity-70">timer</span>}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="mb-8">
+              <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2.5">Snelacties</p>
+              <div className="grid grid-cols-1 gap-2">
+                {drinks.find(d => d.name === 'Bak Freedom') && (
+                  <button
+                    onClick={() => {
+                      const bak = drinks.find(d => d.name === 'Bak Freedom')!;
+                      onAddCost(bak.price, bak, 1);
+                      setTotalToday(prev => prev + 1);
+                    }}
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 px-4 rounded-xl shadow-md shadow-amber-500/20 flex items-center justify-between active:scale-[0.98] transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="material-icons-round">sports_bar</span>
+                      <span>+1 Bak Freedom</span>
+                    </div>
+                    {(() => {
+                      const bak = drinks.find(d => d.name === 'Bak Freedom')!;
+                      return <span className="text-sm bg-white/20 px-2 py-0.5 rounded-lg">€ {bak.price.toFixed(2).replace('.', ',')}</span>;
+                    })()}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -464,6 +537,46 @@ export const StrepenScreen: React.FC = () => {
                 )}
               </button>
             </form>
+
+            {/* Bestaande dranken bewerken */}
+            <div className="mt-4 bg-white dark:bg-[#1f293b] border border-gray-100 dark:border-gray-800 p-5 rounded-2xl">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Bestaande Dranken Beheren</h3>
+              <div className="space-y-3">
+                {drinks.map(drink => (
+                  <div key={drink.id} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                    {editingDrinkId === drink.id ? (
+                      <>
+                        <input
+                          type="text"
+                          value={editDrinkName}
+                          onChange={(e) => setEditDrinkName(e.target.value)}
+                          className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1f2937] text-sm w-1/2 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        />
+                        <div className="flex items-center gap-1 bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-gray-700 rounded-lg px-2 w-24 focus-within:ring-2 focus-within:ring-blue-500/50">
+                          <span className="text-gray-500 text-sm">€</span>
+                          <input
+                            type="number"
+                            step="0.10"
+                            value={editDrinkPrice}
+                            onChange={(e) => setEditDrinkPrice(e.target.value)}
+                            className="w-full py-1.5 bg-transparent text-sm focus:outline-none"
+                          />
+                        </div>
+                        <button onClick={() => handleUpdateDrink(drink.id)} className="p-2 text-green-600 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 rounded-lg transition-colors"><span className="material-icons-round text-sm">check</span></button>
+                        <button onClick={() => setEditingDrinkId(null)} className="p-2 text-gray-500 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors"><span className="material-icons-round text-sm">close</span></button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="flex-1 text-sm font-bold text-gray-900 dark:text-white truncate">{drink.name}</span>
+                        <span className="text-sm font-medium bg-white dark:bg-gray-700 px-2 py-1 rounded-md shadow-sm border border-gray-100 dark:border-gray-600">€ {drink.price.toFixed(2)}</span>
+                        <button onClick={() => { setEditingDrinkId(drink.id); setEditDrinkName(drink.name); setEditDrinkPrice(drink.price.toString()); }} className="p-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg shadow-sm transition-colors"><span className="material-icons-round text-sm">edit</span></button>
+                        <button onClick={() => handleDeleteDrink(drink.id)} className="p-2 text-red-600 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg shadow-sm transition-colors"><span className="material-icons-round text-sm">delete</span></button>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
         )}
 
@@ -545,7 +658,7 @@ export const StrepenScreen: React.FC = () => {
               Kies welk drankje je direct wilt kunnen strepen vanaf het startscherm.
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {drinks.map(drink => (
+              {drinks.filter(d => d.name !== 'Bak Freedom').map(drink => (
                 <button
                   key={`quick-${drink.id}`}
                   onClick={() => onUpdateUser({ ...currentUser, quickDrinkId: String(drink.id) })}

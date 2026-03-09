@@ -111,6 +111,22 @@ export async function addDrank(naam: string, prijs: number, isTemporary = false,
   return { id: data.id, name: data.naam, price: Number(data.prijs), isTemporary: data.is_temporary, validUntil: data.valid_until };
 }
 
+export async function updateDrank(id: string | number, naam: string, prijs: number): Promise<void> {
+  const { error } = await supabase
+    .from('dranken')
+    .update({ naam, prijs })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteDrank(id: string | number): Promise<void> {
+  const { error } = await supabase
+    .from('dranken')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
+
 // ==================== CONSUMPTIES (Streaks) ====================
 
 export async function fetchConsumpties(userId?: string): Promise<Streak[]> {
