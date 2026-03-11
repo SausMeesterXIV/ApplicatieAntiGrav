@@ -6,6 +6,7 @@ import { User, Drink, Streak, StockItem, FryItem, Order, CountdownItem, Bierpong
 import * as db from './lib/supabaseService';
 import { showToast, ToastContainer } from './components/Toast';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 import { BottomNav } from './components/BottomNav';
 import { SplashScreen } from './components/SplashScreen';
@@ -788,6 +789,7 @@ function App() {
     return (
         <BrowserRouter>
             <Analytics />
+            <SpeedInsights />
             <ToastContainer />
             <ScrollToTop />
             <Routes>
