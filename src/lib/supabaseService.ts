@@ -489,6 +489,7 @@ export async function fetchFrituurBestellingen(sessieId?: string): Promise<Order
     totalPrice: Number(b.totaal_prijs || 0),
     date: new Date(b.created_at),
     status: b.status === 'geleverd' ? 'completed' as const : 'pending' as const,
+    periodId: b.period_id,
   }));
 }
 
@@ -779,10 +780,23 @@ export async function saveAppSetting(key: string, value: string): Promise<void> 
 
 // ==================== BILLING PERIODS ====================
 
+export function calculateWerkjaar(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = date.getMonth(); // 0-11, Aug is 7
+  const day = date.getDate();
+
+  if (month < 7 || (month === 7 && day < 15)) {
+    return `${year - 1}-${year}`;
+  } else {
+    return `${year}-${year + 1}`;
+  }
+}
+
 export async function fetchBillingPeriods(): Promise<BillingPeriod[]> {
   const { data, error } = await supabase
     .from('billing_periods')
     .select('*')
+    .order('werkjaar', { ascending: false })
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -807,13 +821,17 @@ export async function createBillingPeriod(payload: {
   start_datum?: string;
   geschatte_kost?: number;
 }): Promise<BillingPeriod> {
+  const startDatum = payload.start_datum ? new Date(payload.start_datum) : new Date();
+  const werkjaar = calculateWerkjaar(startDatum);
+
   const { data, error } = await supabase
     .from('billing_periods')
     .insert([{
       naam: payload.naam,
-      start_datum: payload.start_datum || new Date().toISOString(),
+      start_datum: startDatum.toISOString(),
       is_closed: false,
       geschatte_kost: payload.geschatte_kost || 0,
+      werkjaar: werkjaar
     }])
     .select()
     .single();
@@ -828,6 +846,7 @@ export async function updateBillingPeriod(id: string, updates: Partial<{
   eind_datum: string | null;
   is_closed: boolean;
   geschatte_kost: number;
+  werkjaar: string;
 }>): Promise<void> {
   const { error } = await supabase
     .from('billing_periods')
@@ -860,6 +879,7 @@ function mapBillingPeriod(p: any): BillingPeriod {
     eind_datum: p.eind_datum || p.end_date || null,
     is_closed: p.is_closed || false,
     geschatte_kost: Number(p.geschatte_kost || 0),
+    werkjaar: p.werkjaar || undefined,
     created_at: p.created_at,
   };
 }
@@ -912,6 +932,27 @@ export async function addBillingCorrection(
     notitie: data.notitie || undefined,
     created_at: data.created_at,
   };
+}
+
+// ==================== APP SETTINGS ====================
+
+export async function fetchSetting(key: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('app_settings')
+    .select('value')
+    .eq('key', key)
+    .single();
+  
+  if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+  return data?.value || null;
+}
+
+export async function updateSetting(key: string, value: string): Promise<void> {
+  const { error } = await supabase
+    .from('app_settings')
+    .upsert({ key, value, updated_at: new Date().toISOString() });
+  
+  if (error) throw error;
 }
 
 // Keep backward compat alias

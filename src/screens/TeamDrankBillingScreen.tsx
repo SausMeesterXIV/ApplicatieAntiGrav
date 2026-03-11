@@ -3,18 +3,28 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { BillingPeriod, BillingCorrection } from '../types';
 import { AppContextType } from '../App';
 import * as db from '../lib/supabaseService';
-import { archiveConsumptiesPeriod, fetchBillingPeriods, fetchOpenBillingPeriod } from '../lib/supabaseService';
+import { archiveConsumptiesPeriod, fetchBillingPeriods, fetchOpenBillingPeriod, updateBillingPeriod, calculateWerkjaar } from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
 
 export const TeamDrankBillingScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { users: appUsers, streaks, activePeriod, setActivePeriod, billingPeriods, setBillingPeriods, drinks } = useOutletContext<AppContextType>();
+  const {
+    users: appUsers, streaks, activePeriod, setActivePeriod, billingPeriods, setBillingPeriods,
+    gsheetId, setGsheetId, gsheetSharingEmail, setGsheetSharingEmail, syncToGoogleSheets
+  } = useOutletContext<AppContextType>();
 
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>('');
   const [corrections, setCorrections] = useState<BillingCorrection[]>([]);
   const [loadingCorrections, setLoadingCorrections] = useState(false);
   const [paidUsers, setPaidUsers] = useState<string[]>([]);
   const [filter, setFilter] = useState<'all' | 'open' | 'paid'>('open');
+  const [closeConfirmStep, setCloseConfirmStep] = useState(false);
+  const [localEmail, setLocalEmail] = useState(gsheetSharingEmail || '');
+
+  // Sync localEmail with context if it changes from outside
+  useEffect(() => {
+    setLocalEmail(gsheetSharingEmail || '');
+  }, [gsheetSharingEmail]);
 
   // Correction modal
   const [correctionModal, setCorrectionModal] = useState<{ userId: string; userName: string } | null>(null);
@@ -134,6 +144,42 @@ export const TeamDrankBillingScreen: React.FC = () => {
     }
   };
 
+  const handleCreateNewYear = async () => {
+    if (!gsheetSharingEmail) {
+      showToast('Vul eerst een e-mailadres in om het bestand mee te delen', 'warning');
+      return;
+    }
+
+    const currentYear = calculateWerkjaar(new Date());
+    const title = `KSA Strepen Werkjaar ${currentYear}`;
+
+    try {
+      showToast('Nieuwe Google Sheet aanmaken...', 'info');
+      const data = await syncToGoogleSheets('create_spreadsheet', {
+        title,
+        shareWithEmail: gsheetSharingEmail
+      });
+
+      if (data.spreadsheetId) {
+        setGsheetId(data.spreadsheetId);
+        await db.updateSetting('gsheet_id', data.spreadsheetId);
+        await db.updateSetting('gsheet_sharing_email', gsheetSharingEmail);
+        showToast('Nieuw werkjaar aangemaakt in Google Sheets!', 'success');
+
+        // Add current period as first sheet if exists
+        if (activePeriod) {
+          await syncToGoogleSheets('add_sheet', {
+            spreadsheetId: data.spreadsheetId,
+            title: activePeriod.naam
+          });
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast('Fout bij aanmaken Google Sheet: ' + (err.message || 'Onbekend'), 'error');
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200">
       {/* Header */}
@@ -165,10 +211,86 @@ export const TeamDrankBillingScreen: React.FC = () => {
           >
             {billingPeriods.map(p => (
               <option key={p.id} value={p.id}>
-                {p.naam} {p.is_closed ? '(Afgesloten)' : '(Open)'}
+                {p.naam} {p.werkjaar ? `(${p.werkjaar})` : ''} {p.is_closed ? '[Afgesloten]' : '[Open]'}
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Google Sheets Status / Setup */}
+        <div className="mb-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="material-icons-round text-emerald-600 dark:text-emerald-400">description</span>
+            <h3 className="text-sm font-bold text-emerald-900 dark:text-emerald-100">Google Sheets Sync</h3>
+          </div>
+
+          {gsheetId ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-emerald-800/70 dark:text-emerald-300/70">
+                  Gekoppeld met: <span className="font-mono text-[10px] bg-emerald-100 dark:bg-emerald-950 px-1 rounded">{gsheetId.substring(0, 12)}...</span>
+                </p>
+                <a
+                  href={`https://docs.google.com/spreadsheets/d/${gsheetId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[10px] font-bold text-emerald-600 hover:underline flex items-center gap-0.5"
+                >
+                  OPEN <span className="material-icons-round text-[12px]">open_in_new</span>
+                </a>
+              </div>
+              <p className="text-[10px] text-emerald-600/60 dark:text-emerald-400/60 italic">
+                Deelt met: {gsheetSharingEmail}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="text-xs text-emerald-700 dark:text-emerald-400 space-y-1">
+                <p><strong>Stap 1:</strong> Maak een lege Google Sheet in jullie eigen KSA-Drive.</p>
+                <p><strong>Stap 2:</strong> Deel deze (als Bewerker) met onzen robot:</p>
+                <div className="bg-emerald-100 dark:bg-emerald-950/50 p-2 rounded flex items-center justify-between">
+                  <code className="text-[10px] select-all font-bold">excel-bot-applicatie@ksa-app-489815.iam.gserviceaccount.com</code>
+                </div>
+                <p><strong>Stap 3:</strong> Plak de lange ID uit de URL van die Sheet hieronder:</p>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="bijv. 1BxiMVs0XRYFgPN_z1234567890abcdef..."
+                  value={localEmail}
+                  onChange={(e) => setLocalEmail(e.target.value)}
+                  className="flex-1 text-xs px-3 py-2 rounded-lg bg-white dark:bg-[#0f172a] border border-emerald-200 dark:border-emerald-800 focus:ring-1 focus:ring-emerald-500 outline-none font-mono"
+                />
+                <button
+                  onClick={async () => {
+                    const sheetId = localEmail.trim();
+                    if (!sheetId) {
+                      showToast('Vul een geldige ID in.', 'warning');
+                      return;
+                    }
+                    try {
+                      showToast('Sheet koppelen...', 'info');
+                      setGsheetId(sheetId);
+                      await db.updateSetting('gsheet_id', sheetId);
+                      showToast('Google Sheet succesvol handmatig gekoppeld!', 'success');
+
+                      if (activePeriod) {
+                        await syncToGoogleSheets('add_sheet', {
+                          spreadsheetId: sheetId,
+                          title: activePeriod.naam
+                        });
+                      }
+                    } catch (err: any) {
+                      showToast('Koppeling gelukt, maar basis-tabblad maken mislukte (kijk of robot écht bewerker is).', 'warning');
+                    }
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-3 py-2 rounded-lg transition-colors whitespace-nowrap"
+                >
+                  KOPPEL SHEET
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Period Info Banner */}
@@ -185,32 +307,57 @@ export const TeamDrankBillingScreen: React.FC = () => {
               </span>
             </div>
 
-            {/* Close Period Button if it's the active period */}
+            {/* Close Period Button with double confirmation */}
             {!selectedPeriod.is_closed && activePeriod?.id === selectedPeriod.id && (
               <button
                 onClick={async () => {
-                  if (!window.confirm(`Weet je zeker dat je "${activePeriod.naam}" wilt afsluiten? Dit maakt een nieuwe periode aan.`)) return;
+                  if (!closeConfirmStep) {
+                    setCloseConfirmStep(true);
+                    setTimeout(() => setCloseConfirmStep(false), 4000);
+                    return;
+                  }
+                  setCloseConfirmStep(false);
                   try {
-                    await archiveConsumptiesPeriod();
-                    showToast(`"${activePeriod.naam}" afgesloten! Nieuwe periode aangemaakt.`, 'success');
-                    // Refresh periods
-                    const [newOpen, allPeriods] = await Promise.all([
-                      fetchOpenBillingPeriod(),
-                      fetchBillingPeriods()
-                    ]);
-                    setActivePeriod(newOpen);
-                    setBillingPeriods(allPeriods);
-                    setSelectedPeriodId(newOpen?.id || '');
+                    const result = await archiveConsumptiesPeriod();
+                    // result has closed_period_id and new_period_id
+                    showToast('Periode succesvol afgesloten!', 'success');
+
+                    // Reload context
+                    const freshPeriods = await db.fetchBillingPeriods();
+                    setBillingPeriods(freshPeriods);
+                    const open = freshPeriods.find(p => !p.is_closed);
+                    if (open) {
+                      setActivePeriod(open);
+                      setSelectedPeriodId(open.id);
+
+                      // SYNC TO GOOGLE SHEETS: Create new tab
+                      if (gsheetId) {
+                        try {
+                          await syncToGoogleSheets('add_sheet', {
+                            spreadsheetId: gsheetId,
+                            title: open.naam
+                          });
+                          showToast('Nieuw tabblad aangemaakt in Google Sheets', 'success');
+                        } catch (gsheetErr) {
+                          console.error('GSheet error:', gsheetErr);
+                          showToast('Kon geen tabblad aanmaken in Google Sheets', 'warning');
+                        }
+                      }
+                    }
                   } catch (err: any) {
                     showToast('Fout bij afsluiten: ' + err.message, 'error');
                   }
                 }}
-                className="w-full mt-3 flex items-center justify-center gap-2 p-2 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-300 rounded-lg text-xs font-bold transition-colors"
+                className={`w-full mt-3 flex items-center justify-center gap-2 p-2 rounded-lg text-xs font-bold transition-all ${closeConfirmStep
+                  ? 'bg-red-500 text-white animate-pulse'
+                  : 'bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-300'
+                  }`}
               >
-                <span className="material-icons-round text-sm">lock</span>
-                Periode Afsluiten & Nieuwe Starten
+                <span className="material-icons-round text-sm">{closeConfirmStep ? 'warning' : 'lock'}</span>
+                {closeConfirmStep ? 'Bevestig: Klik nogmaals om af te sluiten' : 'Periode Afsluiten & Nieuwe Starten'}
               </button>
             )}
+
           </div>
         )}
 

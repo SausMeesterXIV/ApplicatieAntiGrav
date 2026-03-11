@@ -1,7 +1,12 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Notification } from '../types';
 
-export const BottomNav: React.FC = () => {
+interface BottomNavProps {
+  notifications?: Notification[];
+}
+
+export const BottomNav: React.FC<BottomNavProps> = ({ notifications = [] }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -14,6 +19,8 @@ export const BottomNav: React.FC = () => {
     { id: 'agenda', icon: 'event', label: 'Agenda' },
     { id: 'settings', icon: 'settings', label: 'Instellingen' },
   ];
+
+  const hasUnread = notifications.some(n => !n.isRead);
 
   return (
     <nav
@@ -32,7 +39,7 @@ export const BottomNav: React.FC = () => {
           >
             <div className="relative">
               <span className="material-icons-round text-2xl">{item.icon}</span>
-              {item.badge && activeTab !== 'notifications' && (
+              {item.badge && hasUnread && activeTab !== 'notificaties' && (
                 <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-surface-light dark:border-surface-dark"></span>
               )}
             </div>

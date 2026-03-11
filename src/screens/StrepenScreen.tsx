@@ -350,7 +350,7 @@ export const StrepenScreen: React.FC = () => {
             <div className="mb-6">
               <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2.5">Kies Drank</p>
               <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                {drinks.map(drink => (
+                {drinks.filter(d => d.name !== 'Bak Freedom').map(drink => (
                   <button
                     key={drink.id}
                     onClick={() => setSelectedDrink(drink)}
@@ -366,31 +366,7 @@ export const StrepenScreen: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="mb-8">
-              <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2.5">Snelacties</p>
-              <div className="grid grid-cols-1 gap-2">
-                {drinks.find(d => d.name === 'Bak Freedom') && (
-                  <button
-                    onClick={() => {
-                      const bak = drinks.find(d => d.name === 'Bak Freedom')!;
-                      onAddCost(bak.price, bak, 1);
-                      setTotalToday(prev => prev + 1);
-                    }}
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 px-4 rounded-xl shadow-md shadow-amber-500/20 flex items-center justify-between active:scale-[0.98] transition-all"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="material-icons-round">sports_bar</span>
-                      <span>+1 Bak Freedom</span>
-                    </div>
-                    {(() => {
-                      const bak = drinks.find(d => d.name === 'Bak Freedom')!;
-                      return <span className="text-sm bg-white/20 px-2 py-0.5 rounded-lg">€ {bak.price.toFixed(2).replace('.', ',')}</span>;
-                    })()}
-                  </button>
-                )}
-              </div>
-            </div>
+
 
             {/* Quantity Stepper */}
             <div className="mb-6">
@@ -447,6 +423,37 @@ export const StrepenScreen: React.FC = () => {
                 <span className="material-icons-round text-white/70">chevron_right</span>
               </div>
             </button>
+
+            {/* Quick Action: Bak BIER (Freedom) Inside Container */}
+            {drinks.find(d => d.name === 'Bak Freedom') && (
+              <div className="mt-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <button
+                  onClick={() => {
+                    const bak = drinks.find(d => d.name === 'Bak Freedom')!;
+                    onAddCost(bak.price, bak, 1);
+                    setTotalToday(prev => prev + 1);
+                  }}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-5 rounded-xl shadow-md shadow-amber-500/10 flex items-center justify-between active:scale-[0.98] transition-all group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <span className="material-icons-round text-xl">sports_bar</span>
+                    </div>
+                    <div className="text-left">
+                      <span className="text-[9px] font-bold text-amber-100 uppercase block leading-none mb-0.5">SNEL ACTIE</span>
+                      <span className="text-base leading-none">1 Bak Freedom</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const bak = drinks.find(d => d.name === 'Bak Freedom')!;
+                      return <span className="text-sm font-black bg-black/10 px-2 py-0.5 rounded-lg">€ {bak.price.toFixed(2).replace('.', ',')}</span>;
+                    })()}
+                    <span className="material-icons-round text-white/50 group-hover:translate-x-1 transition-transform">chevron_right</span>
+                  </div>
+                </button>
+              </div>
+            )}
           </div>
         </section>
 
@@ -677,6 +684,6 @@ export const StrepenScreen: React.FC = () => {
           </div>
         </section>
       </main>
-    </div>
+    </div >
   );
 };

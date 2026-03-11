@@ -377,54 +377,29 @@ export const HomeScreen: React.FC = () => {
           </section>
         )}
 
-        {/* Team Drank Section — Admin or team_drank */}
-        {(currentUser.rol === 'admin' || currentUser.rol === 'team_drank' || currentUser.rol === 'team drank' || (currentUser.roles || []).includes('Drank')) && (
+        {/* --- TEAM DRANK SECTIE --- */}
+        {(currentUser.rol === 'admin' || currentUser.rol === 'team_drank' || currentUser.rol === 'godmode' || currentUser.rol === 'team drank' || (currentUser.roles || []).includes('Drank')) && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="material-icons-round text-primary text-sm">local_drink</span>
               <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Team Drank</h2>
             </div>
-            <div className="bg-white dark:bg-[#1e2330] p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-              <div className="grid grid-cols-2 gap-3">
-                <div
-                  onClick={() => navigate('/strepen/dashboard')}
-                  className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
-                >
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 w-fit group-hover:scale-110 transition-transform origin-left">
-                    <span className="material-icons-round">dashboard</span>
-                  </div>
-                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Dashboard</span>
-                </div>
 
-                <div
-                  onClick={() => navigate('/strepen/voorraad')}
-                  className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
-                >
-                  <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg text-orange-600 dark:text-orange-400 w-fit group-hover:scale-110 transition-transform origin-left">
-                    <span className="material-icons-round">inventory_2</span>
+            <div className="grid gap-3">
+              <div
+                onClick={() => navigate('/strepen/dashboard')}
+                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                    <span className="material-icons-round">local_bar</span>
                   </div>
-                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Voorraad</span>
-                </div>
-
-                <div
-                  onClick={() => navigate('/strepen/facturatie/nieuw')}
-                  className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
-                >
-                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-600 dark:text-green-400 w-fit group-hover:scale-110 transition-transform origin-left">
-                    <span className="material-icons-round">attach_money</span>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Team Drank Beheer</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Dashboard, Strepen & Facturen</p>
                   </div>
-                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Rekeningen</span>
                 </div>
-
-                <div
-                  onClick={() => navigate('/strepen/facturatie')}
-                  className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group col-span-2 sm:col-span-1"
-                >
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400 w-fit group-hover:scale-110 transition-transform origin-left">
-                    <span className="material-icons-round">receipt_long</span>
-                  </div>
-                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Facturen</span>
-                </div>
+                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
               </div>
             </div>
           </section>

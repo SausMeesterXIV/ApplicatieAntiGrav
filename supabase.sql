@@ -310,4 +310,48 @@ INSERT INTO public.dranken (naam, prijs, huidige_voorraad, categorie) VALUES
 ('Karmeliet', 3.00, 24, 'Speciaalbier'),
 ('Kriek', 2.00, 12, 'Bier'),
 ('Cola', 1.00, 24, 'Frisdrank'),
-('Water', 1.00, 12, 'Water');
+('Water', 1.00, 12, 'Water')
+ON CONFLICT DO NOTHING;
+
+-- ==============================================================================
+-- 18. INKOOP FACTUREN
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.inkoop_facturen (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  leverancier TEXT NOT NULL,
+  bedrag NUMERIC(10,2) NOT NULL,
+  datum DATE NOT NULL,
+  bestand_url TEXT,
+  period_id UUID REFERENCES public.billing_periods(id) ON DELETE CASCADE,
+  created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.inkoop_facturen ENABLE ROW LEVEL SECURITY;
+
+-- 19. Bucket & Policies
+INSERT INTO storage.buckets (id, name, public) VALUES ('invoices', 'invoices', false) ON CONFLICT DO NOTHING;
+
+-- Opslag policies
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND policyname = 'Leiding can view invoices'
+    ) THEN
+        CREATE POLICY "Leiding can view invoices" 
+          ON storage.objects FOR SELECT 
+          USING (bucket_id = 'invoices' AND auth.uid() IN (SELECT id FROM public.profiles WHERE rol IN ('admin', 'team_drank', 'godmode', 'team drank')));
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND policyname = 'Team drank can upload invoices'
+    ) THEN
+        CREATE POLICY "Team drank can upload invoices" 
+          ON storage.objects FOR INSERT 
+          WITH CHECK (bucket_id = 'invoices' AND auth.uid() IN (SELECT id FROM public.profiles WHERE rol IN ('admin', 'team_drank', 'godmode', 'team drank')));
+    END IF;
+END $$;
+
+-- 20. Schema wijzigingen Periodes en Frituur
+ALTER TABLE public.billing_periods ADD COLUMN IF NOT EXISTS werkjaar TEXT;
+ALTER TABLE public.frituur_bestellingen ADD COLUMN IF NOT EXISTS period_id UUID REFERENCES public.billing_periods(id) ON DELETE SET NULL;

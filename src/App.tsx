@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
+import { Session } from '@supabase/supabase-js';
 import { User, Drink, Streak, StockItem, Order, CountdownItem, BierpongGame, QuoteItem, Notification, Event, BillingPeriod } from './types';
 import * as db from './lib/supabaseService';
 import { showToast, ToastContainer } from './components/Toast';
@@ -28,6 +29,7 @@ import { TeamDrankInvoicesScreen } from './screens/TeamDrankInvoicesScreen';
 import { TeamDrankArchiveScreen } from './screens/TeamDrankArchiveScreen';
 import { TeamDrankExcelPreviewScreen } from './screens/TeamDrankExcelPreviewScreen';
 import { TeamDrankBillingExcelPreviewScreen } from './screens/TeamDrankBillingExcelPreviewScreen';
+import { TeamDrankExcelBeheerScreen } from './screens/TeamDrankExcelBeheerScreen';
 import { ConsumptionOverviewScreen } from './screens/ConsumptionOverviewScreen';
 import { StrepenHistoryScreen } from './screens/StrepenHistoryScreen';
 import { MyInvoiceScreen } from './screens/MyInvoiceScreen';
@@ -91,6 +93,11 @@ export type AppContextType = {
     handleAddNotification: (notification: Omit<Notification, 'id'>) => void;
     handleMarkNotificationAsRead: (id: number) => void;
     frituurSessieId: string | null;
+    gsheetId: string | null;
+    setGsheetId: React.Dispatch<React.SetStateAction<string | null>>;
+    gsheetSharingEmail: string | null;
+    setGsheetSharingEmail: React.Dispatch<React.SetStateAction<string | null>>;
+    syncToGoogleSheets: (command: string, payload: any) => Promise<any>;
 };
 
 const DEFAULT_USER: User = {
@@ -104,7 +111,10 @@ const DEFAULT_USER: User = {
 };
 
 function App() {
-    const [session, setSession] = useState<any>(null);
+    const [gsheetId, setGsheetId] = useState<string | null>(null);
+    const [gsheetSharingEmail, setGsheetSharingEmail] = useState<string | null>(null);
+
+    const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
 
     // State - all initialized empty, loaded from Supabase
@@ -210,6 +220,8 @@ function App() {
                 countdownsData,
                 activeBillingPeriod,
                 allBillingPeriods,
+                gsheetIdSetting,
+                gsheetSharingEmailSetting,
             ] = await Promise.all([
                 db.fetchProfiles(),
                 db.fetchDranken(),
@@ -225,6 +237,8 @@ function App() {
                 db.fetchCountdowns(),
                 db.fetchActiveBillingPeriod(),
                 db.fetchBillingPeriods(),
+                db.fetchSetting('gsheet_id'),
+                db.fetchSetting('gsheet_sharing_email'),
             ]);
 
             const me = profilesData.find(p => p.id === userId);
@@ -257,6 +271,8 @@ function App() {
             }
             const allOrders = await db.fetchFrituurBestellingen();
             setFriesOrders(allOrders);
+            setGsheetId(gsheetIdSetting);
+            setGsheetSharingEmail(gsheetSharingEmailSetting);
         } catch (error) {
             console.error('Error loading data:', error);
             showToast('Fout bij het laden van de gegevens', 'error');
@@ -578,7 +594,16 @@ function App() {
         handleMarkNotificationAsRead, handleSaveCountdowns, handleAddBierpongGame,
         frituurSessieId,
         activePeriod, setActivePeriod,
-        billingPeriods, setBillingPeriods
+        billingPeriods, setBillingPeriods,
+        gsheetId, setGsheetId,
+        gsheetSharingEmail, setGsheetSharingEmail,
+        syncToGoogleSheets: async (command: string, payload: any) => {
+            const { data, error } = await supabase.functions.invoke('google-sheets-sync', {
+                body: { command, payload }
+            });
+            if (error) throw error;
+            return data;
+        }
     };
 
     // Scroll to top on route change
@@ -597,7 +622,7 @@ function App() {
         return (
             <div className="text-base min-h-screen pb-nav-safe">
                 <Outlet context={contextValue} />
-                <BottomNav />
+                <BottomNav notifications={notifications} />
             </div>
         );
     };
@@ -637,9 +662,11 @@ function App() {
                         <Route path="strepen/facturatie" element={<TeamDrankInvoicesScreen />} />
                         <Route path="strepen/facturatie/nieuw" element={<TeamDrankBillingScreen />} />
                         <Route path="strepen/facturatie/archief" element={<TeamDrankArchiveScreen />} />
+                        <Route path="strepen/facturatie/archief/:periodId" element={<TeamDrankInvoicesScreen />} />
                         <Route path="strepen/facturatie/periodes" element={<BillingPeriodsManageScreen />} />
                         <Route path="strepen/facturatie/excel" element={<TeamDrankExcelPreviewScreen />} />
                         <Route path="strepen/facturatie/billing-excel" element={<TeamDrankBillingExcelPreviewScreen />} />
+                        <Route path="strepen/facturatie/beheer" element={<TeamDrankExcelBeheerScreen />} />
                         <Route path="strepen/overzicht" element={<ConsumptionOverviewScreen users={users} drinks={drinks} streaks={streaks} />} />
 
                         <Route path="mijn-factuur" element={<MyInvoiceScreen balance={balance} currentUser={currentUser} streaks={streaks} friesOrders={friesOrders} />} />

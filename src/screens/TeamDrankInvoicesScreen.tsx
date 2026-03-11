@@ -1,14 +1,85 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { supabase } from '../lib/supabase';
+import { showToast } from '../components/Toast';
 
 export const TeamDrankInvoicesScreen: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'vergelijking' | 'facturen'>('vergelijking');
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleTakeReceiptPhoto = async () => {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: true,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Prompt
+      });
+
+      if (image.base64String) {
+        uploadToSupabase(image.base64String, image.format);
+      }
+    } catch (error) {
+      console.log('Camera geannuleerd of fout:', error);
+    }
+  };
+
+  const uploadToSupabase = async (base64Data: string, format: string = 'jpeg') => {
+    setIsUploading(true);
+    try {
+      const fileExt = format;
+      const fileName = `bonnetje_${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const fetchResponse = await fetch(`data:image/${format};base64,${base64Data}`);
+      const blob = await fetchResponse.blob();
+
+      const { error: uploadError } = await supabase.storage
+        .from('invoices')
+        .upload(filePath, blob, {
+          contentType: `image/${format}`,
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      showToast('Bonnetje succesvol bewaard in het archief!', 'success');
+    } catch (error: any) {
+      showToast('Upload mislukt: ' + error.message, 'error');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      const { error } = await supabase.storage.from('invoices').upload(`pdf_${Date.now()}_${file.name}`, file);
+      if (error) throw error;
+      showToast('Document geüpload!', 'success');
+    } catch (e) {
+      showToast('Fout tijdens uploaden', 'error');
+    }
+    setIsUploading(false);
+  }
 
   // Mock data for comparison logic
-  const comparisonData: any[] = [];
+  const comparisonData = [
+    { id: '1', name: 'Stella Artois', consumed: 124, purchased: 144, unit: 'flesjes' },
+    { id: '2', name: 'Cola / Fanta / Water', consumed: 86, purchased: 72, unit: 'blikjes' },
+    { id: '3', name: 'Zware Bieren (Duvel/Karmeliet)', consumed: 42, purchased: 48, unit: 'flesjes' },
+    { id: '4', name: 'Chips & Snacks', consumed: 15, purchased: 20, unit: 'zakjes' },
+  ];
 
-  const invoices: any[] = [];
+  const invoices = [
+    { id: '1', supplier: 'Colruyt Aalst', date: '12 Okt 2026', amount: 342.50 },
+    { id: '2', supplier: 'Brouwerij De Brabandere', date: '05 Okt 2026', amount: 840.00 },
+    { id: '3', supplier: 'Sligro', date: '28 Sept 2026', amount: 156.20 },
+  ];
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200">
@@ -30,7 +101,10 @@ export const TeamDrankInvoicesScreen: React.FC = () => {
             >
               <span className="material-icons-round">event_note</span>
             </button>
-            <button className="bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-100 dark:border-blue-600/30">
+            <button
+              onClick={() => navigate('/strepen/facturatie/nieuw')}
+              className="bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-100 dark:border-blue-600/30"
+            >
               Periode sluiten
             </button>
           </div>
@@ -62,17 +136,17 @@ export const TeamDrankInvoicesScreen: React.FC = () => {
               <h2 className="text-sm font-bold text-indigo-100 dark:text-indigo-200 uppercase tracking-wide mb-4">Periode Overzicht</h2>
               <div className="flex justify-between items-center relative">
                 <div className="text-center flex-1">
-                  <div className="text-2xl font-bold text-white">0</div>
+                  <div className="text-2xl font-bold text-white">1.338,70</div>
                   <div className="text-[10px] text-indigo-100 dark:text-indigo-300 uppercase">Ingekocht</div>
                 </div>
                 <div className="w-px h-10 bg-indigo-300 dark:bg-indigo-500/30"></div>
                 <div className="text-center flex-1">
-                  <div className="text-2xl font-bold text-white">0</div>
+                  <div className="text-2xl font-bold text-white">1.210,00</div>
                   <div className="text-[10px] text-indigo-100 dark:text-indigo-300 uppercase">Gestreept</div>
                 </div>
                 <div className="w-px h-10 bg-indigo-300 dark:bg-indigo-500/30"></div>
                 <div className="text-center flex-1">
-                  <div className="text-2xl font-bold text-white">0</div>
+                  <div className="text-2xl font-bold text-white">-128,70</div>
                   <div className="text-[10px] text-indigo-100 dark:text-indigo-300 uppercase">Verschil</div>
                 </div>
               </div>
@@ -119,14 +193,27 @@ export const TeamDrankInvoicesScreen: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Upload Area */}
-            <div className="border-2 border-dashed border-blue-300 dark:border-blue-700/50 rounded-2xl p-8 flex flex-col items-center justify-center bg-blue-50 dark:bg-blue-900/10 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors cursor-pointer group">
-              <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm">
-                <span className="material-icons-round text-3xl">cloud_upload</span>
-              </div>
-              <p className="font-bold text-sm text-gray-900 dark:text-white">Factuur uploaden</p>
-              <p className="text-xs text-gray-500 mt-1">Sleep bestanden hierheen of klik om te bladeren</p>
-              <p className="text-[10px] text-gray-400 mt-2 uppercase tracking-wide">PDF, JPG, PNG (MAX 5MB)</p>
+            {/* Camera Upload Knop */}
+            <div
+              onClick={handleTakeReceiptPhoto}
+              className="border-2 border-transparent bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all text-white rounded-3xl p-8 flex flex-col items-center justify-center shadow-lg cursor-pointer mb-6 relative overflow-hidden"
+            >
+              {isUploading && (
+                <div className="absolute inset-0 bg-blue-900/80 flex items-center justify-center z-20">
+                  <span className="material-icons-round animate-spin text-4xl">refresh</span>
+                </div>
+              )}
+              <span className="material-icons-round text-5xl mb-4">document_scanner</span>
+              <h2 className="text-xl font-black">Scan Kassaticket</h2>
+              <p className="text-sm text-blue-200 mt-1">Gebruik de camera van je smartphone</p>
+            </div>
+
+            {/* Filepicker voor andere bestanden */}
+            <div className="relative bg-white dark:bg-[#1e293b] border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-3xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors hover:border-blue-500">
+              <input type="file" accept=".pdf,.docx,.jpg,.jpeg,.png" onChange={handlePdfUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+              <span className="material-icons-round text-gray-400 text-4xl mb-2">upload_file</span>
+              <h3 className="font-bold text-gray-700 dark:text-gray-200">Kies PDF, DOCX of afbeelding</h3>
+              <p className="text-xs text-gray-500 mt-1">Tik of sleep om te bladeren in je bestanden</p>
             </div>
 
             {/* Invoices List */}

@@ -13,6 +13,10 @@ export const BillingPeriodsManageScreen: React.FC = () => {
     const [newName, setNewName] = useState('');
     const [startDate, setStartDate] = useState('');
 
+    // States for editing
+    const [editingPeriod, setEditingPeriod] = useState<BillingPeriod | null>(null);
+    const [editName, setEditName] = useState('');
+
     const loadPeriods = async () => {
         try {
             const [periods, openPeriod] = await Promise.all([
@@ -27,9 +31,22 @@ export const BillingPeriodsManageScreen: React.FC = () => {
         }
     };
 
+    const handleUpdateName = async () => {
+        if (!editingPeriod || !editName) return;
+
+        try {
+            await db.updateBillingPeriod(editingPeriod.id, { naam: editName });
+            showToast('Naam aangepast', 'success');
+            setEditingPeriod(null);
+            loadPeriods();
+        } catch (error) {
+            showToast('Fout bij aanpassen', 'error');
+        }
+    };
+
     const handleCreatePeriod = async () => {
-        if (!newName) {
-            showToast('Vul een naam in', 'warning');
+        if (!newName || !startDate) {
+            showToast('Vul een naam en startdatum in', 'warning');
             return;
         }
 
@@ -90,7 +107,20 @@ export const BillingPeriodsManageScreen: React.FC = () => {
                         <div key={period.id} className={`p-4 rounded-2xl border transition-all ${!period.is_closed ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800' : 'bg-white dark:bg-[#1e293b] border-gray-100 dark:border-gray-800'}`}>
                             <div className="flex justify-between items-start mb-2">
                                 <div>
-                                    <h3 className="font-bold text-lg">{period.naam}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-lg">{period.naam}</h3>
+                                        {!period.is_closed && (
+                                            <button
+                                                onClick={() => {
+                                                    setEditingPeriod(period);
+                                                    setEditName(period.naam);
+                                                }}
+                                                className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                                            >
+                                                <span className="material-icons-round text-sm">edit</span>
+                                            </button>
+                                        )}
+                                    </div>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">
                                         {new Date(period.start_datum).toLocaleDateString('nl-BE')}
                                         {period.eind_datum ? ` — ${new Date(period.eind_datum).toLocaleDateString('nl-BE')}` : ' — heden'}
@@ -150,7 +180,7 @@ export const BillingPeriodsManageScreen: React.FC = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Startdatum (optioneel)</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Startdatum (verplicht)</label>
                                 <input
                                     type="date"
                                     value={startDate}
@@ -172,6 +202,41 @@ export const BillingPeriodsManageScreen: React.FC = () => {
                                 className="flex-[2] bg-blue-600 text-white py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20"
                             >
                                 Opslaan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Edit Modal */}
+            {editingPeriod && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-3xl p-6 shadow-2xl">
+                        <h2 className="text-xl font-bold mb-6">Naam Aanpassen</h2>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Nieuwe Naam</label>
+                                <input
+                                    type="text"
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    className="w-full bg-gray-50 dark:bg-[#0f172a] border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 mt-8">
+                            <button
+                                onClick={() => setEditingPeriod(null)}
+                                className="flex-1 py-3 text-sm font-bold text-gray-500 hover:text-gray-700 dark:hover:text-white transition-colors"
+                            >
+                                Annuleren
+                            </button>
+                            <button
+                                onClick={handleUpdateName}
+                                className="flex-[2] bg-blue-600 text-white py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20"
+                            >
+                                Aanpassen
                             </button>
                         </div>
                     </div>

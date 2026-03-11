@@ -1,427 +1,353 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Drink } from '../types';
 import { AppContextType } from '../App';
-import { fetchAppSetting, saveAppSetting, updateBillingPeriod, updateGeschatteKost, archiveConsumptiesPeriod, fetchBillingPeriods, fetchOpenBillingPeriod } from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
-import { supabase } from '../lib/supabase';
 
 export const TeamDrankDashboardScreen: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    stockItems,
-    drinks,
-    setDrinks: onUpdateDrinks,
-    activePeriod,
-    setActivePeriod,
-    billingPeriods,
-    setBillingPeriods,
-    streaks
-  } = useOutletContext<AppContextType>();
-  const [excelLink, setExcelLink] = useState('');
-  const [billingExcelLink, setBillingExcelLink] = useState('');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [tempLink, setTempLink] = useState('');
-  const [tempBillingLink, setTempBillingLink] = useState('');
-  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
+  const { streaks, users, activePeriod, handleDeleteStreak, friesOrders } = useOutletContext<AppContextType>();
 
-  // Local state for editing drink prices in the modal
-  const [tempDrinks, setTempDrinks] = React.useState<Drink[]>([]);
+  // States voor UI deellijsten
+  const [activeView, setActiveView] = useState<'dashboard' | 'balances' | 'logbook'>(() => {
+    return (sessionStorage.getItem('teamDrankActiveView') as 'dashboard' | 'balances' | 'logbook') || 'dashboard';
+  });
 
-  // Calculate low stock items (urgent or count < 5)
-  const lowStockItems = (stockItems || []).filter(item => item.urgent || item.count < 5);
+  React.useEffect(() => {
+    sessionStorage.setItem('teamDrankActiveView', activeView);
+  }, [activeView]);
 
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const link = await fetchAppSetting('teamDrankExcelLink');
-        const billingLink = await fetchAppSetting('teamDrankBillingExcelLink');
+  const [expandedWeek, setExpandedWeek] = useState<string | null>(null);
 
-        if (link) {
-          setExcelLink(link);
-          setTempLink(link);
-        }
-        if (billingLink) {
-          setBillingExcelLink(billingLink);
-          setTempBillingLink(billingLink);
-        }
-      } catch (err) {
-        console.error("Failed to load settings from DB:", err);
+  // --- Berekeningen voor Drankrekening & Wekelijkse Totalen ---
+  // In een echte applicatie filter je hier ook de `frituur_bestellingen` list op `activePeriod.id`
+  const periodStreaks = useMemo(() => {
+    return (streaks || []).filter(s => s.period_id === activePeriod?.id);
+  }, [streaks, activePeriod]);
+
+  // Voorlopige drankrekening: groepeer per leiding (Frieten + Strepen = Totaal)
+  const drankrekeningen = useMemo(() => {
+    const data: Record<string, { userId: string; userName: string; strepenKost: number; frietenKost: number }> = {};
+
+    periodStreaks.forEach(s => {
+      if (!data[s.userId]) {
+        const u = (users || []).find(user => user.id === s.userId);
+        data[s.userId] = { userId: s.userId, userName: u?.naam || 'Onbekend', strepenKost: 0, frietenKost: 0 };
       }
-    };
-    loadSettings();
-  }, []);
+      data[s.userId].strepenKost += s.price * s.amount;
+    });
 
-  // Initialize tempDrinks when modal opens
-  useEffect(() => {
-    if (isSettingsOpen) {
-      setTempDrinks([...drinks]);
-    }
-  }, [isSettingsOpen, drinks]);
-
-  const handleSaveLink = async () => {
-    setIsLoadingSettings(true);
-    try {
-      await saveAppSetting('teamDrankExcelLink', tempLink);
-      await saveAppSetting('teamDrankBillingExcelLink', tempBillingLink);
-
-      setExcelLink(tempLink);
-      setBillingExcelLink(tempBillingLink);
-
-      // Save updated drink prices
-      if (onUpdateDrinks) {
-        onUpdateDrinks(tempDrinks);
+    // Voeg Frituurkosten toe
+    const periodFriesOrders = (friesOrders || []).filter(o => o.periodId === activePeriod?.id);
+    periodFriesOrders.forEach(o => {
+      if (!data[o.userId]) {
+        const u = (users || []).find(user => user.id === o.userId);
+        data[o.userId] = { userId: o.userId, userName: u?.naam || o.userName || 'Onbekend', strepenKost: 0, frietenKost: 0 };
       }
+      data[o.userId].frietenKost += o.totalPrice;
+    });
 
-      showToast('Instellingen opgeslagen', 'success');
-      setIsSettingsOpen(false);
-    } catch (err) {
-      console.error("Failed to save settings to DB:", err);
-      showToast('Kon instellingen niet opslaan', 'error');
-    } finally {
-      setIsLoadingSettings(false);
+    return Object.values(data).sort((a, b) => (b.strepenKost + b.frietenKost) - (a.strepenKost + a.frietenKost));
+  }, [periodStreaks, users, friesOrders, activePeriod]);
+
+  const totaalOpenstaand = drankrekeningen.reduce((acc, curr) => acc + curr.strepenKost + curr.frietenKost, 0);
+
+  // Wekelijkse groepering voor dropdowns (Start zaterdag 08:00)
+  const weeklyStreaks = useMemo(() => {
+    const weeks: Record<string, { streaks: typeof periodStreaks; summary: string }> = {};
+
+    periodStreaks.forEach(s => {
+      const date = new Date(s.timestamp);
+
+      // Bereken de start van de 'KSA week' (vorige zaterdag 08:00)
+      const ksaDate = new Date(date);
+      // Als het voor zaterdag 08:00 is, hoort het bij de vorige 'week'
+      const day = ksaDate.getDay(); // 0=Sun, 6=Sat
+      const hour = ksaDate.getHours();
+
+      let diff = day === 6 ? (hour < 8 ? 7 : 0) : (day + 1);
+
+      const weekStart = new Date(ksaDate);
+      weekStart.setDate(ksaDate.getDate() - diff);
+      weekStart.setHours(8, 0, 0, 0);
+
+      const weekLabel = `Zat ${weekStart.toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' }).replace('.', '')}`;
+
+      if (!weeks[weekLabel]) {
+        weeks[weekLabel] = { streaks: [], summary: '' };
+      }
+      weeks[weekLabel].streaks.push(s);
+    });
+
+    // Genereer samenvattingen per week
+    Object.keys(weeks).forEach(label => {
+      const drinkTotals: Record<string, number> = {};
+      weeks[label].streaks.forEach(s => {
+        drinkTotals[s.drinkName] = (drinkTotals[s.drinkName] || 0) + s.amount;
+      });
+      weeks[label].summary = Object.entries(drinkTotals)
+        .map(([name, count]) => `${count}x ${name}`)
+        .join(', ');
+    });
+
+    return weeks;
+  }, [periodStreaks]);
+
+  const onMinKnop = async (streakId: string) => {
+    if (window.confirm('Weet je zeker dat je deze consumptie wil corrigeren (-1 streepje)?')) {
+      await handleDeleteStreak(streakId);
+      showToast('Correctie toegepast!', 'success');
     }
   };
 
-  const handleUpdateTempDrinkPrice = (id: string | number, price: string) => {
-    const numericPrice = parseFloat(price.replace(',', '.')) || 0;
-    setTempDrinks(prev => prev.map(d => d.id === id ? { ...d, price: numericPrice } : d));
+  const handleBack = () => {
+    if (activeView !== 'dashboard') {
+      setActiveView('dashboard');
+    } else {
+      navigate(-1);
+    }
   };
-
-  // handleOpenExcel and data are unused in the current component return, 
-  // keeping them disabled/removed or just ignoring the data warning if any.
-
-  // Unused data array removed.
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200 relative">
-      {/* Header */}
-      <header className="px-4 py-6 flex items-center gap-4 sticky top-0 bg-gray-50/80 dark:bg-[#0f172a]/80 backdrop-blur-md z-10 transition-colors border-b border-gray-200/50 dark:border-gray-800/50">
-        <ChevronBack onClick={() => navigate(-1)} />
-        <div>
-          <h1 className="text-2xl font-bold leading-tight tracking-tight">Team Drank</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Dashboard & Statistieken</p>
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
+      <header className="px-4 py-6 sticky top-0 bg-gray-50/90 dark:bg-[#0f172a]/90 backdrop-blur-md z-20 flex justify-between items-center border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-center gap-3">
+          <ChevronBack onClick={handleBack} />
+          <div>
+            <h1 className="text-xl font-black">
+              {activeView === 'dashboard' ? 'Team Drank' : activeView === 'balances' ? "Openstaande Saldo's" : 'Logboek'}
+            </h1>
+            <p className="text-xs text-gray-500 font-medium">Periode: {activePeriod?.naam || 'Geen'}</p>
+          </div>
         </div>
+
+
       </header>
 
-      <main className="flex-1 px-4 pb-nav-safe overflow-y-auto space-y-6">
-        {/* Alerts Section */}
-        {lowStockItems.length > 0 && (
-          <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/30 rounded-2xl p-4 flex gap-4 items-start relative overflow-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500"></div>
-            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg text-orange-600 dark:text-orange-500 shrink-0">
-              <span className="material-icons-round">inventory_2</span>
-            </div>
-            <div>
-              <h3 className="text-orange-800 dark:text-orange-400 font-bold text-sm mb-1">Lage Voorraad</h3>
-              <p className="text-orange-700/80 dark:text-orange-300/70 text-xs leading-relaxed">
-                {lowStockItems.map((item, index) => (
-                  <React.Fragment key={item.id}>
-                    <span className="font-bold">{item.name}</span> ({item.count} {item.unit}){index < lowStockItems.length - 1 ? ', ' : '.'}
-                  </React.Fragment>
-                ))}
-                <br />
-                Bestel tijdig bij voor het weekend.
-              </p>
-            </div>
-          </div>
-        )}
+      <main className="px-4 py-6 space-y-8 pb-nav-safe">
 
-        {/* Quick Actions Grid */}
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3 px-1">Snelkoppelingen</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => navigate('/strepen/facturatie')}
-              className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
-            >
-              <div className="w-10 h-10 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="material-icons-round">receipt_long</span>
-              </div>
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Facturen</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/strepen/voorraad')}
-              className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
-            >
-              <div className="w-10 h-10 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="material-icons-round">inventory_2</span>
-              </div>
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Voorraad</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/strepen/facturatie/nieuw')}
-              className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
-            >
-              <div className="w-10 h-10 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="material-icons-round">attach_money</span>
-              </div>
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Drankrekeningen</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/strepen/facturatie/excel')}
-              className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
-            >
-              <div className="w-10 h-10 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="material-icons-round">table_view</span>
-              </div>
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Excel Sheet</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/strepen/geschiedenis-alle')}
-              className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
-            >
-              <div className="w-10 h-10 rounded-full bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="material-icons-round">history</span>
-              </div>
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Alle gezette strepen</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/strepen/facturatie/archief')}
-              className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
-            >
-              <div className="w-10 h-10 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="material-icons-round">history</span>
-              </div>
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Archief</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/strepen/streaks')}
-              className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
-            >
-              <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="material-icons-round">format_list_numbered</span>
-              </div>
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Alle Strepen</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/frituur/geschiedenis')}
-              className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
-            >
-              <div className="w-10 h-10 rounded-full bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="material-icons-round">fastfood</span>
-              </div>
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Frieten</span>
-            </button>
-
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group col-span-2"
-            >
-              <div className="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="material-icons-round">settings</span>
-              </div>
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Instellingen</span>
-            </button>
-          </div>
-        </div>
-      </main>
-
-      {/* Settings Modal */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1e293b] w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[85vh] overflow-y-auto flex flex-col">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 shrink-0">Instellingen</h3>
-
-            <div className="overflow-y-auto pr-1 custom-scrollbar">
-              {/* Excel Link Section */}
-              <div className="mb-6">
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Link naar Voorraad Excel</label>
-                <input
-                  type="url"
-                  value={tempLink}
-                  onChange={(e) => setTempLink(e.target.value)}
-                  placeholder="https://docs.google.com/spreadsheets/..."
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
-                />
-
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Link naar Drankrekening Excel</label>
-                <input
-                  type="url"
-                  value={tempBillingLink}
-                  onChange={(e) => setTempBillingLink(e.target.value)}
-                  placeholder="https://docs.google.com/spreadsheets/..."
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-[10px] text-gray-400 mt-2">
-                  Plak hier de links naar de online Excel bestanden.
-                </p>
-              </div>
-
-              {/* Prices & Financial Section */}
-              <div className="mb-6">
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-3">Prijzen & Financieel</label>
-                <div className="space-y-3">
-                  {tempDrinks.map(drink => (
-                    <div key={drink.id} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-700 dark:text-gray-300 truncate pr-2">{drink.name}</span>
-                      <div className="relative w-24 shrink-0">
-                        <span className="absolute left-3 top-2.5 text-gray-500 text-xs">€</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={drink.price}
-                          onChange={(e) => handleUpdateTempDrinkPrice(drink.id, e.target.value)}
-                          className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-6 pr-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                    </div>
-                  ))}
+        {activeView === 'dashboard' && (
+          <>
+            {/* 1. Financiën Widget */}
+            <section>
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-6 shadow-xl text-white relative overflow-hidden">
+                <div className="absolute right-0 top-0 opacity-10">
+                  <span className="material-icons-round text-9xl">account_balance_wallet</span>
+                </div>
+                <p className="text-sm font-medium text-blue-100 uppercase tracking-wider mb-1">Totaal Lopende Rekeningen</p>
+                <h2 className="text-4xl font-black">€ {totaalOpenstaand.toFixed(2).replace('.', ',')}</h2>
+                <div className="mt-4 pt-4 border-t border-white/20 flex justify-between text-sm font-semibold">
+                  <span>Strepen: € {drankrekeningen.reduce((a, b) => a + b.strepenKost, 0).toFixed(2).replace('.', ',')}</span>
+                  <span>Frituur: € {drankrekeningen.reduce((a, b) => a + b.frietenKost, 0).toFixed(2).replace('.', ',')}</span>
                 </div>
               </div>
+            </section>
 
-              {/* Period Management Section */}
-              <div className="mb-6">
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-3">Huidige Periode Beheer</label>
-                {activePeriod ? (
-                  <div className="space-y-4">
-                    {/* Period Name */}
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Naam huidige periode</label>
-                      <input
-                        type="text"
-                        value={activePeriod.naam}
-                        onChange={(e) => setActivePeriod({ ...activePeriod, naam: e.target.value })}
-                        onBlur={async () => {
-                          try {
-                            await updateBillingPeriod(activePeriod.id, { naam: activePeriod.naam });
-                          } catch (err) { console.error(err); }
-                        }}
-                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
+            {/* Navigatie Knoppen */}
+            <section className="grid gap-3">
+              <div
+                onClick={() => setActiveView('balances')}
+                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-xl text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform">
+                    <span className="material-icons-round">account_balance</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Openstaande Saldo's</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Bekijk schulden van leden</p>
+                  </div>
+                </div>
+                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+              </div>
 
-                    {/* Geschatte Kost */}
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Factuurkosten Brouwer (€)</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-3 text-gray-500 text-sm">€</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={activePeriod.geschatte_kost || ''}
-                          onChange={(e) => setActivePeriod({ ...activePeriod, geschatte_kost: parseFloat(e.target.value) || 0 })}
-                          onBlur={async () => {
-                            try {
-                              await updateGeschatteKost(activePeriod.id, activePeriod.geschatte_kost);
-                              showToast('Factuurkosten opgeslagen', 'success');
-                            } catch (err) { showToast('Fout bij opslaan', 'error'); }
-                          }}
-                          placeholder="0.00"
-                          className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-7 pr-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+              <div
+                onClick={() => setActiveView('logbook')}
+                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                    <span className="material-icons-round text-indigo-700 dark:text-indigo-300">history</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 transition-colors">Logboek & Correcties</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Recente consumpties bekijken en wissen</p>
+                  </div>
+                </div>
+                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+              </div>
+
+              <div className="pt-2">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3 px-1">Beheer & Instellingen</h4>
+                <div className="grid gap-3">
+                  <div onClick={() => navigate('/strepen/voorraad')} className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-sky-100 dark:bg-sky-900/30 rounded-xl text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform">
+                        <span className="material-icons-round">inventory</span>
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-sky-600 transition-colors">Voorraad & Prijzen</h3>
+                        <p className="text-xs text-gray-500">Dranken toevoegen of aanpassen</p>
                       </div>
                     </div>
+                    <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+                  </div>
 
-                    {/* Realtime Calculation */}
-                    {(() => {
-                      const periodStreaks = streaks.filter(s => s.period_id === activePeriod.id);
-                      const totalStrepen = periodStreaks.reduce((sum, s) => sum + s.amount, 0);
-                      const prijsPerStreep = totalStrepen > 0 ? activePeriod.geschatte_kost / totalStrepen : 0;
-                      return (
-                        <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-500 dark:text-gray-400">Totaal strepen deze periode</span>
-                            <span className="font-bold text-gray-900 dark:text-white">{totalStrepen}</span>
-                          </div>
-                          <div className="flex justify-between text-xs mt-1">
-                            <span className="text-gray-500 dark:text-gray-400">Berekende prijs per streep</span>
-                            <span className="font-bold text-blue-600 dark:text-blue-400">
-                              {totalStrepen > 0 ? `€ ${prijsPerStreep.toFixed(2).replace('.', ',')}` : 'N.v.t. (0 strepen)'}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Close Period Button */}
-                    <button
-                      onClick={async () => {
-                        if (!window.confirm(`Weet je zeker dat je "${activePeriod.naam}" wilt afsluiten? Dit maakt een nieuwe periode aan.`)) return;
-                        try {
-                          const result = await archiveConsumptiesPeriod();
-                          showToast(`"${activePeriod.naam}" afgesloten! Nieuwe periode aangemaakt.`, 'success');
-                          // Refresh periods
-                          const [newOpen, allPeriods] = await Promise.all([
-                            fetchOpenBillingPeriod(),
-                            fetchBillingPeriods()
-                          ]);
-                          setActivePeriod(newOpen);
-                          setBillingPeriods(allPeriods);
-                        } catch (err: any) {
-                          showToast('Fout bij afsluiten: ' + err.message, 'error');
-                        }
-                      }}
-                      className="w-full flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-left group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="material-icons-round text-red-400 group-hover:text-red-600">lock</span>
-                        <span className="text-sm font-medium text-red-700 dark:text-red-400">Periode Afsluiten</span>
+                  <div onClick={() => navigate('/strepen/facturatie')} className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
+                        <span className="material-icons-round">receipt_long</span>
                       </div>
-                      <span className="material-icons-round text-red-300 text-sm">chevron_right</span>
-                    </button>
-                    <p className="text-[10px] text-gray-400 px-1 leading-relaxed">
-                      Sluit de huidige periode af, koppelt alle losse strepen, en maakt automatisch een nieuwe periode aan.
-                    </p>
+                      <div>
+                        <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-amber-600 transition-colors">Factuurbeheer</h3>
+                        <p className="text-xs text-gray-500">Facturen genereren voor leden</p>
+                      </div>
+                    </div>
+                    <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
                   </div>
-                ) : (
-                  <div className="text-center py-4 text-gray-400 text-sm">
-                    <p>Geen open periode gevonden.</p>
-                    <button
-                      onClick={async () => {
-                        try {
-                          const result = await archiveConsumptiesPeriod();
-                          const [newOpen, allPeriods] = await Promise.all([
-                            fetchOpenBillingPeriod(),
-                            fetchBillingPeriods()
-                          ]);
-                          setActivePeriod(newOpen);
-                          setBillingPeriods(allPeriods);
-                          showToast('Nieuwe periode aangemaakt!', 'success');
-                        } catch (err: any) {
-                          showToast('Fout: ' + err.message, 'error');
-                        }
-                      }}
-                      className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold"
-                    >
-                      Nieuwe Periode Starten
-                    </button>
+
+                  <div onClick={() => navigate('/strepen/facturatie/beheer')} className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                        <span className="material-icons-round font-bold">grid_on</span>
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 transition-colors">Excel Beheer</h3>
+                        <p className="text-xs text-gray-500">Gegevens rechtstreeks aanpassen</p>
+                      </div>
+                    </div>
+                    <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
                   </div>
-                )}
+
+                  <div onClick={() => navigate('/strepen/facturatie/archief')} className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
+                        <span className="material-icons-round">inventory_2</span>
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900 dark:text-white">Archief</h3>
+                        <p className="text-xs text-gray-500">Oude periodes en facturen inkijken</p>
+                      </div>
+                    </div>
+                    <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* 2. Lopende Drankrekeningen per Leiding */}
+        {activeView === 'balances' && (
+          <section>
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-sm px-1">Lopende Saldo's (Nu)</h3>
+                <p className="text-[10px] text-gray-400 px-1 mt-0.5">Huidige consumpties van {activePeriod?.naam}</p>
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800 mt-auto shrink-0">
+            {/* Quick Actions */}
+            <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4 pb-1">
               <button
-                onClick={() => setIsSettingsOpen(false)}
-                className="flex-1 py-3 rounded-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                onClick={() => navigate(`/strepen/facturatie/billing-excel?periodId=${activePeriod?.id}`)}
+                className="shrink-0 flex items-center gap-1.5 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors hover:bg-green-100 border border-green-200 dark:border-green-800/50"
               >
-                Annuleren
+                <span className="material-icons-round text-sm">download</span>
+                Excel Downloaden
               </button>
               <button
-                onClick={handleSaveLink}
-                disabled={isLoadingSettings}
-                className="flex-1 py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                onClick={() => navigate('/strepen/facturatie')}
+                className="shrink-0 flex items-center gap-1.5 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors hover:bg-blue-100 border border-blue-200 dark:border-blue-800/50"
               >
-                {isLoadingSettings ? (
-                  <span className="material-icons-round animate-spin">refresh</span>
-                ) : (
-                  'Opslaan'
-                )}
+                <span className="material-icons-round text-sm">receipt_long</span>
+                Alle Facturen / Afsluiten
+              </button>
+              <button
+                onClick={() => navigate('/strepen/facturatie/archief')}
+                className="shrink-0 flex items-center gap-1.5 bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors hover:bg-purple-100 border border-purple-200 dark:border-purple-800/50"
+              >
+                <span className="material-icons-round text-sm">history</span>
+                Oude Saldo's
               </button>
             </div>
-          </div>
-        </div>
-      )}
+            <div className="bg-white dark:bg-[#1e2330] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800">
+              {drankrekeningen.map(rek => (
+                <div key={rek.userId} className="p-4 flex justify-between items-center group">
+                  <div>
+                    <span className="font-bold text-gray-900 dark:text-white block">{rek.userName}</span>
+                    <span className="text-xs text-gray-400">Str: €{rek.strepenKost.toFixed(2)} | Fri: €{rek.frietenKost.toFixed(2)}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-black text-lg text-red-500 dark:text-red-400">€ {(rek.strepenKost + rek.frietenKost).toFixed(2).replace('.', ',')}</span>
+                  </div>
+                </div>
+              ))}
+              {drankrekeningen.length === 0 && <div className="p-4 text-center text-sm text-gray-400 font-medium">Geen rekeningen lopend in deze periode.</div>}
+            </div>
+          </section>
+        )}
+
+        {activeView === 'logbook' && (
+          <section>
+            <div className="flex justify-between items-end mb-4">
+              <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-sm px-1">Logboek (Correcties Maken)</h3>
+              <button onClick={() => navigate('/strepen/geschiedenis-alle')} className="text-xs font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-lg hover:bg-indigo-100 transition-colors">
+                Alle Strepen Historiek
+              </button>
+            </div>
+            <div className="space-y-3">
+              {Object.entries(weeklyStreaks).map(([weekLabel, data]) => (
+                <div key={weekLabel} className="bg-white dark:bg-[#1e2330] rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
+                  <button
+                    onClick={() => setExpandedWeek(expandedWeek === weekLabel ? null : weekLabel)}
+                    className="w-full p-4 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors gap-3"
+                  >
+                    <div className="shrink-0 flex items-center">
+                      <span className="font-bold text-sm text-gray-900 dark:text-white whitespace-nowrap">{weekLabel}</span>
+                    </div>
+
+                    <div className="flex-1 text-left min-w-0">
+                      <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-md truncate block max-w-full">
+                        {data.summary || 'Geen consumpties'}
+                      </span>
+                    </div>
+
+                    <span className="material-icons-round text-gray-400 transition-transform duration-200 shrink-0" style={{ transform: expandedWeek === weekLabel ? 'rotate(180deg)' : 'rotate(0deg)' }}>expand_more</span>
+                  </button>
+
+                  {expandedWeek === weekLabel && (
+                    <div className="divide-y divide-gray-50 dark:divide-gray-800">
+                      {data.streaks.map(s => {
+                        const userName = (users || []).find(u => u.id === s.userId)?.naam || 'Onbekend';
+                        return (
+                          <div key={s.id} className="p-3 pl-4 flex items-center justify-between text-sm group">
+                            <div>
+                              <span className="font-bold text-gray-900 dark:text-white block">{userName}</span>
+                              <span className="text-xs font-medium text-gray-500">{s.amount}x {s.drinkName} (€{s.price.toFixed(2).replace('.', ',')})</span>
+                            </div>
+                            {/* DE CRUCIALE CORRECTIE KNOP (MIN) */}
+                            <button
+                              onClick={() => onMinKnop(s.id)}
+                              className="bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 p-2 rounded-xl transition-colors flex items-center gap-1 active:scale-95"
+                              title="Verwijder (corrigeer) dit kasticketje"
+                            >
+                              <span className="material-icons-round text-sm">remove_circle</span>
+                              <span className="text-xs font-bold">Wis</span>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {Object.keys(weeklyStreaks).length === 0 && <p className="text-xs text-center text-gray-400 italic">Geen strepen of frietbestellingen in deze periode.</p>}
+            </div>
+          </section>
+        )}
+
+      </main>
     </div>
   );
 };

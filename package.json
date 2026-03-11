@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",
+    "@capacitor/camera": "^8.0.2",
     "@capacitor/core": "^8.1.0",
     "@supabase/supabase-js": "^2.39.8",
     "@vercel/analytics": "^1.6.1",

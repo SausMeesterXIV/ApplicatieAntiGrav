@@ -85,9 +85,10 @@ export const TeamDrankBillingExcelPreviewScreen: React.FC<TeamDrankBillingExcelP
          try {
             const wb = XLSX.utils.book_new();
             const periodName = selectedPeriod?.naam || 'Alle';
+            const wekjaarStr = selectedPeriod?.werkjaar ? ` (${selectedPeriod.werkjaar})` : '';
 
             // === Sheet 1: Overview with dynamic pricing ===
-            const headerRow = [{ v: `KSA Drankrekeningen — ${periodName}`, t: 's' }, '', '', '', '', ''];
+            const headerRow = [{ v: `KSA Drankrekeningen — ${periodName}${wekjaarStr}`, t: 's' }, '', '', '', '', ''];
             const dateRow = [{ v: 'Gegenereerd op:', t: 's' }, { v: new Date().toLocaleDateString('nl-BE'), t: 's' }, '', '', '', ''];
             const kostRow = [
                { v: 'Factuurkosten:', t: 's' },
@@ -168,7 +169,8 @@ export const TeamDrankBillingExcelPreviewScreen: React.FC<TeamDrankBillingExcelP
 
             // Download
             const safeName = (selectedPeriod?.naam || 'Alle').replace(/[^a-zA-Z0-9]/g, '_');
-            const fileName = `KSA_Rekeningen_${safeName}_${new Date().toISOString().split('T')[0]}.xlsx`;
+            const safeYear = (selectedPeriod?.werkjaar || '').replace(/[^a-zA-Z0-9]/g, '_');
+            const fileName = `KSA_Rekeningen_${safeName}${safeYear ? `_${safeYear}` : ''}_${new Date().toISOString().split('T')[0]}.xlsx`;
             XLSX.writeFile(wb, fileName);
 
             setGenerated(true);
@@ -194,7 +196,9 @@ export const TeamDrankBillingExcelPreviewScreen: React.FC<TeamDrankBillingExcelP
                   <div>
                      <h1 className="font-bold text-lg leading-tight">Excel Drankrekeningen</h1>
                      {selectedPeriod && (
-                        <p className="text-[10px] text-green-200 leading-tight">{selectedPeriod.naam}</p>
+                        <p className="text-[10px] text-green-200 leading-tight">
+                           {selectedPeriod.naam} {selectedPeriod.werkjaar ? `(${selectedPeriod.werkjaar})` : ''}
+                        </p>
                      )}
                   </div>
                </div>

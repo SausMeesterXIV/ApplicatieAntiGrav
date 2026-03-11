@@ -21,7 +21,19 @@ export interface BillingPeriod {
     eind_datum: string | null;
     is_closed: boolean;
     geschatte_kost: number;
+    werkjaar?: string;
     created_at: string;
+}
+
+export interface InkoopFactuur {
+    id: string;
+    leverancier: string;
+    bedrag: number;
+    datum: string;
+    bestand_url?: string;
+    period_id: string;
+    created_by?: string;
+    created_at?: string;
 }
 
 export interface BillingCorrection {
@@ -45,6 +57,7 @@ export interface Drink {
     icon?: string;
     isTemporary?: boolean;
     validUntil?: string;
+    category?: string;
 }
 
 export interface FryItem {
@@ -67,6 +80,7 @@ export interface Order {
     totalPrice: number;
     date: Date;
     status: 'pending' | 'completed';
+    periodId?: string;
 }
 
 export interface Event {
@@ -132,7 +146,6 @@ export interface StockItem {
     count: number;
     unit: string;
     exp: string;
-    urgent: boolean;
     icon: string;
     color: string;
 }
