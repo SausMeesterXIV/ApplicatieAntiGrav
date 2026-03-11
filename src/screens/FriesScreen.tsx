@@ -405,7 +405,7 @@ export const FriesScreen: React.FC = () => {
       {showOrderSummary && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowOrderSummary(false)} />
-          <div className="relative bg-white dark:bg-[#1e293b] w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden">
+          <div className="relative bg-white dark:bg-[#1e293b] w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden pb-[calc(env(safe-area-inset-bottom,0px)+5rem)] sm:pb-0">
             <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">📋 Bestelling Overzicht</h2>
@@ -445,7 +445,7 @@ export const FriesScreen: React.FC = () => {
 
       {/* Time Input Modal */}
       {showTimeInput && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-20">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowTimeInput(false)} />
           <div className="relative bg-white dark:bg-[#1e293b] w-full max-w-xs rounded-2xl shadow-2xl p-6">
             <div className="flex items-center gap-3 mb-4">

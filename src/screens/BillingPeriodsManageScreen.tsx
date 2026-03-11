@@ -164,7 +164,7 @@ export const BillingPeriodsManageScreen: React.FC = () => {
 
             {/* Add Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-20 bg-black/50 backdrop-blur-sm">
                     <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-3xl p-6 shadow-2xl">
                         <h2 className="text-xl font-bold mb-6">Nieuwe Periode</h2>
 
@@ -209,7 +209,7 @@ export const BillingPeriodsManageScreen: React.FC = () => {
             )}
             {/* Edit Modal */}
             {editingPeriod && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-20 bg-black/50 backdrop-blur-sm">
                     <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-3xl p-6 shadow-2xl">
                         <h2 className="text-xl font-bold mb-6">Naam Aanpassen</h2>
 

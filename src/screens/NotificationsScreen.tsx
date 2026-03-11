@@ -96,8 +96,13 @@ const NotificationCard: React.FC<{ data: Notification, onClick: () => void }> = 
   >
     <div className="flex items-start gap-4">
       {/* Icon */}
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${data.color}`}>
-        <span className="material-icons-round text-2xl">{data.icon}</span>
+      <div className="relative shrink-0">
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${data.color}`}>
+          <span className="material-icons-round text-2xl">{data.icon}</span>
+        </div>
+        {!data.isRead && (
+          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-white dark:border-[#1e293b] shadow-sm animate-pulse"></span>
+        )}
       </div>
 
       <div className="flex-1 min-w-0">
@@ -112,7 +117,7 @@ const NotificationCard: React.FC<{ data: Notification, onClick: () => void }> = 
               </span>
             )}
           </div>
-          {!data.isRead && <span className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse"></span>}
+
         </div>
 
         {data.title && <p className="text-gray-900 dark:text-white text-sm font-medium mb-1">{data.title}</p>}

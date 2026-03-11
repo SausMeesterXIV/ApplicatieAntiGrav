@@ -47,6 +47,7 @@ export const RolesManageScreen: React.FC = () => {
   const [newRoleIcon, setNewRoleIcon] = useState('star');
   const [newRoleColor, setNewRoleColor] = useState('bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800');
   const [isDeletingRoles, setIsDeletingRoles] = useState(false);
+  const [pendingDeactivationUser, setPendingDeactivationUser] = useState<User | null>(null);
 
   const handleCreateRole = () => {
     if (!newRoleLabel) return;
@@ -164,16 +165,22 @@ export const RolesManageScreen: React.FC = () => {
   };
 
   const toggleUserActief = async (user: User) => {
-    if (!window.confirm(`Weet je zeker dat je het account van ${user.naam} wilt ${user.actief ? 'deactiveren' : 'activeren'}?`)) return;
+    // If currently active, we need confirmation before deactivating
+    if (user.actief) {
+      setPendingDeactivationUser(user);
+      return;
+    }
+    // Re-activating directly without confirmation
+    await executeToggleActief(user);
+  };
 
+  const executeToggleActief = async (user: User) => {
     const updatedUser = { ...user, actief: !user.actief };
     setLocalUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
-
-    // Auto close modal if the user was selected and we just disabled them
     if (selectedUser?.id === user.id) {
       setSelectedUser(updatedUser);
     }
-
+    setPendingDeactivationUser(null);
     try {
       await db.updateProfile(user.id, { actief: !user.actief });
       showToast(`Account ${!user.actief ? 'geactiveerd' : 'gedeactiveerd'}`, 'success');
@@ -471,30 +478,39 @@ export const RolesManageScreen: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Icoon (Material Icon)</label>
-                <div className="relative">
-                  <span className="material-icons-round absolute left-4 top-3 text-gray-500">{newRoleIcon}</span>
-                  <select
-                    value={newRoleIcon}
-                    onChange={(e) => setNewRoleIcon(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl pl-11 pr-4 py-3 text-sm text-gray-900 dark:text-white appearance-none"
-                  >
-                    <option value="star">Ster</option>
-                    <option value="person">Persoon</option>
-                    <option value="groups">Groep</option>
-                    <option value="admin_panel_settings">Schild</option>
-                    <option value="build">Gereedschap</option>
-                    <option value="local_bar">Drank</option>
-                    <option value="restaurant">Bestek</option>
-                    <option value="celebration">Feest</option>
-                    <option value="account_balance">Bank</option>
-                    <option value="photo_camera">Camera</option>
-                    <option value="campaign">Megafoon</option>
-                    <option value="sports_soccer">Bal</option>
-                    <option value="music_note">Muziek</option>
-                    <option value="volunteer_activism">Hart</option>
-                    <option value="pets">Dier</option>
-                  </select>
+                <label className="text-xs font-bold text-gray-500 uppercase block mb-2">Kies Icoon</label>
+                <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-2 pb-2 custom-scrollbar">
+                  {[
+                    { val: 'star', label: 'Ster' },
+                    { val: 'person', label: 'Persoon' },
+                    { val: 'groups', label: 'Groep' },
+                    { val: 'admin_panel_settings', label: 'Schild' },
+                    { val: 'build', label: 'Gereedschap' },
+                    { val: 'local_bar', label: 'Drank' },
+                    { val: 'restaurant', label: 'Bestek' },
+                    { val: 'celebration', label: 'Feest' },
+                    { val: 'account_balance', label: 'Bank' },
+                    { val: 'photo_camera', label: 'Camera' },
+                    { val: 'campaign', label: 'Megafoon' },
+                    { val: 'sports_soccer', label: 'Bal' },
+                    { val: 'music_note', label: 'Muziek' },
+                    { val: 'volunteer_activism', label: 'Hart' },
+                    { val: 'pets', label: 'Dier' },
+                  ].map((icon) => (
+                    <button
+                      key={icon.val}
+                      type="button"
+                      onClick={() => setNewRoleIcon(icon.val)}
+                      className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${
+                        newRoleIcon === icon.val
+                          ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400'
+                          : 'bg-gray-50 border-gray-100 text-gray-500 dark:bg-[#0f172a] dark:border-gray-800'
+                      }`}
+                    >
+                      <span className="material-icons-round text-xl mb-1">{icon.val}</span>
+                      <span className="text-[10px] truncate w-full text-center leading-tight">{icon.label}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -559,6 +575,41 @@ export const RolesManageScreen: React.FC = () => {
             >
               Sluiten
             </button>
+          </div>
+        </div>
+      )}
+      {/* Account Deactivation Confirmation Modal */}
+      {pendingDeactivationUser && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPendingDeactivationUser(null)}></div>
+          <div className="bg-white dark:bg-[#1e293b] w-full max-w-sm rounded-3xl relative z-10 p-6 shadow-2xl border border-gray-200 dark:border-gray-800 animate-in fade-in zoom-in-95 duration-200">
+            {/* Icon */}
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center">
+                <span className="material-icons-round text-3xl text-red-600 dark:text-red-400">no_accounts</span>
+              </div>
+            </div>
+            <h2 className="text-xl font-bold text-center text-gray-900 dark:text-white mb-2">Account Deactiveren?</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-1">
+              Je staat op het punt het account van <span className="font-bold text-gray-900 dark:text-white">{pendingDeactivationUser.naam}</span> te deactiveren.
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center mb-6">
+              De gebruiker kan niet meer inloggen. Gegevens worden bewaard voor 6 maanden.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => executeToggleActief(pendingDeactivationUser)}
+                className="w-full bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/20 transition-all"
+              >
+                Ja, deactiveer account
+              </button>
+              <button
+                onClick={() => setPendingDeactivationUser(null)}
+                className="w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-bold py-4 rounded-xl transition-all"
+              >
+                Annuleren
+              </button>
+            </div>
           </div>
         </div>
       )}

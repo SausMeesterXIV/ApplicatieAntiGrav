@@ -108,6 +108,16 @@ export const BierpongScreen: React.FC = () => {
     return map;
   }, [leaderboard]);
 
+  // Podium: only players who played at least half the games of the most active player
+  const podiumLeaders = useMemo(() => {
+    if (leaderboard.length === 0) return [];
+    const maxGames = leaderboard[0].gamesPlayed; // leaderboard is sorted by gamesPlayed desc
+    const minGames = Math.ceil(maxGames / 2);
+    const eligible = leaderboard.filter(e => e.gamesPlayed >= minGames);
+    // Sort eligible by winRatio (best win% on top), then gamesPlayed as tiebreaker
+    return [...eligible].sort((a, b) => b.winRatio - a.winRatio || b.gamesPlayed - a.gamesPlayed);
+  }, [leaderboard]);
+
   const leadersToDisplay = useMemo(() => {
     if (!showAllLeaders) return leaderboard.slice(0, 10);
 
@@ -161,12 +171,12 @@ export const BierpongScreen: React.FC = () => {
       <main className="flex-1 px-4 pb-nav-safe overflow-y-auto space-y-6 pt-2">
 
         {/* ===== TOP 3 PODIUM ===== */}
-        {leaderboard.length >= 3 && (
+        {podiumLeaders.length >= 3 && (
           <section className="relative">
             <div className="flex items-end justify-center gap-3 pt-4 pb-2">
               {/* #2 - Silver */}
               {(() => {
-                const leader = leaderboard[1];
+                const leader = podiumLeaders[1];
                 return (
                   <div className="flex flex-col items-center w-24">
                     <div className="relative mb-2">
@@ -190,7 +200,7 @@ export const BierpongScreen: React.FC = () => {
 
               {/* #1 - Gold */}
               {(() => {
-                const leader = leaderboard[0];
+                const leader = podiumLeaders[0];
                 return (
                   <div className="flex flex-col items-center w-28 -mt-4">
                     <div className="relative mb-2">
@@ -214,7 +224,7 @@ export const BierpongScreen: React.FC = () => {
 
               {/* #3 - Bronze */}
               {(() => {
-                const leader = leaderboard[2];
+                const leader = podiumLeaders[2];
                 return (
                   <div className="flex flex-col items-center w-24">
                     <div className="relative mb-2">
@@ -236,6 +246,7 @@ export const BierpongScreen: React.FC = () => {
                 );
               })()}
             </div>
+            <p className="text-[10px] text-center text-gray-400 dark:text-gray-500 mt-1">Min. {Math.ceil((leaderboard[0]?.gamesPlayed || 0) / 2)} potjes nodig om op het podium te staan</p>
           </section>
         )}
 
@@ -501,7 +512,7 @@ export const BierpongScreen: React.FC = () => {
         return (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowScoreModal(false)} />
-            <div className="relative bg-white dark:bg-[#1e293b] w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="relative bg-white dark:bg-[#1e293b] w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden pb-[calc(env(safe-area-inset-bottom,0px)+5rem)] sm:pb-0">
               {/* Modal Header */}
               <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <div>

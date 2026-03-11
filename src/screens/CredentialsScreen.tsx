@@ -35,11 +35,27 @@ export const CredentialsScreen: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
+
+      // Check if account is active
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('actief')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profile && profile.actief === false) {
+          // Sign out immediately and show deactivation message
+          await supabase.auth.signOut();
+          showToast('Sorry, je account is gedeactiveerd. Voor verdere vragen moet je bij de hoofdleiding zijn!', 'error');
+          return;
+        }
+      }
     } catch (error: any) {
       showToast(error.message || 'Fout bij het inloggen', 'error');
     } finally {

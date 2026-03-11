@@ -247,7 +247,7 @@ export const ConsumptionOverviewScreen: React.FC<ConsumptionOverviewScreenProps>
       {showSortMenu && (
         <>
           <div className="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm" onClick={() => setShowSortMenu(false)}></div>
-          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#1e2330] rounded-t-[2rem] p-6 z-50 animate-in slide-in-from-bottom-full duration-300 border-t border-gray-200 dark:border-gray-700 shadow-2xl">
+          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#1e2330] rounded-t-[2rem] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,24px))] z-50 animate-in slide-in-from-bottom-full duration-300 border-t border-gray-200 dark:border-gray-700 shadow-2xl">
             <div className="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-6"></div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Sorteer lijst op</h3>
             <div className="space-y-2">
