@@ -1,22 +1,36 @@
 import React, { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { AppContextType } from '../App';
+import * as db from '../lib/supabaseService';
 
 export const NudgeSelectorScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { users } = useOutletContext<AppContextType>();
+  const { users, currentUser } = useOutletContext<AppContextType>();
   const [search, setSearch] = useState('');
-  const [nudgedIds, setNudgedIds] = useState<string[]>(['3']); // Thomas pre-nudged as per screenshot
+  const [nudgedIds, setNudgedIds] = useState<string[]>([]); // Start empty instead of assuming '3'
   const [showToast, setShowToast] = useState(false);
 
   // Users from Supabase via context
   const leaders = users;
 
-  const handleNudge = (id: string) => {
+  const handleNudge = async (id: string) => {
     if (nudgedIds.includes(id)) return;
 
     setNudgedIds([...nudgedIds, id]);
     setShowToast(true);
+
+    try {
+      const senderName = currentUser?.nickname || currentUser?.name || 'Iemand';
+      await db.addNotificatie(
+        currentUser.id, 
+        id, 
+        'Nudge ontvangen! 👀', 
+        `${senderName} herinnert je eraan om je streepjes aan te vullen!`, 
+        senderName
+      );
+    } catch (e) {
+      console.error('Failed to save nudge:', e);
+    }
 
     // Hide toast after 3 seconds
     setTimeout(() => {

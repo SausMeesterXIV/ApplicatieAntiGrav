@@ -3,6 +3,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { AppContextType } from '../App';
 import { User } from '../types';
+import * as db from '../lib/supabaseService';
 
 export const BierpongManageScreen: React.FC = () => {
     const navigate = useNavigate();
@@ -10,6 +11,7 @@ export const BierpongManageScreen: React.FC = () => {
 
     const [search, setSearch] = useState('');
     const [selectedWinners, setSelectedWinners] = useState<string[]>(duoBierpongWinners);
+    const [isSaving, setIsSaving] = useState(false);
     const [saved, setSaved] = useState(false);
 
     const getUserName = (userId: string) => {
@@ -27,10 +29,21 @@ export const BierpongManageScreen: React.FC = () => {
         setSaved(false);
     };
 
-    const saveWinners = () => {
-        setDuoBierpongWinners(selectedWinners);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
+    const saveWinners = async () => {
+        if (selectedWinners.length !== 2) return;
+        
+        setIsSaving(true);
+        try {
+            await db.setBierpongKampioenen(selectedWinners);
+            setDuoBierpongWinners(selectedWinners);
+            setSaved(true);
+            setTimeout(() => setSaved(false), 2000);
+        } catch (error) {
+            console.error('Fout bij het opslaan van kampioenen:', error);
+            // Je zou hier een toast kunnen toevoegen als die beschikbaar is
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const filteredUsers = users.filter((u: User) =>
@@ -150,14 +163,24 @@ export const BierpongManageScreen: React.FC = () => {
             <div className="fixed bottom-nav-offset left-0 right-0 px-4 pb-4 bg-gradient-to-t from-gray-50 dark:from-[#0f172a] pt-6">
                 <button
                     onClick={saveWinners}
-                    disabled={selectedWinners.length !== 2}
+                    disabled={selectedWinners.length !== 2 || isSaving}
                     className={`w-full font-bold py-4 rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${saved
                         ? 'bg-green-600 text-white shadow-green-500/20'
-                        : 'bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white shadow-purple-500/20'
+                        : isSaving
+                            ? 'bg-purple-400 text-white cursor-wait'
+                            : 'bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white shadow-purple-500/20'
                         }`}
                 >
-                    <span className="material-icons-round">{saved ? 'check_circle' : 'emoji_events'}</span>
-                    {saved ? 'Opgeslagen!' : selectedWinners.length === 2 ? 'Kampioenen Opslaan' : `Selecteer nog ${2 - selectedWinners.length} personen`}
+                    <span className="material-icons-round">
+                        {saved ? 'check_circle' : isSaving ? 'sync' : 'emoji_events'}
+                    </span>
+                    {saved 
+                        ? 'Opgeslagen!' 
+                        : isSaving 
+                            ? 'Bezig met opslaan...' 
+                            : selectedWinners.length === 2 
+                                ? 'Kampioenen Opslaan' 
+                                : `Selecteer nog ${2 - selectedWinners.length} personen`}
                 </button>
             </div>
         </div>

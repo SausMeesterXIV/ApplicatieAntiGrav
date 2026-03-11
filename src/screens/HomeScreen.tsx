@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Event, QuoteItem, CountdownItem, User, Drink } from '../types';
 import { AppContextType } from '../App';
+import { hasRole } from '../lib/roleUtils';
 
 export const HomeScreen: React.FC = () => {
   const {
@@ -333,7 +334,7 @@ export const HomeScreen: React.FC = () => {
         {/* --- ADMIN SECTIONS BELOW (Role-gated) --- */}
 
         {/* Hoofdleiding Section — Admin only */}
-        {currentUser.rol === 'admin' && (
+        {hasRole(currentUser, 'admin') && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="material-icons-round text-primary text-sm">admin_panel_settings</span>
@@ -378,7 +379,7 @@ export const HomeScreen: React.FC = () => {
         )}
 
         {/* --- TEAM DRANK SECTIE --- */}
-        {(currentUser.rol === 'admin' || currentUser.rol === 'team_drank' || currentUser.rol === 'godmode' || currentUser.rol === 'team drank' || (currentUser.roles || []).includes('Drank')) && (
+        {hasRole(currentUser, 'drank') && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="material-icons-round text-primary text-sm">local_drink</span>
@@ -406,7 +407,7 @@ export const HomeScreen: React.FC = () => {
         )}
 
         {/* Sfeerbeheer Section — Admin only */}
-        {(currentUser.rol === 'admin' || (currentUser.roles || []).includes('Sfeerbeheer')) && (
+        {hasRole(currentUser, 'sfeerbeheer') && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="material-icons-round text-primary text-sm">celebration</span>

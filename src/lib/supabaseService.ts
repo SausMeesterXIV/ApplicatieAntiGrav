@@ -493,6 +493,54 @@ export async function fetchFrituurBestellingen(sessieId?: string): Promise<Order
   }));
 }
 
+// ==================== FRITUUR MENU ITEMS ====================
+
+export async function fetchFryItems(): Promise<import('../types').FryItem[]> {
+  const { data, error } = await supabase
+    .from('frituur_items')
+    .select('*')
+    .order('category')
+    .order('name');
+  
+  if (error) throw error;
+  return (data || []).map(i => ({
+    id: i.id,
+    name: i.name,
+    price: Number(i.price),
+    category: i.category as any,
+    description: i.description || undefined
+  }));
+}
+
+export async function addFryItem(item: Omit<import('../types').FryItem, 'id'>): Promise<string> {
+  const { data, error } = await supabase
+    .from('frituur_items')
+    .insert([item])
+    .select('id')
+    .single();
+  
+  if (error) throw error;
+  return data.id;
+}
+
+export async function updateFryItem(id: string, updates: Partial<import('../types').FryItem>): Promise<void> {
+  const { error } = await supabase
+    .from('frituur_items')
+    .update(updates)
+    .eq('id', id);
+  
+  if (error) throw error;
+}
+
+export async function deleteFryItem(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('frituur_items')
+    .delete()
+    .eq('id', id);
+  
+  if (error) throw error;
+}
+
 export async function addFrituurBestelling(
   userId: string,
   userName: string,
@@ -580,6 +628,7 @@ export async function fetchBierpongKampioenen(): Promise<string[]> {
   if (error) throw error;
   return data && data.length > 0 ? data[0].player_ids : [];
 }
+
 
 export async function setBierpongKampioenen(playerIds: string[]): Promise<void> {
   const { error } = await supabase

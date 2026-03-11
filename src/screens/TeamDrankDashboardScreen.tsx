@@ -3,10 +3,22 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { AppContextType } from '../App';
 import { showToast } from '../components/Toast';
+import { hasRole } from '../lib/roleUtils';
 
 export const TeamDrankDashboardScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { streaks, users, activePeriod, handleDeleteStreak, friesOrders } = useOutletContext<AppContextType>();
+  const { streaks, users, activePeriod, handleDeleteStreak, friesOrders, currentUser } = useOutletContext<AppContextType>();
+  
+  const canAccess = hasRole(currentUser, 'drank');
+
+  React.useEffect(() => {
+    if (!canAccess) {
+      showToast('Geen toegang tot Team Drank dashboard', 'error');
+      navigate('/');
+    }
+  }, [canAccess, navigate]);
+
+  if (!canAccess) return null;
 
   // States voor UI deellijsten
   const [activeView, setActiveView] = useState<'dashboard' | 'balances' | 'logbook'>(() => {

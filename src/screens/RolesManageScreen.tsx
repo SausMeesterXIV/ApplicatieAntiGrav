@@ -4,11 +4,12 @@ import { User } from '../types';
 import { AppContextType } from '../App';
 import * as db from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
+import { hasRole } from '../lib/roleUtils';
 
 export const RolesManageScreen: React.FC = () => {
   const navigate = useNavigate();
   const { users, setUsers: setUsersContext, availableRoles, handleSaveRoles, currentUser } = useOutletContext<AppContextType>();
-  const isHoofdleiding = currentUser.rol === 'admin' || (currentUser.roles || []).includes('Hoofdleiding');
+  const isHoofdleiding = hasRole(currentUser, 'admin');
 
   // Data from Supabase via context
   const [localUsers, setLocalUsers] = useState<User[]>([]);
@@ -45,6 +46,7 @@ export const RolesManageScreen: React.FC = () => {
   const [newRoleLabel, setNewRoleLabel] = useState('');
   const [newRoleIcon, setNewRoleIcon] = useState('star');
   const [newRoleColor, setNewRoleColor] = useState('bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800');
+  const [isDeletingRoles, setIsDeletingRoles] = useState(false);
 
   const handleCreateRole = () => {
     if (!newRoleLabel) return;
@@ -231,22 +233,26 @@ export const RolesManageScreen: React.FC = () => {
                     <span className="font-bold text-sm">{role.label}</span>
                     {isActive && <span className="material-icons-round text-sm ml-1">check_circle</span>}
                   </button>
-                  {isHoofdleiding && isActive && (
-                    <button onClick={() => handleDeleteRole(role.id, role.label)} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1 rounded-full transition-colors flex items-center justify-center w-full">
-                      <span className="material-icons-round text-xs">delete</span>
-                    </button>
-                  )}
                 </div>
               );
             })}
             {isHoofdleiding && (
+              <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() => setIsAddingRole(true)}
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-gray-400 text-gray-500 text-sm font-bold transition-all whitespace-nowrap shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-gray-400 text-gray-500 text-sm font-bold transition-all whitespace-nowrap hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <span className="material-icons-round text-lg text-gray-400">add</span>
                   Nieuwe Rol
                 </button>
+                <button
+                  onClick={() => setIsDeletingRoles(true)}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-red-400 text-red-500 text-sm font-bold transition-all whitespace-nowrap hover:bg-red-50 dark:hover:bg-red-900/10"
+                >
+                  <span className="material-icons-round text-lg">delete_sweep</span>
+                  Beheer
+                </button>
+              </div>
             )}
           </div>
 
@@ -498,6 +504,44 @@ export const RolesManageScreen: React.FC = () => {
               <button onClick={() => setIsAddingRole(false)} className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">Annuleren</button>
               <button disabled={!newRoleLabel || !newRoleIcon} onClick={handleCreateRole} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-500 disabled:opacity-50 transition-colors">Aanmaken</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Roles Modal */}
+      {isDeletingRoles && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsDeletingRoles(false)}></div>
+          <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-3xl animate-in fade-in zoom-in-95 duration-200 shadow-2xl overflow-hidden relative z-10 p-6 border border-gray-200 dark:border-gray-800">
+            <h2 className="text-xl font-bold mb-1">Rollen Beheren</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 font-medium">Verwijder rollen die niet meer nodig zijn.</p>
+
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto mb-6 pr-2 no-scrollbar">
+              {availableRoles.map(role => (
+                <div key={role.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#0f172a] rounded-2xl border border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-3">
+                    <span className="material-icons-round text-gray-400">{role.icon}</span>
+                    <span className="font-bold text-gray-900 dark:text-white">{role.label}</span>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteRole(role.id, role.label)}
+                    className="p-2 transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl"
+                  >
+                    <span className="material-icons-round">delete</span>
+                  </button>
+                </div>
+              ))}
+              {availableRoles.length === 0 && (
+                <div className="text-center py-8 text-gray-400 italic text-sm">Geen rollen gevonden.</div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setIsDeletingRoles(false)}
+              className="w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-bold py-4 rounded-xl transition-all"
+            >
+              Sluiten
+            </button>
           </div>
         </div>
       )}

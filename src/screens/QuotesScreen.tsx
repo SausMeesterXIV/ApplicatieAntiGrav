@@ -3,6 +3,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { QuoteItem, User } from '../types';
 import { AppContextType } from '../App';
+import { hasRole } from '../lib/roleUtils';
 
 interface QuotesScreenProps {
   enableManagement?: boolean; // New prop to toggle delete functionality
@@ -39,7 +40,7 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
   const [viewMode, setViewMode] = useState<'current' | 'archive'>('current');
 
   // Logic: User must have role AND management must be enabled via navigation source
-  const canDelete = enableManagement && ((currentUser?.roles || []).includes('Sfeerbeheer') || currentUser?.rol === 'admin');
+  const canDelete = enableManagement && hasRole(currentUser, 'sfeerbeheer');
 
   const handleAdd = () => {
     if (!newQuoteText || !selectedAuthor) return;

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { Session } from '@supabase/supabase-js';
-import { User, Drink, Streak, StockItem, Order, CountdownItem, BierpongGame, QuoteItem, Notification, Event, BillingPeriod } from './types';
+import { User, Drink, Streak, StockItem, FryItem, Order, CountdownItem, BierpongGame, QuoteItem, Notification, Event, BillingPeriod } from './types';
 import * as db from './lib/supabaseService';
 import { showToast, ToastContainer } from './components/Toast';
 import { Analytics } from '@vercel/analytics/react';
@@ -62,6 +62,8 @@ export type AppContextType = {
     handleSaveRoles: (roles: import('./types').RoleDefinition[]) => void;
     balance: number;
     setBalance: React.Dispatch<React.SetStateAction<number>>;
+    fryItems: FryItem[];
+    setFryItems: React.Dispatch<React.SetStateAction<FryItem[]>>;
     friesOrders: Order[];
     setFriesOrders: React.Dispatch<React.SetStateAction<Order[]>>;
     friesSessionStatus: 'open' | 'closed' | 'completed' | 'ordering' | 'ordered';
@@ -95,6 +97,9 @@ export type AppContextType = {
     handleDeleteEvent: (id: string) => void;
     handleAddNotification: (notification: Omit<Notification, 'id'>) => void;
     handleMarkNotificationAsRead: (id: number) => void;
+    handleAddFryItem: (item: Omit<FryItem, 'id'>) => Promise<void>;
+    handleUpdateFryItem: (id: string, updates: Partial<FryItem>) => Promise<void>;
+    handleDeleteFryItem: (id: string) => Promise<void>;
     frituurSessieId: string | null;
     gsheetId: string | null;
     setGsheetId: React.Dispatch<React.SetStateAction<string | null>>;
@@ -128,6 +133,7 @@ function App() {
     const [streaks, setStreaks] = useState<Streak[]>([]);
     const [stockItems, setStockItems] = useState<StockItem[]>([]);
     const [balance, setBalance] = useState(0);
+    const [fryItems, setFryItems] = useState<FryItem[]>([]);
     const [friesOrders, setFriesOrders] = useState<Order[]>([]);
     const [friesSessionStatus, setFriesSessionStatus] = useState<'open' | 'closed' | 'completed' | 'ordering' | 'ordered'>('closed');
     const [friesPickupTime, setFriesPickupTime] = useState<string | null>(null);
@@ -226,6 +232,9 @@ function App() {
                 allBillingPeriods,
                 gsheetIdSetting,
                 gsheetSharingEmailSetting,
+                loadedRoles,
+                fryItemsData,
+                frituurOrdersData,
             ] = await Promise.all([
                 db.fetchProfiles(),
                 db.fetchDranken(),
@@ -244,6 +253,8 @@ function App() {
                 db.fetchSetting('gsheet_id'),
                 db.fetchSetting('gsheet_sharing_email'),
                 db.fetchAvailableRoles(),
+                db.fetchFryItems(),
+                db.fetchFrituurBestellingen(),
             ]);
 
             const me = profilesData.find(p => p.id === userId);
@@ -274,14 +285,13 @@ function App() {
                 setFriesSessionStatus(frituurSessieData.status as any);
                 setFriesPickupTime(frituurSessieData.pickupTime);
             }
-            const allOrders = await db.fetchFrituurBestellingen();
-            setFriesOrders(allOrders);
+            setFriesOrders(frituurOrdersData || []);
+            setFryItems(fryItemsData || []);
             setGsheetId(gsheetIdSetting);
             setGsheetSharingEmail(gsheetSharingEmailSetting);
 
             // Default roles if none in db
-            const loadedRoles = arguments[16] || []; // since it's the 17th item in the array returned by Promise.all
-            if (loadedRoles.length === 0) {
+            if (!loadedRoles || loadedRoles.length === 0) {
                 const defaultRoles = [
                     { id: '1', label: 'Financiën', icon: 'account_balance', color: 'bg-green-100 text-green-700' },
                     { id: '2', label: 'Sfeerbeheer', icon: 'celebration', color: 'bg-purple-100 text-purple-700' },
@@ -621,6 +631,7 @@ function App() {
         friesPickupTime, setFriesPickupTime, countdowns, setCountdowns,
         bierpongGames, setBierpongGames, duoBierpongWinners, setDuoBierpongWinners,
         quotes, setQuotes, events, setEvents,
+        fryItems, setFryItems,
         notifications, setNotifications,
         handleAddCost, handleDeleteStreak, handleQuickStreep, handlePlaceFryOrder,
         handleRemoveFryOrder, handleArchiveFriesSession, handleVoteQuote, handleAddQuote,
@@ -631,6 +642,36 @@ function App() {
         billingPeriods, setBillingPeriods,
         gsheetId, setGsheetId,
         gsheetSharingEmail, setGsheetSharingEmail,
+        handleAddFryItem: async (item) => {
+            try {
+                const id = await db.addFryItem(item);
+                setFryItems(prev => [...prev, { ...item, id }]);
+                showToast('Item toegevoegd', 'success');
+            } catch (error) {
+                console.error('Failed to add fry item:', error);
+                showToast('Fout bij toevoegen item', 'error');
+            }
+        },
+        handleUpdateFryItem: async (id, updates) => {
+            try {
+                await db.updateFryItem(id, updates);
+                setFryItems(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
+                showToast('Item bijgewerkt', 'success');
+            } catch (error) {
+                console.error('Failed to update fry item:', error);
+                showToast('Fout bij bijwerken item', 'error');
+            }
+        },
+        handleDeleteFryItem: async (id) => {
+            try {
+                await db.deleteFryItem(id);
+                setFryItems(prev => prev.filter(i => i.id !== id));
+                showToast('Item verwijderd', 'success');
+            } catch (error) {
+                console.error('Failed to delete fry item:', error);
+                showToast('Fout bij verwijderen item', 'error');
+            }
+        },
         syncToGoogleSheets: async (command: string, payload: any) => {
             const { data, error } = await supabase.functions.invoke('google-sheets-sync', {
                 body: { command, payload }
@@ -707,7 +748,6 @@ function App() {
                         <Route path="bierpong" element={<BierpongScreen />} />
                         <Route path="bierpong/beheer" element={<BierpongManageScreen />} />
                         <Route path="quotes" element={<QuotesScreen />} />
-                        <Route path="quotes-manage" element={<QuotesScreen enableManagement={true} />} />
                         <Route path="quotes/beheer" element={<QuotesScreen enableManagement={true} />} />
 
                         <Route path="settings" element={<SettingsScreen />} />

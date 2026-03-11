@@ -17,7 +17,11 @@ export const FriesScreen: React.FC = () => {
     setFriesPickupTime: onSetPickupTime,
     handleAddNotification: onAddNotification,
     currentUser,
-    users
+    users,
+    fryItems: items,
+    handleAddFryItem,
+    handleUpdateFryItem,
+    handleDeleteFryItem
   } = useOutletContext<AppContextType>();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [favoriteCart, setFavoriteCart] = useState<CartItem[]>(() => {
@@ -92,147 +96,19 @@ export const FriesScreen: React.FC = () => {
   // 'history' orders are 'completed' status OR active orders if the session is locked/ordered (visual only).
   const showTodayAsHistory = sessionStatus === 'ordered';
 
-  const todayOrders = myOrders.filter(o => isToday(o.date) && o.status === 'pending' && !showTodayAsHistory);
+  // Filter orders to only show the ones for the current user in the main UI
+  const myOwnOrders = myOrders.filter(o => o.userId === currentUser.id);
 
-  const historyOrders = myOrders.filter(o =>
+  const todayOrders = myOwnOrders.filter(o => isToday(o.date) && o.status === 'pending' && !showTodayAsHistory);
+
+  const historyOrders = myOwnOrders.filter(o =>
     o.status === 'completed' ||
     (isToday(o.date) && o.status === 'pending' && showTodayAsHistory) ||
     (!isToday(o.date) && o.status === 'pending') // Catch-all for old pending
   );
 
   // Menu items from the local frituur
-  const [items, setItems] = useState<FryItem[]>([
-    // === FRIETEN ===
-    { id: 'f1', name: 'Kinder', price: 2.30, category: 'frieten' },
-    { id: 'f2', name: 'Klein', price: 2.80, category: 'frieten' },
-    { id: 'f3', name: 'Middel', price: 3.20, category: 'frieten' },
-    { id: 'f4', name: 'Groot', price: 3.70, category: 'frieten' },
-    { id: 'f5', name: 'Extra (2~3 pers.)', price: 5.00, category: 'frieten' },
-    { id: 'f6', name: 'Supertje Klein', price: 6.50, category: 'frieten' },
-    { id: 'f7', name: 'Supertje Groot', price: 7.50, category: 'frieten' },
-    { id: 'f8', name: 'Julientje', price: 8.70, category: 'frieten' },
-    { id: 'f9', name: 'Romboutje', price: 9.00, category: 'frieten' },
-    { id: 'f10', name: 'Smullbox', price: 7.50, category: 'frieten' },
-    { id: 'f11', name: 'Aardappelkroket (7st)', price: 2.80, category: 'frieten' },
-    { id: 'f12', name: 'Groot Romboutje', price: 9.80, category: 'frieten' },
-    { id: 'f13', name: 'Groot Julientje', price: 9.50, category: 'frieten' },
-
-    // === SAUZEN ===
-    { id: 's1', name: 'Mayonnaise', price: 1.00, category: 'sauzen' },
-    { id: 's2', name: 'Ketchup tomaat', price: 1.00, category: 'sauzen' },
-    { id: 's3', name: 'Ketchup curry', price: 1.00, category: 'sauzen' },
-    { id: 's4', name: 'Tartaar', price: 1.10, category: 'sauzen' },
-    { id: 's5', name: 'Pickles', price: 1.00, category: 'sauzen' },
-    { id: 's6', name: 'Americain', price: 1.00, category: 'sauzen' },
-    { id: 's7', name: 'Samurai', price: 1.00, category: 'sauzen' },
-    { id: 's8', name: 'Cocktail', price: 1.00, category: 'sauzen' },
-    { id: 's9', name: 'Andalouse', price: 1.00, category: 'sauzen' },
-    { id: 's10', name: 'Loempiasaus', price: 1.00, category: 'sauzen' },
-    { id: 's11', name: 'Mammoetsaus', price: 1.00, category: 'sauzen' },
-    { id: 's12', name: 'Bicky Saus', price: 1.00, category: 'sauzen' },
-    { id: 's13', name: 'Joppiesaus', price: 1.10, category: 'sauzen' },
-    { id: 's14', name: 'Zigeunersaus', price: 1.00, category: 'sauzen' },
-    { id: 's15', name: 'Barbecuesaus', price: 1.00, category: 'sauzen' },
-    { id: 's16', name: 'Pepersaus', price: 1.00, category: 'sauzen' },
-    { id: 's17', name: 'Toscaanse saus', price: 1.00, category: 'sauzen' },
-    { id: 's18', name: 'Gele currysaus', price: 1.00, category: 'sauzen' },
-    { id: 's19', name: 'Zoete Frietsaus', price: 1.00, category: 'sauzen' },
-    { id: 's20', name: 'Special saus (tomaat)', price: 2.00, category: 'sauzen' },
-    { id: 's21', name: 'Special saus (curry)', price: 2.00, category: 'sauzen' },
-    { id: 's22', name: 'Potje satekruiden', price: 0.50, category: 'sauzen' },
-
-    // === HUISBEREID ===
-    { id: 'h1', name: 'Stoofvlees', price: 6.50, category: 'huisbereid' },
-    { id: 'h2', name: 'Stoofvleessaus', price: 2.00, category: 'huisbereid' },
-    { id: 'h3', name: 'Balletjes in tomatensaus', price: 6.30, category: 'huisbereid' },
-    { id: 'h4', name: 'Vol-au-vent', price: 6.30, category: 'huisbereid' },
-
-    // === SNACKS ===
-    { id: 'sn1', name: 'Frikandel', price: 2.20, category: 'snacks' },
-    { id: 'sn2', name: 'Frikandel special', price: 3.20, category: 'snacks' },
-    { id: 'sn3', name: 'Viandel', price: 2.80, category: 'snacks' },
-    { id: 'sn4', name: 'Viandel special', price: 3.80, category: 'snacks' },
-    { id: 'sn5', name: 'Boulet', price: 2.80, category: 'snacks' },
-    { id: 'sn6', name: 'Boulet special', price: 3.70, category: 'snacks' },
-    { id: 'sn7', name: 'Ardeense saté', price: 4.50, category: 'snacks' },
-    { id: 'sn8', name: 'Bamischijf', price: 3.10, category: 'snacks' },
-    { id: 'sn9', name: 'Bitterballen', price: 2.70, category: 'snacks' },
-    { id: 'sn10', name: 'Borrelmaatjes', price: 5.90, category: 'snacks' },
-    { id: 'sn11', name: 'Crizly', price: 4.50, category: 'snacks' },
-    { id: 'sn12', name: 'Kaasballetjes', price: 3.10, category: 'snacks' },
-    { id: 'sn13', name: 'Kipcorn', price: 3.20, category: 'snacks' },
-    { id: 'sn14', name: 'Inktvis ring', price: 4.00, category: 'snacks' },
-    { id: 'sn15', name: 'Frankfurter', price: 2.10, category: 'snacks' },
-    { id: 'sn16', name: 'Garnaalkroket', price: 3.10, category: 'snacks' },
-    { id: 'sn17', name: 'Gebakken Garnalen', price: 6.00, category: 'snacks' },
-    { id: 'sn18', name: 'Ribster', price: 3.30, category: 'snacks' },
-    { id: 'sn19', name: 'Kaaskroket', price: 2.10, category: 'snacks' },
-    { id: 'sn20', name: 'Kippenboutjes hofkip', price: 4.60, category: 'snacks' },
-    { id: 'sn21', name: 'Kipfingers', price: 4.30, category: 'snacks' },
-    { id: 'sn22', name: 'Kip kaas donut', price: 2.90, category: 'snacks' },
-    { id: 'sn23', name: 'Kaaskipcorn', price: 3.30, category: 'snacks' },
-    { id: 'sn24', name: 'Kip kaas punt', price: 3.30, category: 'snacks' },
-    { id: 'sn25', name: 'Kippets (6st)', price: 4.30, category: 'snacks' },
-    { id: 'sn26', name: 'Perlut', price: 4.50, category: 'snacks' },
-    { id: 'sn27', name: 'Loempia + saus', price: 4.90, category: 'snacks' },
-    { id: 'sn28', name: 'Lookworst rood', price: 3.20, category: 'snacks' },
-    { id: 'sn29', name: 'Lookworst rood special', price: 4.20, category: 'snacks' },
-    { id: 'sn30', name: 'Lookworst bruin', price: 4.00, category: 'snacks' },
-    { id: 'sn31', name: 'Lookworst bruin special', price: 5.00, category: 'snacks' },
-    { id: 'sn32', name: 'Lucifer', price: 3.50, category: 'snacks' },
-    { id: 'sn33', name: 'Mammoet zonder saus', price: 2.80, category: 'snacks' },
-    { id: 'sn34', name: 'Mammoet + saus', price: 3.50, category: 'snacks' },
-    { id: 'sn35', name: 'Mexicano', price: 3.30, category: 'snacks' },
-    { id: 'sn36', name: 'Mini Bamiballetjes', price: 2.60, category: 'snacks' },
-    { id: 'sn37', name: 'Mini Kipsaté', price: 3.00, category: 'snacks' },
-    { id: 'sn38', name: 'Mini Loempias (8st)', price: 4.30, category: 'snacks' },
-    { id: 'sn39', name: 'Mini kaassouflesse', price: 4.00, category: 'snacks' },
-    { id: 'sn40', name: "Chick 'n Chili", price: 3.30, category: 'snacks' },
-    { id: 'sn41', name: 'Chicken tenders', price: 3.90, category: 'snacks' },
-    { id: 'sn42', name: 'Mozzarella fingers (5st)', price: 3.80, category: 'snacks' },
-    { id: 'sn43', name: 'Saté klein', price: 3.90, category: 'snacks' },
-    { id: 'sn44', name: 'Saté groot', price: 5.00, category: 'snacks' },
-    { id: 'sn45', name: 'Ragouzi', price: 3.30, category: 'snacks' },
-    { id: 'sn46', name: 'Sito', price: 4.10, category: 'snacks' },
-    { id: 'sn47', name: 'Taco', price: 4.20, category: 'snacks' },
-    { id: 'sn48', name: 'Twijfelaar', price: 4.30, category: 'snacks' },
-    { id: 'sn49', name: 'Visstick', price: 4.10, category: 'snacks' },
-    { id: 'sn50', name: 'Vleeskroket', price: 2.80, category: 'snacks' },
-    { id: 'sn51', name: 'Zigeunerstick', price: 3.40, category: 'snacks' },
-    { id: 'sn52', name: 'Kipsaté', price: 4.20, category: 'snacks' },
-    { id: 'sn53', name: 'Spicy viandel', price: 2.90, category: 'snacks' },
-    { id: 'sn54', name: 'Kippenballetjes (6st)', price: 5.80, category: 'snacks' },
-    { id: 'sn55', name: 'Belcrunch', price: 3.60, category: 'snacks' },
-    { id: 'sn56', name: 'Vuurvreter', price: 3.30, category: 'snacks' },
-    { id: 'sn57', name: 'Mini megamix', price: 5.00, category: 'snacks' },
-    { id: 'sn58', name: 'Mini lucifer', price: 4.40, category: 'snacks' },
-    { id: 'sn59', name: 'Kaassouflesse', price: 3.00, category: 'snacks' },
-    { id: 'sn60', name: 'K3 kaashartjes (3st)', price: 4.50, category: 'snacks' },
-    { id: 'sn61', name: 'Mammoet special', price: 3.80, category: 'snacks' },
-    { id: 'sn62', name: 'Goulashkroket', price: 3.10, category: 'snacks' },
-    { id: 'sn63', name: 'Boulet ajuin', price: 3.70, category: 'snacks' },
-    { id: 'sn64', name: 'Loempidel', price: 3.50, category: 'snacks' },
-    { id: 'sn65', name: 'Topmix', price: 6.80, category: 'snacks' },
-
-    // === BURGERS ===
-    { id: 'b1', name: 'Bicky burger', price: 3.90, category: 'burgers' },
-    { id: 'b2', name: 'Bicky cheese', price: 4.30, category: 'burgers' },
-    { id: 'b3', name: 'Bicky Fish', price: 4.70, category: 'burgers', description: 'Met tartaar saus en verse ajuin' },
-    { id: 'b4', name: 'Bicky Crunchy Chicken', price: 4.30, category: 'burgers' },
-    { id: 'b5', name: "Bicky v/h Huis", price: 4.50, category: 'burgers', description: 'Met toscaanse saus en verse ajuin' },
-    { id: 'b6', name: 'Bicky Rib', price: 4.90, category: 'burgers', description: 'Met andalouse saus' },
-    { id: 'b7', name: 'Bicky vegi', price: 4.30, category: 'burgers' },
-    { id: 'b8', name: 'Bicky mexicano', price: 4.80, category: 'burgers' },
-    { id: 'b9', name: 'Bicky Royale', price: 6.60, category: 'burgers' },
-    { id: 'b10', name: 'Hamburger natuur', price: 3.50, category: 'burgers', description: 'Enkel vlees en broodje' },
-    { id: 'b11', name: 'Hamburger tomatenketchup', price: 3.70, category: 'burgers' },
-    { id: 'b12', name: 'Hamburger curry ketchup', price: 3.70, category: 'burgers' },
-
-    // === SPAGHETTI ===
-    { id: 'sp1', name: 'Spaghetti Kinder', price: 8.20, category: 'spaghetti' },
-    { id: 'sp2', name: 'Spaghetti Klein', price: 9.20, category: 'spaghetti' },
-    { id: 'sp3', name: 'Spaghetti Groot', price: 10.00, category: 'spaghetti' },
-  ]);
+  // State removed - now using context
 
   const updateQuantity = (item: FryItem, delta: number) => {
     if (isAdmin) return; // Disable ordering while editing prices
@@ -318,10 +194,10 @@ export const FriesScreen: React.FC = () => {
     setEditPrice(item.price.toFixed(2));
   };
 
-  const savePrice = (id: string) => {
+  const savePrice = async (id: string) => {
     const newPrice = parseFloat(editPrice.replace(',', '.'));
     if (!isNaN(newPrice)) {
-      setItems(prev => prev.map(item => item.id === id ? { ...item, price: newPrice } : item));
+      await handleUpdateFryItem(id, { price: newPrice });
     }
     setEditingId(null);
   };
@@ -337,16 +213,16 @@ export const FriesScreen: React.FC = () => {
   const [newItemPrice, setNewItemPrice] = useState('');
   const [newItemCategory, setNewItemCategory] = useState<FryItem['category']>('snacks');
 
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
     const price = parseFloat(newItemPrice.replace(',', '.'));
     if (!newItemName.trim() || isNaN(price)) return;
-    const newItem: FryItem = {
-      id: `custom-${Date.now()}`,
+    
+    await handleAddFryItem({
       name: newItemName.trim(),
       price,
       category: newItemCategory,
-    };
-    setItems(prev => [...prev, newItem]);
+    });
+    
     setNewItemName('');
     setNewItemPrice('');
     setNewItemCategory('snacks');
@@ -881,12 +757,24 @@ export const FriesScreen: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <p className="text-gray-500 dark:text-gray-400 text-sm">€ {item.price.toFixed(2)}</p>
                           {isAdmin && !orderingFor && (
-                            <button
-                              onClick={() => startEditing(item)}
-                              className="text-gray-300 hover:text-blue-600 transition-colors"
-                            >
-                              <span className="material-icons-round text-xs">edit</span>
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => startEditing(item)}
+                                className="text-gray-300 hover:text-blue-600 transition-colors"
+                              >
+                                <span className="material-icons-round text-xs">edit</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`Weet je zeker dat je "${item.name}" wilt verwijderen?`)) {
+                                    handleDeleteFryItem(item.id);
+                                  }
+                                }}
+                                className="text-gray-300 hover:text-red-600 transition-colors"
+                              >
+                                <span className="material-icons-round text-xs">delete</span>
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}

@@ -6,11 +6,11 @@ import { Order } from '../types';
 
 export const FriesHistoryScreen: React.FC = () => {
     const navigate = useNavigate();
-    const { friesOrders, users } = useOutletContext<AppContextType>();
+    const { friesOrders, users, currentUser } = useOutletContext<AppContextType>();
 
     // Group completed orders by date (day)
     const groupedByDate = (() => {
-        const completed = friesOrders;
+        const completed = friesOrders.filter(o => o.userId === currentUser.id);
         const groups = new Map<string, { date: Date; orders: Order[]; total: number }>();
 
         completed.forEach(order => {

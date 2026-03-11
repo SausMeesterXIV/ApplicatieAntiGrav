@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { BillingPeriod, BillingCorrection } from '../types';
 import { AppContextType } from '../App';
@@ -30,6 +30,7 @@ export const TeamDrankBillingScreen: React.FC = () => {
   const [correctionModal, setCorrectionModal] = useState<{ userId: string; userName: string } | null>(null);
   const [correctionAmount, setCorrectionAmount] = useState('');
   const [correctionNote, setCorrectionNote] = useState('');
+  const sheetIdRef = useRef<HTMLInputElement>(null);
 
   // Choose the open period by default
   useEffect(() => {
@@ -234,9 +235,9 @@ export const TeamDrankBillingScreen: React.FC = () => {
                   href={`https://docs.google.com/spreadsheets/d/${gsheetId}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[10px] font-bold text-emerald-600 hover:underline flex items-center gap-0.5"
+                  className="px-3 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 flex items-center gap-1.5 transition-colors border border-emerald-200/50 dark:border-emerald-700/50"
                 >
-                  OPEN <span className="material-icons-round text-[12px]">open_in_new</span>
+                  SPREADSHEET OPENEN <span className="material-icons-round text-[12px]">open_in_new</span>
                 </a>
               </div>
               <p className="text-[10px] text-emerald-600/60 dark:text-emerald-400/60 italic">
@@ -255,8 +256,9 @@ export const TeamDrankBillingScreen: React.FC = () => {
               </div>
               <div className="flex gap-2">
                 <input
+                  ref={sheetIdRef}
                   type="text"
-                  placeholder="bijv. 1BxiMVs0XRYFgPN_z1234567890abcdef..."
+                  placeholder="Plak ID hier..."
                   value={localEmail}
                   onChange={(e) => setLocalEmail(e.target.value)}
                   className="flex-1 text-xs px-3 py-2 rounded-lg bg-white dark:bg-[#0f172a] border border-emerald-200 dark:border-emerald-800 focus:ring-1 focus:ring-emerald-500 outline-none font-mono"
@@ -265,7 +267,8 @@ export const TeamDrankBillingScreen: React.FC = () => {
                   onClick={async () => {
                     const sheetId = localEmail.trim();
                     if (!sheetId) {
-                      showToast('Vul een geldige ID in.', 'warning');
+                      showToast('Plak het Spreadsheet ID in het veld.', 'warning');
+                      sheetIdRef.current?.focus();
                       return;
                     }
                     try {
@@ -284,7 +287,7 @@ export const TeamDrankBillingScreen: React.FC = () => {
                       showToast('Koppeling gelukt, maar basis-tabblad maken mislukte (kijk of robot écht bewerker is).', 'warning');
                     }
                   }}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-3 py-2 rounded-lg transition-colors whitespace-nowrap"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-3 py-2 rounded-lg transition-colors whitespace-nowrap shadow-lg shadow-emerald-600/20"
                 >
                   KOPPEL SHEET
                 </button>
