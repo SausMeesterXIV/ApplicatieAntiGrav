@@ -6,6 +6,7 @@ import { AppContextType } from '../App';
 import { supabase } from '../lib/supabase';
 import * as db from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
+import { isHapticEnabled, setHapticEnabled as saveHapticPref } from '../lib/haptics';
 
 export const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ export const SettingsScreen: React.FC = () => {
     }
   };
   const [isDark, setIsDark] = useState(false);
+  const [hapticOn, setHapticOn] = useState(false);
   const [nickname, setNickname] = useState(currentUser.nickname || '');
   const [avatar, setAvatar] = useState(currentUser.avatar);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,6 +39,7 @@ export const SettingsScreen: React.FC = () => {
   useEffect(() => {
     // Sync local state with the actual class on html element (applied in App.tsx)
     setIsDark(document.documentElement.classList.contains('dark'));
+    setHapticOn(isHapticEnabled());
   }, []);
 
   const toggleDarkMode = () => {
@@ -48,6 +51,12 @@ export const SettingsScreen: React.FC = () => {
     }
     setIsDark(newIsDark);
     localStorage.setItem('dark_mode', String(newIsDark));
+  };
+
+  const toggleHaptic = () => {
+    const newVal = !hapticOn;
+    setHapticOn(newVal);
+    saveHapticPref(newVal);
   };
 
   const handleSaveNickname = () => {
@@ -184,6 +193,20 @@ export const SettingsScreen: React.FC = () => {
                   className={`w-12 h-6 rounded-full relative transition-colors duration-200 ease-in-out focus:outline-none ${isDark ? 'bg-blue-600' : 'bg-gray-300'}`}
                 >
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out ${isDark ? 'translate-x-6' : 'translate-x-0'}`} />
+                </button>
+              </div>
+
+              {/* Haptic Feedback */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800/50">
+                <div className="flex items-center gap-3">
+                  <span className="material-icons-round text-blue-600 dark:text-blue-500">vibration</span>
+                  <span className="font-medium text-gray-900 dark:text-white">Trillen bij acties</span>
+                </div>
+                <button
+                  onClick={toggleHaptic}
+                  className={`w-12 h-6 rounded-full relative transition-colors duration-200 ease-in-out focus:outline-none ${hapticOn ? 'bg-blue-600' : 'bg-gray-300'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out ${hapticOn ? 'translate-x-6' : 'translate-x-0'}`} />
                 </button>
               </div>
 

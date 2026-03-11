@@ -408,7 +408,7 @@ export async function fetchNotificaties(userId: string): Promise<Notification[]>
     content: n.bericht || '',
     time: formatTimeAgo(new Date(n.datum)),
     isRead: n.gelezen,
-    action: '',
+    action: n.action || '',
     icon: 'notifications',
     color: 'bg-blue-100 text-blue-600',
     _supabaseId: n.id, // Keep the UUID for updates
@@ -420,11 +420,12 @@ export async function addNotificatie(
   ontvangerId: string,
   titel: string,
   bericht: string,
-  zenderNaam?: string
+  zenderNaam?: string,
+  action?: string
 ): Promise<void> {
   const { error } = await supabase
     .from('notificaties')
-    .insert([{ zender_id: zenderId, ontvanger_id: ontvangerId, titel, bericht, zender_naam: zenderNaam || null }]);
+    .insert([{ zender_id: zenderId, ontvanger_id: ontvangerId, titel, bericht, zender_naam: zenderNaam || null, action: action || null }]);
   if (error) throw error;
 }
 
@@ -461,12 +462,37 @@ export async function createFrituurSessie(createdBy: string): Promise<string> {
   return data.id;
 }
 
-export async function updateFrituurSessie(sessieId: string, updates: { status?: string; pickup_time?: string | null }): Promise<void> {
+export async function updateFrituurSessie(sessieId: string, updates: { 
+  status?: string; 
+  pickup_time?: string | null;
+  actual_amount?: number;
+  receipt_url?: string;
+}): Promise<void> {
   const { error } = await supabase
     .from('frituur_sessies')
     .update(updates)
     .eq('id', sessieId);
   if (error) throw error;
+}
+
+export async function uploadReceipt(sessieId: string, file: File): Promise<string> {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `receipt-${sessieId}-${Date.now()}.${fileExt}`;
+  const filePath = `${fileName}`;
+
+  // Upload file to receipts bucket
+  const { error: uploadError } = await supabase.storage
+    .from('receipts')
+    .upload(filePath, file, { upsert: true });
+
+  if (uploadError) throw uploadError;
+
+  // Get public URL
+  const { data } = supabase.storage
+    .from('receipts')
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
 }
 
 export async function fetchFrituurBestellingen(sessieId?: string): Promise<Order[]> {

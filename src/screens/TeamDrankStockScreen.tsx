@@ -4,6 +4,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { StockItem, Drink } from '../types';
 import { AppContextType } from '../App';
 import { showToast } from '../components/Toast';
+import { Modal, BottomSheet } from '../components/Modal';
+import { SkeletonRow } from '../components/Skeleton';
 
 export const TeamDrankStockScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -11,7 +13,8 @@ export const TeamDrankStockScreen: React.FC = () => {
     stockItems,
     setStockItems: onUpdateStock,
     drinks,
-    setDrinks: onUpdateDrinks
+    setDrinks: onUpdateDrinks,
+    loading
   } = useOutletContext<AppContextType>();
   const [activeMainTab, setActiveMainTab] = useState<'voorraad' | 'dranken'>('voorraad');
   const [activeFilter, setActiveFilter] = useState('Standaard');
@@ -206,48 +209,55 @@ export const TeamDrankStockScreen: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
-                  {filteredItems.map(item => (
-                    <div
-                      key={item.id}
-                      onClick={() => handleOpenModal(item)}
-                      className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 flex gap-4 group shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-[0.98]"
-                    >
-                      <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${item.id === 3 ? 'bg-yellow-100' : 'bg-gray-50 dark:bg-gray-800'} relative`}>
-                        <span className={`material-icons-round text-2xl ${item.id === 3 ? 'text-yellow-600' : 'text-gray-400 dark:text-gray-500'}`}>{item.icon}</span>
+                  {loading ? (
+                    <>
+                      {[...Array(6)].map((_, i) => (
+                        <SkeletonRow key={i} />
+                      ))}
+                    </>
+                  ) : (
+                    filteredItems.map(item => (
+                      <div
+                        key={item.id}
+                        onClick={() => handleOpenModal(item)}
+                        className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 flex gap-4 group shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-[0.98]"
+                      >
+                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${item.id === 3 ? 'bg-yellow-100' : 'bg-gray-50 dark:bg-gray-800'} relative`}>
+                          <span className={`material-icons-round text-2xl ${item.id === 3 ? 'text-yellow-600' : 'text-gray-400 dark:text-gray-500'}`}>{item.icon}</span>
+                        </div>
+
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <div className="flex justify-between items-start mb-1">
+                            <h3 className="font-bold text-gray-900 dark:text-white text-sm truncate pr-2">{item.name}</h3>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                              {item.count} {item.unit}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center gap-1">
+                              <span className="material-icons-round text-[10px]">category</span> {item.category}
+                            </span>
+                            <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                            <span>Exp: {item.exp}</span>
+                          </div>
+
+                          <div className="mt-2 h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-blue-500"
+                              style={{ width: '60%' }}
+                            ></div>
+                          </div>
+                        </div>
                       </div>
-
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <div className="flex justify-between items-start mb-1">
-                          <h3 className="font-bold text-gray-900 dark:text-white text-sm truncate pr-2">{item.name}</h3>
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                            {item.count} {item.unit}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                          <span className="flex items-center gap-1">
-                            <span className="material-icons-round text-[10px]">category</span> {item.category}
-                          </span>
-                          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-                          <span>Exp: {item.exp}</span>
-                        </div>
-
-                        <div className="mt-2 h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-blue-500"
-                            style={{ width: '60%' }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </>
             ) : (
               <div className="space-y-6 mt-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-blue-500 text-white p-4 rounded-2xl shadow-lg shadow-blue-500/20">
-                    <div className="text-3xl font-bold mb-1">{stockItems.length}</div>
                     <div className="text-xs font-medium text-blue-100 uppercase tracking-wide">Totaal Items</div>
                   </div>
                   <div className="bg-green-500 text-white p-4 rounded-2xl shadow-lg shadow-green-500/20">
@@ -284,46 +294,52 @@ export const TeamDrankStockScreen: React.FC = () => {
           /* Dranken & Prijzen Tab */
           <div className="space-y-4 mt-4">
             <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider px-1">Levende Prijzen (wordt direct doorgerekend!)</h2>
-            {drinks.map((drink: Drink) => (
-              <div key={drink.id} className="bg-white dark:bg-[#1e293b] p-4 rounded-xl flex items-center justify-between border border-gray-100 dark:border-gray-800 shadow-sm">
-                <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white flex items-center">
-                    {drink.name}
-                    {drink.isTemporary && <span className="text-[10px] bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full ml-2 lowercase">Tijdelijk</span>}
-                  </h3>
-                  {drink.validUntil && <p className="text-[10px] text-gray-500 mt-0.5">Vervalt na: <span className="font-semibold text-gray-700 dark:text-gray-300">{drink.validUntil}</span></p>}
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <span className="absolute left-3 top-2 text-gray-400 text-sm">€</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={drink.price}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value) || 0;
-                        if (onUpdateDrinks) {
-                          onUpdateDrinks(drinks.map(d => d.id === drink.id ? { ...d, price: val } : d));
-                        }
-                      }}
-                      className="w-20 lg:w-24 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-6 pr-2 py-1.5 text-right font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-                    />
-                  </div>
-                  {drink.isTemporary && (
-                    <button
-                      onClick={() => {
-                        if (window.confirm('Tijdelijke drank verwijderen?')) {
-                          onUpdateDrinks && onUpdateDrinks(drinks.filter(d => d.id !== drink.id));
-                        }
-                      }}
-                      className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
-                    >
-                      <span className="material-icons-round text-sm">delete</span>
-                    </button>
-                  )}
-                </div>
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}
               </div>
-            ))}
+            ) : (
+              drinks.map((drink: Drink) => (
+                <div key={drink.id} className="bg-white dark:bg-[#1e293b] p-4 rounded-xl flex items-center justify-between border border-gray-100 dark:border-gray-800 shadow-sm">
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white flex items-center">
+                      {drink.name}
+                      {drink.isTemporary && <span className="text-[10px] bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full ml-2 lowercase">Tijdelijk</span>}
+                    </h3>
+                    {drink.validUntil && <p className="text-[10px] text-gray-500 mt-0.5">Vervalt na: <span className="font-semibold text-gray-700 dark:text-gray-300">{drink.validUntil}</span></p>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 text-gray-400 text-sm">€</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={drink.price}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          if (onUpdateDrinks) {
+                            onUpdateDrinks(drinks.map(d => d.id === drink.id ? { ...d, price: val } : d));
+                          }
+                        }}
+                        className="w-20 lg:w-24 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-6 pr-2 py-1.5 text-right font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                      />
+                    </div>
+                    {drink.isTemporary && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Tijdelijke drank verwijderen?')) {
+                            onUpdateDrinks && onUpdateDrinks(drinks.filter(d => d.id !== drink.id));
+                          }
+                        }}
+                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                      >
+                        <span className="material-icons-round text-sm">delete</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
 
             <button
               onClick={() => setIsDrinkModalOpen(true)}
@@ -347,162 +363,157 @@ export const TeamDrankStockScreen: React.FC = () => {
             Nieuw Stock Item
           </button>
         </footer>
-      )}
-
-      {/* Add/Edit Modal VOORRAAD */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1e293b] w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-              {editingItem ? 'Item Bewerken' : 'Nieuw Item'}
-            </h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Naam</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="bv. Jupiler Bakken"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Aantal</label>
-                  <input
-                    type="number"
-                    value={formData.count}
-                    onChange={(e) => setFormData({ ...formData, count: e.target.value })}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Eenheid</label>
-                  <select
-                    value={formData.unit}
-                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="flessen">flessen</option>
-                    <option value="blikken">blikken</option>
-                    <option value="bakken">bakken</option>
-                    <option value="stuks">stuks</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Categorie</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {filters.map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Vervaldatum</label>
-                <input
-                  type="text"
-                  value={formData.exp}
-                  onChange={(e) => setFormData({ ...formData, exp: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="bv. 12/10/24"
-                />
-              </div>
-
-
+      )}      {/* Add/Edit Modal VOORRAAD */}
+      <BottomSheet 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title={editingItem ? 'Item Bewerken' : 'Nieuw Item'}
+      >
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Naam</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="bv. Jupiler Bakken"
+              />
             </div>
 
-            <div className="flex gap-3 mt-6">
-              {editingItem && (
-                <button
-                  onClick={handleDeleteStock}
-                  className="px-4 py-3 rounded-xl font-bold text-red-600 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                >
-                  <span className="material-icons-round">delete</span>
-                </button>
-              )}
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="flex-1 py-3 rounded-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                Annuleren
-              </button>
-              <button
-                onClick={handleSaveStock}
-                className="flex-1 py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20"
-              >
-                Opslaan
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Modal TIJDELIJKE DRANK */}
-      {isDrinkModalOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1e293b] w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-gray-100 dark:border-gray-700">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Nieuwe Tijdelijke Drank</h3>
-
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Naam</label>
-                <input
-                  type="text"
-                  value={drinkFormData.name}
-                  onChange={(e) => setDrinkFormData({ ...drinkFormData, name: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white"
-                  placeholder="Bv. Rode Wodka Redbull"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Prijs (€)</label>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Aantal</label>
                 <input
                   type="number"
-                  step="0.10"
-                  value={drinkFormData.price}
-                  onChange={(e) => setDrinkFormData({ ...drinkFormData, price: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white"
-                  placeholder="2.50"
+                  value={formData.count}
+                  onChange={(e) => setFormData({ ...formData, count: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Geldigheid (Optioneel)</label>
-                <input
-                  type="text"
-                  value={drinkFormData.validUntil}
-                  onChange={(e) => setDrinkFormData({ ...drinkFormData, validUntil: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white"
-                  placeholder="Bv. Enkel vanavond"
-                />
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Eenheid</label>
+                <select
+                  value={formData.unit}
+                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="flessen">flessen</option>
+                  <option value="blikken">blikken</option>
+                  <option value="bakken">bakken</option>
+                  <option value="stuks">stuks</option>
+                </select>
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setIsDrinkModalOpen(false)}
-                className="flex-1 py-3 rounded-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            <div>
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Categorie</label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                Annuleren
-              </button>
-              <button
-                onClick={handleSaveDrink}
-                className="flex-1 py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20 active:scale-95"
-              >
-                Toevoegen
-              </button>
+                {filters.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Vervaldatum</label>
+              <input
+                type="text"
+                value={formData.exp}
+                onChange={(e) => setFormData({ ...formData, exp: e.target.value })}
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="bv. 12/10/24"
+              />
             </div>
           </div>
+
+          <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+            {editingItem && (
+              <button
+                onClick={handleDeleteStock}
+                className="px-4 py-3.5 rounded-xl font-bold text-red-600 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                title="Verwijderen"
+              >
+                <span className="material-icons-round">delete_outline</span>
+              </button>
+            )}
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="px-4 py-3.5 rounded-xl font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 transition-colors"
+            >
+              Annuleren
+            </button>
+            <button
+              onClick={handleSaveStock}
+              className="flex-1 py-3.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 active:scale-[0.98]"
+            >
+              Opslaan
+            </button>
+          </div>
         </div>
-      )}
+      </BottomSheet>
+
+      {/* Add Modal TIJDELIJKE DRANK */}
+      <Modal 
+        isOpen={isDrinkModalOpen} 
+        onClose={() => setIsDrinkModalOpen(false)} 
+        title="Nieuwe Tijdelijke Drank"
+      >
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Naam</label>
+              <input
+                type="text"
+                value={drinkFormData.name}
+                onChange={(e) => setDrinkFormData({ ...drinkFormData, name: e.target.value })}
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white"
+                placeholder="Bv. Rode Wodka Redbull"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Prijs (€)</label>
+              <input
+                type="number"
+                step="0.10"
+                value={drinkFormData.price}
+                onChange={(e) => setDrinkFormData({ ...drinkFormData, price: e.target.value })}
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white"
+                placeholder="2.50"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Geldigheid (Optioneel)</label>
+              <input
+                type="text"
+                value={drinkFormData.validUntil}
+                onChange={(e) => setDrinkFormData({ ...drinkFormData, validUntil: e.target.value })}
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white"
+                placeholder="Bv. Enkel vanavond"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={() => setIsDrinkModalOpen(false)}
+              className="flex-1 py-3.5 rounded-xl font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 transition-colors"
+            >
+              Annuleren
+            </button>
+            <button
+              onClick={handleSaveDrink}
+              className="flex-1 py-3.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 active:scale-[0.98]"
+            >
+              Toevoegen
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

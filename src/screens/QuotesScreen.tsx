@@ -4,6 +4,9 @@ import { ChevronBack } from '../components/ChevronBack';
 import { QuoteItem, User } from '../types';
 import { AppContextType } from '../App';
 import { hasRole } from '../lib/roleUtils';
+import { hapticSuccess } from '../lib/haptics';
+import { SkeletonCard } from '../components/Skeleton';
+import { Modal } from '../components/Modal';
 
 interface QuotesScreenProps {
   enableManagement?: boolean; // New prop to toggle delete functionality
@@ -19,7 +22,8 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
     handleAddQuote: onAddQuote,
     handleDeleteQuote: onDeleteQuote,
     currentUser,
-    users
+    users,
+    loading
   } = useOutletContext<AppContextType>();
   const [isAdding, setIsAdding] = useState(false);
   const [newQuoteText, setNewQuoteText] = useState('');
@@ -46,7 +50,8 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
     if (!newQuoteText || !selectedAuthor) return;
     // Pass empty string for context since it's removed from UI
     onAddQuote(newQuoteText, "", selectedAuthor.id);
-
+    
+    hapticSuccess();
     setIsAdding(false);
     setNewQuoteText('');
     setAuthorSearch('');
@@ -155,8 +160,13 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
       </header>
 
       <main className="flex-1 px-4 py-6 overflow-y-auto pb-nav-safe space-y-4">
-
-        {displayedQuotes.length === 0 ? (
+        {loading ? (
+          <div className="space-y-4">
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={3} />
+            <SkeletonCard lines={2} />
+          </div>
+        ) : displayedQuotes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
             <span className="material-icons-round text-5xl mb-3 opacity-20">format_quote</span>
             <p>Geen citaten gevonden in deze lijst.</p>
@@ -276,111 +286,95 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
         </button>
       )}
 
-      {/* Add Modal - Now with Header/Body/Footer structure */}
-      {isAdding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-20 pointer-events-none">
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto" onClick={() => setIsAdding(false)}></div>
-
-          {/* Modal Card - Flex Column */}
-          <div className="bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-3xl pointer-events-auto animate-in fade-in zoom-in-95 duration-200 shadow-2xl flex flex-col max-h-[85vh] relative z-10">
-
-            {/* Header */}
-            <div className="p-6 pb-2 shrink-0">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Nieuwe Quote Toevoegen</h2>
+      {/* Add Modal */}
+      <Modal
+        isOpen={isAdding}
+        onClose={() => setIsAdding(false)}
+        title="Nieuwe Quote Toevoegen"
+      >
+        <div className="space-y-4">
+          <div>
+            <div className="flex justify-between items-baseline mb-1">
+              <label className="text-xs font-bold text-gray-500 uppercase block">
+                Wie zei het?
+                {selectedAuthor && (
+                  <span className="text-pink-600 dark:text-pink-400 text-sm font-bold ml-2">
+                    {selectedAuthor.name}
+                  </span>
+                )}
+              </label>
+              {selectedAuthor && (
+                <button
+                  onClick={() => setSelectedAuthor(null)}
+                  className="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                >
+                  Wijzig
+                </button>
+              )}
             </div>
 
-            {/* Scrollable Body */}
-            <div className="px-6 py-2 overflow-y-auto flex-1 custom-scrollbar space-y-4">
-              <div>
-                <div className="flex justify-between items-baseline mb-1">
-                  <label className="text-xs font-bold text-gray-500 uppercase block">
-                    Wie zei het?
-                    {selectedAuthor && (
-                      <span className="text-pink-600 dark:text-pink-400 text-sm font-bold ml-2">
-                        {selectedAuthor.name}
-                      </span>
-                    )}
-                  </label>
-                  {selectedAuthor && (
-                    <button
-                      onClick={() => setSelectedAuthor(null)}
-                      className="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                    >
-                      Wijzig
-                    </button>
-                  )}
-                </div>
+            {/* Search / Select Author Input - Only show if NO author selected */}
+            {!selectedAuthor && (
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Zoek leiding (bijv. Tibo)..."
+                  value={authorSearch}
+                  onChange={(e) => setAuthorSearch(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 pl-10 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  autoFocus
+                />
+                <span className="material-icons-round absolute left-3 top-3 text-gray-400">search</span>
 
-                {/* Search / Select Author Input - Only show if NO author selected */}
-                {!selectedAuthor && (
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Zoek leiding (bijv. Tibo)..."
-                      value={authorSearch}
-                      onChange={(e) => setAuthorSearch(e.target.value)}
-                      className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 pl-10 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
-                      autoFocus
-                    />
-                    <span className="material-icons-round absolute left-3 top-3 text-gray-400">search</span>
-
-                    {/* Results - Now in-flow (relative) to avoid clipping and expand the form */}
-                    {authorSearch && (
-                      <div className="mt-2 bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-xl shadow-inner max-h-48 overflow-y-auto">
-                        {filteredAuthors.length > 0 ? (
-                          filteredAuthors.map(u => (
-                            <div
-                              key={u.id}
-                              onClick={() => handleSelectAuthor(u)}
-                              className="p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer flex items-center gap-3 border-b last:border-0 border-gray-100 dark:border-gray-800"
-                            >
-                              <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden shrink-0">
-                                <img src={u.avatar} alt={u.naam} className="w-full h-full object-cover" />
-                              </div>
-                              <div>
-                                <span className="font-bold text-sm block text-gray-900 dark:text-white">{u.nickname || u.naam}</span>
-                                {u.nickname && <span className="text-[10px] text-gray-500 block">{u.naam}</span>}
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="p-4 text-sm text-gray-500 text-center">Geen resultaten gevonden</div>
-                        )}
-                      </div>
+                {authorSearch && (
+                  <div className="mt-2 bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-xl shadow-inner max-h-48 overflow-y-auto">
+                    {filteredAuthors.length > 0 ? (
+                      filteredAuthors.map(u => (
+                        <div
+                          key={u.id}
+                          onClick={() => handleSelectAuthor(u)}
+                          className="p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer flex items-center gap-3 border-b last:border-0 border-gray-100 dark:border-gray-800"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden shrink-0">
+                            <img src={u.avatar} alt={u.naam} className="w-full h-full object-cover" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-sm block text-gray-900 dark:text-white">{u.nickname || u.naam}</span>
+                            {u.nickname && <span className="text-[10px] text-gray-500 block">{u.naam}</span>}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-sm text-gray-500 text-center">Geen resultaten gevonden</div>
                     )}
                   </div>
                 )}
               </div>
-
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">De Quote</label>
-                <textarea
-                  ref={quoteInputRef}
-                  value={newQuoteText}
-                  onChange={(e) => setNewQuoteText(e.target.value)}
-                  placeholder='"..."'
-                  rows={3}
-                  className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500 resize-none"
-                />
-              </div>
-            </div>
-
-            {/* Footer - Fixed at bottom of card */}
-            <div className="p-6 pt-2 shrink-0">
-              <button
-                onClick={handleAdd}
-                disabled={!newQuoteText || !selectedAuthor}
-                className="w-full bg-pink-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-pink-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-              >
-                <span className="material-icons-round">send</span>
-                Quote
-              </button>
-            </div>
-
+            )}
           </div>
+
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">De Quote</label>
+            <textarea
+              ref={quoteInputRef}
+              value={newQuoteText}
+              onChange={(e) => setNewQuoteText(e.target.value)}
+              placeholder='"..."'
+              rows={3}
+              className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500 resize-none"
+            />
+          </div>
+
+          <button
+            onClick={handleAdd}
+            disabled={!newQuoteText || !selectedAuthor}
+            className="w-full bg-pink-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-pink-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          >
+            <span className="material-icons-round">send</span>
+            Quote Toevoegen
+          </button>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

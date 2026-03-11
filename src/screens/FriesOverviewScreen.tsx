@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Order, Notification, User } from '../types';
 import { AppContextType } from '../App';
+import { BottomSheet } from '../components/BottomSheet';
 
 export const FriesOverviewScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ export const FriesOverviewScreen: React.FC = () => {
     friesPickupTime: pickupTime,
     setFriesPickupTime: onSetPickupTime,
     handleArchiveFriesSession: onArchiveSession,
+    handleCompleteFriesPayment: onCompletePayment,
     handleAddNotification: onAddNotification,
     currentUser
   } = useOutletContext<AppContextType>();
@@ -19,6 +21,13 @@ export const FriesOverviewScreen: React.FC = () => {
   const [aggregatedItems, setAggregatedItems] = useState<any[]>([]);
   const [showReopenConfirmation, setShowReopenConfirmation] = useState(false);
   const [showTimeInput, setShowTimeInput] = useState(false);
+  const [showPaymentSheet, setShowPaymentSheet] = useState(false);
+
+  // Payment state
+  const [actualAmount, setActualAmount] = useState<number | string>('');
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Time input state (default to now + 30m if not set)
   const [tempPickupTime, setTempPickupTime] = useState('');
@@ -129,6 +138,32 @@ export const FriesOverviewScreen: React.FC = () => {
     });
 
     setShowTimeInput(false);
+  };
+
+  const handleFinishPayment = async () => {
+    const amount = typeof actualAmount === 'string' ? parseFloat(actualAmount) : actualAmount;
+    if (isNaN(amount)) {
+      alert('Voer een geldig bedrag in');
+      return;
+    }
+
+    await onCompletePayment(amount, receiptFile || undefined);
+    setShowPaymentSheet(false);
+    setActualAmount('');
+    setReceiptFile(null);
+    setReceiptPreview(null);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setReceiptFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReceiptPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // Status Text Helper
@@ -258,8 +293,20 @@ export const FriesOverviewScreen: React.FC = () => {
                   <span className="font-bold text-sm">Besteld voor {pickupTime}</span>
                 </div>
               </div>
+
+              <button
+                onClick={() => {
+                  setActualAmount(totalAmount.toFixed(2));
+                  setShowPaymentSheet(true);
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+              >
+                <span className="material-icons-round">receipt_long</span>
+                Betaal & Rond af
+              </button>
+
               <p className="text-xs text-center text-gray-500">
-                De sessie reset automatisch wanneer dit tijdstip gepasseerd is.
+                Wanneer je betaald hebt, voer je het bedrag in en neem je een foto van het kasticket.
               </p>
             </div>
           )}
@@ -368,6 +415,69 @@ export const FriesOverviewScreen: React.FC = () => {
           )}
         </div>
       </footer>
+
+      {/* Payment BottomSheet */}
+      <BottomSheet
+        isOpen={showPaymentSheet}
+        onClose={() => setShowPaymentSheet(false)}
+        title="Betaal & Rond af"
+      >
+        <div className="space-y-6">
+          <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
+            <p className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1">Verwacht bedrag (App)</p>
+            <p className="text-2xl font-black text-blue-700 dark:text-blue-300">€ {totalAmount.toFixed(2).replace('.', ',')}</p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Werkelijk betaald bedrag</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">€</span>
+              <input
+                type="number"
+                step="0.01"
+                value={actualAmount}
+                onChange={(e) => setActualAmount(e.target.value)}
+                placeholder="0,00"
+                className="w-full pl-10 pr-4 py-4 rounded-xl bg-gray-50 dark:bg-gray-800 border-2 border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-gray-700 outline-none transition-all font-bold text-lg"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Foto van rekening</label>
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className={`w-full aspect-video rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-all ${receiptPreview ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-700 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+            >
+              {receiptPreview ? (
+                <img src={receiptPreview} alt="Receipt" className="w-full h-full object-contain" />
+              ) : (
+                <>
+                  <span className="material-icons-round text-4xl text-gray-400 mb-2">add_a_photo</span>
+                  <p className="text-xs font-bold text-gray-400">Tik om foto te nemen/kiezen</p>
+                </>
+              )}
+            </div>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*" 
+              capture="environment"
+              onChange={handleFileChange} 
+            />
+          </div>
+
+          <button
+            onClick={handleFinishPayment}
+            disabled={!actualAmount}
+            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+          >
+            <span className="material-icons-round">check_circle</span>
+            Bevestig & Sluit Sessie
+          </button>
+        </div>
+      </BottomSheet>
     </div>
   );
 };

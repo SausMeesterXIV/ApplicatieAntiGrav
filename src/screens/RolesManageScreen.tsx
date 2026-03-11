@@ -5,6 +5,8 @@ import { AppContextType } from '../App';
 import * as db from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
 import { hasRole } from '../lib/roleUtils';
+import { Modal, BottomSheet } from '../components/Modal';
+import { SkeletonRow } from '../components/Skeleton';
 
 export const RolesManageScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -190,13 +192,6 @@ export const RolesManageScreen: React.FC = () => {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-[#0f172a]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans relative transition-colors duration-200">
@@ -299,7 +294,12 @@ export const RolesManageScreen: React.FC = () => {
         </div>
 
         <div className="space-y-3">
-          {filteredUsers.map(user => {
+          {loading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonRow key={i} />
+            ))
+          ) : (
+            filteredUsers.map(user => {
             // Check if user has the active role (for highlighting in quick mode)
             const hasActiveRole = activeAssignRole && (user.roles || []).includes(activeAssignRole);
 
@@ -365,254 +365,250 @@ export const RolesManageScreen: React.FC = () => {
                 )}
               </div>
             );
-          })}
-        </div>
+          })
+        )}
+      </div>
       </main>
 
-      {/* Bottom Sheet / Modal (Only shows if NOT in Quick Assign Mode) */}
-      {selectedUser && (
-        <>
-          <div className="fixed inset-0 bg-black/40 dark:bg-black/60 z-40 backdrop-blur-sm transition-colors" onClick={() => setSelectedUser(null)}></div>
-          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 rounded-t-[2rem] p-6 pb-[calc(1.5rem + env(safe-area-inset-bottom, 24px))] z-[60] animate-in slide-in-from-bottom-full duration-300 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div className="w-12 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-6"></div>
-
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Rollen beheren</h3>
-                <p className="text-sm text-blue-600 dark:text-blue-400">Voor {selectedUser.naam}</p>
-                {selectedUser.nickname && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-xs text-gray-500">Bijnaam: {selectedUser.nickname}</span>
-                    <button
-                      onClick={() => handleResetNickname(selectedUser.id)}
-                      className="text-[10px] text-red-500 font-bold border border-red-200 bg-red-50 px-2 py-0.5 rounded hover:bg-red-100"
-                    >
-                      Reset Bijnaam
-                    </button>
-                  </div>
-                )}
+      {/* User Detail BottomSheet */}
+      <BottomSheet 
+        isOpen={!!selectedUser} 
+        onClose={() => setSelectedUser(null)} 
+        title="Rollen beheren"
+        subtitle={selectedUser ? `Voor ${selectedUser.naam}` : ''}
+      >
+        {selectedUser && (
+          <div className="space-y-6">
+            {selectedUser.nickname && (
+              <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/10 p-3 rounded-xl border border-blue-100 dark:border-blue-800">
+                <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Bijnaam: <span className="font-bold text-blue-600 dark:text-blue-400">{selectedUser.nickname}</span></span>
+                <button
+                  onClick={() => handleResetNickname(selectedUser.id)}
+                  className="text-xs text-red-500 font-bold bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-900/50 hover:bg-red-50"
+                >
+                  Reset
+                </button>
               </div>
-              <button onClick={() => setSelectedUser(null)} className="text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                <span className="material-icons-round">close</span>
-              </button>
-            </div>
+            )}
 
-            <div className="space-y-4 mb-8">
-              {/* Role Items */}
+            <div className="space-y-3">
               {availableRoles.map(role => {
                 const isToggled = toggles[role.label] || false;
-                // Parse tailwind classes safely from color
                 const colorClasses = role.color.split(' ').slice(0,3).join(' ');
 
                 return (
-                  <div key={role.id} className="bg-gray-50 dark:bg-[#1e293b] rounded-xl p-4 flex items-center justify-between transition-colors mb-4 border border-gray-100 dark:border-gray-800">
+                  <div key={role.id} className="bg-gray-50 dark:bg-[#1e293b] rounded-2xl p-4 flex items-center justify-between border border-gray-100 dark:border-gray-800">
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${colorClasses}`}>
-                        <span className="material-icons-round text-lg">{role.icon}</span>
+                      <div className={`p-2.5 rounded-xl ${colorClasses}`}>
+                        <span className="material-icons-round text-xl">{role.icon}</span>
                       </div>
-                      <span className="font-medium text-gray-700 dark:text-gray-200">{role.label}</span>
+                      <span className="font-bold text-gray-700 dark:text-gray-200">{role.label}</span>
                     </div>
                     <button
                       onClick={() => setToggles({ ...toggles, [role.label]: !isToggled })}
-                      className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${isToggled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                      className={`w-14 h-7 rounded-full relative transition-all duration-300 ${isToggled ? 'bg-blue-600 shadow-inner' : 'bg-gray-300 dark:bg-gray-700'}`}
                     >
-                      <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${isToggled ? 'translate-x-6' : 'translate-x-0'}`}>
-                        {isToggled && <span className="absolute inset-0 flex items-center justify-center"><span className="material-icons-round text-[10px] text-blue-600">check</span></span>}
-                      </span>
+                      <div className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300 flex items-center justify-center ${isToggled ? 'translate-x-7' : 'translate-x-0'}`}>
+                        {isToggled && <span className="material-icons-round text-[12px] text-blue-600 font-black">check</span>}
+                      </div>
                     </button>
                   </div>
                 );
               })}
+            </div>
 
-              {/* Account Status Toggle */}
-              <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="bg-red-50 dark:bg-red-900/10 rounded-xl p-4 flex items-center justify-between transition-colors border border-red-100 dark:border-red-900/30">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
-                      <span className="material-icons-round text-lg">no_accounts</span>
-                    </div>
-                    <div>
-                      <span className="font-bold text-red-700 dark:text-red-400 block text-sm">Account Deactiveren</span>
-                      <span className="text-xs text-red-600/70 dark:text-red-400/70">Ontneem toegang tot de app</span>
-                    </div>
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+              <div className="bg-red-50 dark:bg-red-900/10 rounded-2xl p-4 flex items-center justify-between border border-red-100 dark:border-red-900/30">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                    <span className="material-icons-round text-xl">no_accounts</span>
                   </div>
-                  <button
-                    onClick={() => toggleUserActief(selectedUser)}
-                    className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${!selectedUser.actief ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-600'}`}
-                  >
-                    <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${!selectedUser.actief ? 'translate-x-6' : 'translate-x-0'}`}>
-                      {!selectedUser.actief && <span className="absolute inset-0 flex items-center justify-center"><span className="material-icons-round text-[10px] text-red-600">close</span></span>}
-                    </span>
-                  </button>
+                  <div>
+                    <span className="font-bold text-red-700 dark:text-red-400 block text-sm">Account Status</span>
+                    <span className="text-xs text-red-600/70 dark:text-red-400/70 font-medium">{selectedUser.actief ? 'Actief' : 'Gedeactiveerd'}</span>
+                  </div>
                 </div>
+                <button
+                  onClick={() => toggleUserActief(selectedUser)}
+                  className={`w-14 h-7 rounded-full relative transition-all duration-300 ${!selectedUser.actief ? 'bg-red-600 shadow-inner' : 'bg-green-500 shadow-inner'}`}
+                >
+                  <div className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300 flex items-center justify-center ${!selectedUser.actief ? 'translate-x-7' : 'translate-x-0'}`}>
+                    {selectedUser.actief ? (
+                      <span className="material-icons-round text-[12px] text-green-600 font-black">check</span>
+                    ) : (
+                      <span className="material-icons-round text-[12px] text-red-600 font-black">close</span>
+                    )}
+                  </div>
+                </button>
               </div>
             </div>
 
             <button
               onClick={saveFromModal}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
             >
-              Opslaan
+              Wijzigingen Opslaan
             </button>
           </div>
-        </>
-      )}
+        )}
+      </BottomSheet>
 
       {/* Add Role Modal */}
-      {isAddingRole && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pb-20 pointer-events-none">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto" onClick={() => setIsAddingRole(false)}></div>
-          <div className="bg-white dark:bg-[#1e293b] w-full max-w-sm rounded-3xl pointer-events-auto animate-in fade-in zoom-in-95 duration-200 shadow-2xl overflow-hidden relative z-10 p-6 border border-gray-200 dark:border-gray-800">
-            <h2 className="text-xl font-bold mb-4">Nieuwe Rol Toevoegen</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Naam</label>
-                <input
-                  type="text"
-                  value={newRoleLabel}
-                  onChange={(e) => setNewRoleLabel(e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white"
-                  placeholder="bv. Social Media"
-                />
-              </div>
+      <Modal 
+        isOpen={isAddingRole} 
+        onClose={() => setIsAddingRole(false)} 
+        title="Nieuwe Rol Toevoegen"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Naam</label>
+            <input
+              type="text"
+              value={newRoleLabel}
+              onChange={(e) => setNewRoleLabel(e.target.value)}
+              className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white"
+              placeholder="bv. Social Media"
+            />
+          </div>
 
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase block mb-2">Kies Icoon</label>
-                <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-2 pb-2 custom-scrollbar">
-                  {[
-                    { val: 'star', label: 'Ster' },
-                    { val: 'person', label: 'Persoon' },
-                    { val: 'groups', label: 'Groep' },
-                    { val: 'admin_panel_settings', label: 'Schild' },
-                    { val: 'build', label: 'Gereedschap' },
-                    { val: 'local_bar', label: 'Drank' },
-                    { val: 'restaurant', label: 'Bestek' },
-                    { val: 'celebration', label: 'Feest' },
-                    { val: 'account_balance', label: 'Bank' },
-                    { val: 'photo_camera', label: 'Camera' },
-                    { val: 'campaign', label: 'Megafoon' },
-                    { val: 'sports_soccer', label: 'Bal' },
-                    { val: 'music_note', label: 'Muziek' },
-                    { val: 'volunteer_activism', label: 'Hart' },
-                    { val: 'pets', label: 'Dier' },
-                  ].map((icon) => (
-                    <button
-                      key={icon.val}
-                      type="button"
-                      onClick={() => setNewRoleIcon(icon.val)}
-                      className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${
-                        newRoleIcon === icon.val
-                          ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400'
-                          : 'bg-gray-50 border-gray-100 text-gray-500 dark:bg-[#0f172a] dark:border-gray-800'
-                      }`}
-                    >
-                      <span className="material-icons-round text-xl mb-1">{icon.val}</span>
-                      <span className="text-[10px] truncate w-full text-center leading-tight">{icon.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Kleur Palette</label>
-                <select 
-                  value={newRoleColor}
-                  onChange={(e) => setNewRoleColor(e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white appearance-none"
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase block mb-2">Kies Icoon</label>
+            <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-2 pb-2 custom-scrollbar">
+              {[
+                { val: 'star', label: 'Ster' },
+                { val: 'person', label: 'Persoon' },
+                { val: 'groups', label: 'Groep' },
+                { val: 'admin_panel_settings', label: 'Schild' },
+                { val: 'build', label: 'Gereedschap' },
+                { val: 'local_bar', label: 'Drank' },
+                { val: 'restaurant', label: 'Bestek' },
+                { val: 'celebration', label: 'Feest' },
+                { val: 'account_balance', label: 'Bank' },
+                { val: 'photo_camera', label: 'Camera' },
+                { val: 'campaign', label: 'Megafoon' },
+                { val: 'sports_soccer', label: 'Bal' },
+                { val: 'music_note', label: 'Muziek' },
+                { val: 'volunteer_activism', label: 'Hart' },
+                { val: 'pets', label: 'Dier' },
+              ].map((icon) => (
+                <button
+                  key={icon.val}
+                  type="button"
+                  onClick={() => setNewRoleIcon(icon.val)}
+                  className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${
+                    newRoleIcon === icon.val
+                      ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400'
+                      : 'bg-gray-50 border-gray-100 text-gray-500 dark:bg-[#0f172a] dark:border-gray-800'
+                  }`}
                 >
-                  <option value="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800">Blauw</option>
-                  <option value="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800">Paars</option>
-                  <option value="bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-400 border-pink-200 dark:border-pink-800">Roze</option>
-                  <option value="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">Groen</option>
-                  <option value="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800">Geel</option>
-                  <option value="bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800">Oranje</option>
-                  <option value="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800">Rood</option>
-                  <option value="bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-800">Grijs</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-8">
-              <button onClick={() => setIsAddingRole(false)} className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">Annuleren</button>
-              <button disabled={!newRoleLabel || !newRoleIcon} onClick={handleCreateRole} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-500 disabled:opacity-50 transition-colors">Aanmaken</button>
+                  <span className="material-icons-round text-xl mb-1">{icon.val}</span>
+                  <span className="text-[10px] truncate w-full text-center leading-tight">{icon.label}</span>
+                </button>
+              ))}
             </div>
           </div>
+
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Kleur Palette</label>
+            <select 
+              value={newRoleColor}
+              onChange={(e) => setNewRoleColor(e.target.value)}
+              className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white appearance-none"
+            >
+              <option value="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800">Blauw</option>
+              <option value="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800">Paars</option>
+              <option value="bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-400 border-pink-200 dark:border-pink-800">Roze</option>
+              <option value="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">Groen</option>
+              <option value="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800">Geel</option>
+              <option value="bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800">Oranje</option>
+              <option value="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800">Rood</option>
+              <option value="bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-800">Grijs</option>
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button onClick={() => setIsAddingRole(false)} className="flex-1 px-4 py-3.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 transition-colors">Annuleren</button>
+            <button disabled={!newRoleLabel || !newRoleIcon} onClick={handleCreateRole} className="flex-1 px-4 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-500 disabled:opacity-50 transition-colors">Aanmaken</button>
+          </div>
         </div>
-      )}
+      </Modal>
 
       {/* Manage Roles Modal */}
-      {isDeletingRoles && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pb-20">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsDeletingRoles(false)}></div>
-          <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-3xl animate-in fade-in zoom-in-95 duration-200 shadow-2xl overflow-hidden relative z-10 p-6 border border-gray-200 dark:border-gray-800">
-            <h2 className="text-xl font-bold mb-1">Rollen Beheren</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 font-medium">Verwijder rollen die niet meer nodig zijn.</p>
+      <Modal 
+        isOpen={isDeletingRoles} 
+        onClose={() => setIsDeletingRoles(false)} 
+        title="Rollen Beheren"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 font-medium">Verwijder rollen die niet meer nodig zijn.</p>
 
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto mb-6 pr-2 no-scrollbar">
-              {availableRoles.map(role => (
-                <div key={role.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#0f172a] rounded-2xl border border-gray-100 dark:border-gray-800">
-                  <div className="flex items-center gap-3">
-                    <span className="material-icons-round text-gray-400">{role.icon}</span>
-                    <span className="font-bold text-gray-900 dark:text-white">{role.label}</span>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteRole(role.id, role.label)}
-                    className="p-2 transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl"
-                  >
-                    <span className="material-icons-round">delete</span>
-                  </button>
+          <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1 no-scrollbar">
+            {availableRoles.map(role => (
+              <div key={role.id} className="flex items-center justify-between p-3.5 bg-gray-50 dark:bg-[#0f172a] rounded-2xl border border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-3">
+                  <span className="material-icons-round text-gray-400">{role.icon}</span>
+                  <span className="font-bold text-gray-900 dark:text-white">{role.label}</span>
                 </div>
-              ))}
-              {availableRoles.length === 0 && (
-                <div className="text-center py-8 text-gray-400 italic text-sm">Geen rollen gevonden.</div>
-              )}
+                <button
+                  onClick={() => handleDeleteRole(role.id, role.label)}
+                  className="p-2 transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl"
+                >
+                  <span className="material-icons-round">delete_outline</span>
+                </button>
+              </div>
+            ))}
+            {availableRoles.length === 0 && (
+              <div className="text-center py-8 text-gray-400 italic text-sm">Geen rollen gevonden.</div>
+            )}
+          </div>
+
+          <button
+            onClick={() => setIsDeletingRoles(false)}
+            className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-500/10 mt-4"
+          >
+            Klaar
+          </button>
+        </div>
+      </Modal>
+
+      {/* Account Deactivation Confirmation Modal */}
+      <Modal 
+        isOpen={!!pendingDeactivationUser} 
+        onClose={() => setPendingDeactivationUser(null)} 
+        title="Account Deactiveren?"
+      >
+        {pendingDeactivationUser && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-center p-4 bg-red-50 dark:bg-red-900/20 rounded-2xl">
+              <span className="material-icons-round text-5xl text-red-600 dark:text-red-400">no_accounts</span>
+            </div>
+            
+            <div className="text-center">
+              <p className="text-gray-600 dark:text-gray-400 mb-1">
+                Je staat op het punt het account van <span className="font-bold text-gray-900 dark:text-white">{pendingDeactivationUser.naam}</span> te deactiveren.
+              </p>
+              <p className="text-xs text-gray-400 font-medium">
+                De gebruiker kan niet meer inloggen. Gegevens worden bewaard voor 6 maanden.
+              </p>
             </div>
 
-            <button
-              onClick={() => setIsDeletingRoles(false)}
-              className="w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-bold py-4 rounded-xl transition-all"
-            >
-              Sluiten
-            </button>
-          </div>
-        </div>
-      )}
-      {/* Account Deactivation Confirmation Modal */}
-      {pendingDeactivationUser && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPendingDeactivationUser(null)}></div>
-          <div className="bg-white dark:bg-[#1e293b] w-full max-w-sm rounded-3xl relative z-10 p-6 shadow-2xl border border-gray-200 dark:border-gray-800 animate-in fade-in zoom-in-95 duration-200">
-            {/* Icon */}
-            <div className="flex items-center justify-center mb-4">
-              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center">
-                <span className="material-icons-round text-3xl text-red-600 dark:text-red-400">no_accounts</span>
-              </div>
-            </div>
-            <h2 className="text-xl font-bold text-center text-gray-900 dark:text-white mb-2">Account Deactiveren?</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-1">
-              Je staat op het punt het account van <span className="font-bold text-gray-900 dark:text-white">{pendingDeactivationUser.naam}</span> te deactiveren.
-            </p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 text-center mb-6">
-              De gebruiker kan niet meer inloggen. Gegevens worden bewaard voor 6 maanden.
-            </p>
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => executeToggleActief(pendingDeactivationUser)}
-                className="w-full bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/20 transition-all"
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-red-500/20 active:scale-[0.98] transition-all"
               >
                 Ja, deactiveer account
               </button>
               <button
                 onClick={() => setPendingDeactivationUser(null)}
-                className="w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-bold py-4 rounded-xl transition-all"
+                className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold py-4 rounded-2xl hover:bg-gray-200 transition-all"
               >
                 Annuleren
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
     </div>
   );

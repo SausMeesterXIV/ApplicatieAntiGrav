@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
+import { BottomSheet } from '../components/Modal';
 import { User, Drink, Streak } from '../types';
 import { AppContextType } from '../App';
+import { SkeletonRow } from '../components/Skeleton';
 
 export interface ConsumptionOverviewScreenProps {
   onBack?: () => void;
@@ -25,6 +27,7 @@ export const ConsumptionOverviewScreen: React.FC<ConsumptionOverviewScreenProps>
   const drinks = propDrinks || context?.drinks || [];
   const streaks = propStreaks || context?.streaks || [];
   const currentUser = context?.currentUser;
+  const loading = context?.loading;
 
   const handleBack = () => {
     if (propOnBack) propOnBack();
@@ -204,27 +207,37 @@ export const ConsumptionOverviewScreen: React.FC<ConsumptionOverviewScreenProps>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {sortedData.map((row, rowIdx) => {
-                  const isCurrentUser = row.id === currentUser?.id;
-                  return (
-                    <tr
-                      key={rowIdx}
-                      className={`${isCurrentUser ? 'bg-blue-50 dark:bg-blue-900/20 z-10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'} transition-colors relative`}
-                    >
-                      <td className={`py-4 px-4 font-medium text-sm sticky left-0 border-r border-gray-100 dark:border-gray-800 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)] ${isCurrentUser ? 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-[#131b2e]' : 'text-gray-900 dark:text-white bg-white dark:bg-surface-dark'}`}>
-                        <div className="flex items-center gap-2">
-                          {isCurrentUser && <span className="material-icons-round text-xs text-blue-500">person</span>}
-                          {row.name}
-                        </div>
+                {loading ? (
+                  Array.from({ length: 10 }).map((_, i) => (
+                    <tr key={`skeleton-${i}`}>
+                      <td colSpan={columns.length} className="px-4 py-2">
+                        <SkeletonRow />
                       </td>
-                      {row.values.map((val, vIdx) => (
-                        <td key={vIdx} className={`py-4 px-4 text-center text-sm ${sortOption === columns[vIdx + 1] ? 'font-bold text-blue-600 dark:text-blue-400 bg-blue-50/30 dark:bg-blue-900/10' : 'text-gray-600 dark:text-gray-300'}`}>
-                          {val}
-                        </td>
-                      ))}
                     </tr>
-                  );
-                })}
+                  ))
+                ) : (
+                  sortedData.map((row, rowIdx) => {
+                    const isCurrentUser = row.id === currentUser?.id;
+                    return (
+                      <tr
+                        key={rowIdx}
+                        className={`${isCurrentUser ? 'bg-blue-50 dark:bg-blue-900/20 z-10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'} transition-colors relative`}
+                      >
+                        <td className={`py-4 px-4 font-medium text-sm sticky left-0 border-r border-gray-100 dark:border-gray-800 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)] ${isCurrentUser ? 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-[#131b2e]' : 'text-gray-900 dark:text-white bg-white dark:bg-surface-dark'}`}>
+                          <div className="flex items-center gap-2">
+                            {isCurrentUser && <span className="material-icons-round text-xs text-blue-500">person</span>}
+                            {row.name}
+                          </div>
+                        </td>
+                        {row.values.map((val, vIdx) => (
+                          <td key={vIdx} className={`py-4 px-4 text-center text-sm ${sortOption === columns[vIdx + 1] ? 'font-bold text-blue-600 dark:text-blue-400 bg-blue-50/30 dark:bg-blue-900/10' : 'text-gray-600 dark:text-gray-300'}`}>
+                            {val}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
               <tfoot className="bg-gray-50 dark:bg-gray-800 font-bold sticky bottom-0 z-10 border-t-2 border-gray-100 dark:border-gray-700">
                 <tr>
@@ -244,38 +257,37 @@ export const ConsumptionOverviewScreen: React.FC<ConsumptionOverviewScreenProps>
       </main>
 
       {/* Sort Menu Modal */}
-      {showSortMenu && (
-        <>
-          <div className="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm" onClick={() => setShowSortMenu(false)}></div>
-          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#1e2330] rounded-t-[2rem] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,24px))] z-50 animate-in slide-in-from-bottom-full duration-300 border-t border-gray-200 dark:border-gray-700 shadow-2xl">
-            <div className="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-6"></div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Sorteer lijst op</h3>
-            <div className="space-y-2">
-              <button
-                onClick={() => { setSortOption('alphabetical'); setShowSortMenu(false); }}
-                className={`w-full p-4 rounded-xl flex items-center justify-between ${sortOption === 'alphabetical' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
-              >
-                <span className="font-bold">Alfabetisch (A-Z)</span>
-                {sortOption === 'alphabetical' && <span className="material-icons-round">check</span>}
-              </button>
+      <BottomSheet 
+        isOpen={showSortMenu} 
+        onClose={() => setShowSortMenu(false)} 
+        title="Sorteer lijst op"
+      >
+        <div className="space-y-3">
+          <button
+            onClick={() => { setSortOption('alphabetical'); setShowSortMenu(false); }}
+            className={`w-full p-4 rounded-xl flex items-center justify-between transition-all ${sortOption === 'alphabetical' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-transparent'}`}
+          >
+            <span className="font-bold">Alfabetisch (A-Z)</span>
+            {sortOption === 'alphabetical' && <span className="material-icons-round">check</span>}
+          </button>
 
-              <p className="text-xs text-gray-400 uppercase font-bold mt-4 mb-2 pl-1">Meeste strepen per soort</p>
-
+          <div className="pt-2">
+            <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-3 pl-1">Meeste strepen per soort</p>
+            <div className="grid grid-cols-1 gap-2">
               {columns.slice(1).map(col => (
                 <button
                   key={col}
                   onClick={() => { setSortOption(col); setShowSortMenu(false); }}
-                  className={`w-full p-4 rounded-xl flex items-center justify-between ${sortOption === col ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
+                  className={`w-full p-4 rounded-xl flex items-center justify-between transition-all ${sortOption === col ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-transparent'}`}
                 >
                   <span className="font-bold">{col}</span>
                   {sortOption === col && <span className="material-icons-round">check</span>}
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowSortMenu(false)} className="w-full mt-6 py-4 font-bold text-gray-500">Annuleren</button>
           </div>
-        </>
-      )}
+        </div>
+      </BottomSheet>
     </div>
   );
 };

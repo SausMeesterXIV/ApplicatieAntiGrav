@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { AppContextType } from '../App';
+import { SkeletonEvent } from '../components/Skeleton';
 
 export const AgendaScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { notifications, handleMarkNotificationAsRead, events } = useOutletContext<AppContextType>();
+  const { notifications, handleMarkNotificationAsRead, events, loading } = useOutletContext<AppContextType>();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showNewEvents, setShowNewEvents] = useState(false);
@@ -196,8 +197,13 @@ export const AgendaScreen: React.FC = () => {
 
       {/* Event List */}
       <div className="px-4 pb-nav-safe pt-2 space-y-4">
-
-        {allUpcomingEvents.length > 0 ? (
+        {loading ? (
+          <div className="space-y-4">
+            <SkeletonEvent />
+            <SkeletonEvent />
+            <SkeletonEvent />
+          </div>
+        ) : allUpcomingEvents.length > 0 ? (
           allUpcomingEvents.map(event => {
             const d = new Date(event.date);
             const dateStr = d.toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'short' });

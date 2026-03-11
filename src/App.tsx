@@ -20,6 +20,7 @@ import { AgendaManageScreen } from './screens/AgendaManageScreen';
 import { FriesScreen } from './screens/FriesScreen';
 import { FriesOverviewScreen } from './screens/FriesOverviewScreen';
 import { FriesHistoryScreen } from './screens/FriesHistoryScreen';
+import { FriesComparisonScreen } from './screens/FriesComparisonScreen';
 import { StrepenScreen } from './screens/StrepenScreen';
 import { TeamDrankDashboardScreen } from './screens/TeamDrankDashboardScreen';
 import { TeamDrankStockScreen } from './screens/TeamDrankStockScreen';
@@ -89,8 +90,9 @@ export type AppContextType = {
     handleQuickStreep: () => void;
     handlePlaceFryOrder: (items: any[], totalCost: number, targetUser?: User) => void;
     handleRemoveFryOrder: (orderId: string) => void;
-    handleArchiveFriesSession: () => void;
-    handleVoteQuote: (id: string, type: 'like' | 'dislike') => void;
+    handleArchiveFriesSession: () => Promise<void>;
+    handleCompleteFriesPayment: (actualAmount: number, receiptFile?: File) => Promise<void>;
+    handleVoteQuote: (id: string, type: 'like' | 'dislike') => Promise<void>;
     handleAddQuote: (text: string, context: string, authorId: string) => void;
     handleDeleteQuote: (id: string) => void;
     handleSaveEvent: (event: Event) => void;
@@ -106,6 +108,7 @@ export type AppContextType = {
     gsheetSharingEmail: string | null;
     setGsheetSharingEmail: React.Dispatch<React.SetStateAction<string | null>>;
     syncToGoogleSheets: (command: string, payload: any) => Promise<any>;
+    loading: boolean;
 };
 
 const DEFAULT_USER: User = {
@@ -463,6 +466,82 @@ function App() {
         }
     };
 
+    const handleCompleteFriesPayment = async (actualAmount: number, receiptFile?: File) => {
+        if (!frituurSessieId) return;
+
+        try {
+            let receiptUrl = '';
+            if (receiptFile) {
+                receiptUrl = await db.uploadReceipt(frituurSessieId, receiptFile);
+            }
+
+            await db.updateFrituurSessie(frituurSessieId, {
+                actual_amount: actualAmount,
+                receipt_url: receiptUrl,
+                status: 'paid'
+            });
+
+            // Calculate expected amount from pending orders
+            const expectedAmount = friesOrders.filter(o => o.status === 'pending').reduce((acc, o) => acc + o.totalPrice, 0);
+
+            if (Math.abs(actualAmount - expectedAmount) > 0.01) {
+                // Price mismatch detected — notify Hoofdleiding and Team Drank
+                const targetUsers = users.filter(u => {
+                    const roles = (u.roles || []).map(r => r.toLowerCase());
+                    return roles.includes('hoofdleiding') ||
+                           roles.includes('drank') ||
+                           roles.includes('team drank') ||
+                           u.rol === 'admin' ||
+                           u.rol === 'team_drank';
+                });
+
+                const formattedActual = `€${actualAmount.toFixed(2).replace('.', ',')}`;
+                const formattedExpected = `€${expectedAmount.toFixed(2).replace('.', ',')}`;
+                const diff = actualAmount - expectedAmount;
+                const formattedDiff = `${diff > 0 ? '+' : ''}€${diff.toFixed(2).replace('.', ',')}`;
+
+                const notifTitle = '🍟 Prijswijziging Frituur?';
+                const notifContent = `Het betaalde bedrag (${formattedActual}) wijkt af van het verwachte bedrag in de app (${formattedExpected}). Verschil: ${formattedDiff}. Dit kan wijzen op een prijswijziging bij de frituur.`;
+                // Action format: "LABEL|URL" — parsed by NotificationCard
+                const notifAction = `Ga naar rekening & bestelling|/fries-comparison?sessionId=${frituurSessieId}`;
+
+                targetUsers.forEach(user => {
+                    db.addNotificatie(
+                        currentUser.id,
+                        user.id,
+                        notifTitle,
+                        notifContent,
+                        currentUser.naam,
+                        notifAction
+                    );
+                });
+
+                // Also add a local notification so the current user gets immediate feedback
+                handleAddNotification({
+                    type: 'order',
+                    sender: 'Systeem',
+                    role: '',
+                    title: notifTitle,
+                    content: notifContent,
+                    time: 'Zonet',
+                    isRead: false,
+                    action: notifAction,
+                    icon: 'price_change',
+                    color: 'bg-orange-100 dark:bg-orange-600/20 text-orange-600 dark:text-orange-500'
+                });
+
+                handleArchiveFriesSession();
+                showToast('Betaling afgerond — prijsverschil gemeld aan leiding', 'warning');
+            } else {
+                handleArchiveFriesSession();
+                showToast('Betaling succesvol afgerond!', 'success');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('Fout bij afronden betaling', 'error');
+        }
+    };
+
     const handleVoteQuote = async (id: string, type: 'like' | 'dislike') => {
         // Optimistic update
         setQuotes(prev => prev.map(q => {
@@ -520,7 +599,7 @@ function App() {
             await db.deleteQuote(id);
             showToast('Quote verwijderd', 'info');
         } catch (error) {
-            if (quote) setQuotes(prev => [quote, ...prev]);
+            if (quote) setQuotes(prev => [...prev, quote]);
             showToast('Fout bij het verwijderen. Alleen admins kunnen quotes verwijderen.', 'error');
         }
     };
@@ -634,7 +713,10 @@ function App() {
         fryItems, setFryItems,
         notifications, setNotifications,
         handleAddCost, handleDeleteStreak, handleQuickStreep, handlePlaceFryOrder,
-        handleRemoveFryOrder, handleArchiveFriesSession, handleVoteQuote, handleAddQuote,
+        handleRemoveFryOrder,
+        handleArchiveFriesSession,
+        handleCompleteFriesPayment,
+        handleVoteQuote, handleAddQuote,
         handleDeleteQuote, handleSaveEvent, handleDeleteEvent, handleAddNotification,
         handleMarkNotificationAsRead, handleSaveCountdowns, handleAddBierpongGame,
         frituurSessieId,
@@ -642,6 +724,7 @@ function App() {
         billingPeriods, setBillingPeriods,
         gsheetId, setGsheetId,
         gsheetSharingEmail, setGsheetSharingEmail,
+        loading, // Added loading to context
         handleAddFryItem: async (item) => {
             try {
                 const id = await db.addFryItem(item);
@@ -725,8 +808,10 @@ function App() {
                         <Route path="nudges" element={<NudgeSelectorScreen />} />
 
                         <Route path="frituur" element={<FriesScreen />} />
-                        <Route path="frituur/overzicht" element={<FriesOverviewScreen />} />
+                        <Route path="/fries-overview" element={<FriesOverviewScreen />} />
+                        <Route path="/fries-comparison" element={<FriesComparisonScreen />} />
                         <Route path="frituur/geschiedenis" element={<FriesHistoryScreen />} />
+                        <Route path="/billing-dashboard" element={<TeamDrankDashboardScreen />} />
 
                         <Route path="strepen" element={<StrepenScreen />} />
                         <Route path="strepen/geschiedenis" element={<StrepenHistoryScreen adminMode={false} />} />

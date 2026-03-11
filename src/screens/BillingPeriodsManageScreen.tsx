@@ -4,6 +4,8 @@ import { AppContextType } from '../App';
 import { BillingPeriod } from '../types';
 import * as db from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
+import { Modal, BottomSheet } from '../components/Modal';
+import { SkeletonRow } from '../components/Skeleton';
 
 export const BillingPeriodsManageScreen: React.FC = () => {
     const navigate = useNavigate();
@@ -98,7 +100,13 @@ export const BillingPeriodsManageScreen: React.FC = () => {
             </header>
 
             <main className="p-4 space-y-4">
-                {billingPeriods.length === 0 ? (
+                {loading ? (
+                    <>
+                        {[...Array(5)].map((_, i) => (
+                            <SkeletonRow key={i} />
+                        ))}
+                    </>
+                ) : billingPeriods.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
                         Geen periodes gevonden. Maak er een aan om te beginnen.
                     </div>
@@ -163,85 +171,84 @@ export const BillingPeriodsManageScreen: React.FC = () => {
             </main>
 
             {/* Add Modal */}
-            {showAddModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-20 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-3xl p-6 shadow-2xl">
-                        <h2 className="text-xl font-bold mb-6">Nieuwe Periode</h2>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Naam</label>
-                                <input
-                                    type="text"
-                                    value={newName}
-                                    onChange={(e) => setNewName(e.target.value)}
-                                    placeholder="v.b. Maart - April 2024"
-                                    className="w-full bg-gray-50 dark:bg-[#0f172a] border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Startdatum (verplicht)</label>
-                                <input
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    className="w-full bg-gray-50 dark:bg-[#0f172a] border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
+            <BottomSheet 
+                isOpen={showAddModal} 
+                onClose={() => setShowAddModal(false)} 
+                title="Nieuwe Periode"
+            >
+                <div className="space-y-6">
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Naam</label>
+                            <input
+                                type="text"
+                                value={newName}
+                                onChange={(e) => setNewName(e.target.value)}
+                                placeholder="v.b. Maart - April 2024"
+                                className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500"
+                            />
                         </div>
-
-                        <div className="flex gap-3 mt-8">
-                            <button
-                                onClick={() => setShowAddModal(false)}
-                                className="flex-1 py-3 text-sm font-bold text-gray-500 hover:text-gray-700 dark:hover:text-white transition-colors"
-                            >
-                                Annuleren
-                            </button>
-                            <button
-                                onClick={handleCreatePeriod}
-                                className="flex-[2] bg-blue-600 text-white py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20"
-                            >
-                                Opslaan
-                            </button>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Startdatum (verplicht)</label>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500"
+                            />
                         </div>
                     </div>
+
+                    <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <button
+                            onClick={() => setShowAddModal(false)}
+                            className="flex-1 py-3 text-sm font-bold text-gray-500 hover:text-gray-700 dark:hover:text-white transition-colors"
+                        >
+                            Annuleren
+                        </button>
+                        <button
+                            onClick={handleCreatePeriod}
+                            className="flex-[2] bg-blue-600 text-white py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
+                        >
+                            Opslaan
+                        </button>
+                    </div>
                 </div>
-            )}
+            </BottomSheet>
+
             {/* Edit Modal */}
-            {editingPeriod && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-20 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-3xl p-6 shadow-2xl">
-                        <h2 className="text-xl font-bold mb-6">Naam Aanpassen</h2>
+            <Modal 
+                isOpen={!!editingPeriod} 
+                onClose={() => setEditingPeriod(null)} 
+                title="Naam Aanpassen"
+            >
+                <div className="space-y-6">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Nieuwe Naam</label>
+                        <input
+                            type="text"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Nieuwe Naam</label>
-                                <input
-                                    type="text"
-                                    value={editName}
-                                    onChange={(e) => setEditName(e.target.value)}
-                                    className="w-full bg-gray-50 dark:bg-[#0f172a] border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3 mt-8">
-                            <button
-                                onClick={() => setEditingPeriod(null)}
-                                className="flex-1 py-3 text-sm font-bold text-gray-500 hover:text-gray-700 dark:hover:text-white transition-colors"
-                            >
-                                Annuleren
-                            </button>
-                            <button
-                                onClick={handleUpdateName}
-                                className="flex-[2] bg-blue-600 text-white py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20"
-                            >
-                                Aanpassen
-                            </button>
-                        </div>
+                    <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <button
+                            onClick={() => setEditingPeriod(null)}
+                            className="flex-1 py-3 text-sm font-bold text-gray-500 hover:text-gray-700 dark:hover:text-white transition-colors"
+                        >
+                            Annuleren
+                        </button>
+                        <button
+                            onClick={handleUpdateName}
+                            className="flex-[2] bg-blue-600 text-white py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
+                        >
+                            Aanpassen
+                        </button>
                     </div>
                 </div>
-            )}
+            </Modal>
         </div>
     );
 };

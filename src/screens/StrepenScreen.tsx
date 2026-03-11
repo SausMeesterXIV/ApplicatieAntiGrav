@@ -4,6 +4,8 @@ import { Drink, User } from '../types';
 import { ChevronBack } from '../components/ChevronBack';
 import { supabase } from '../lib/supabase';
 import { AppContextType } from '../App';
+import { SkeletonRow } from '../components/Skeleton';
+import { hapticSuccess } from '../lib/haptics';
 // Users now come from context (useOutletContext)
 
 export const StrepenScreen: React.FC = () => {
@@ -270,6 +272,8 @@ export const StrepenScreen: React.FC = () => {
     // Update global balance with quantity
     onAddCost(selectedDrink.price, selectedDrink, countToAdd);
 
+    hapticSuccess();
+
     // Optimistic update local
     setTotalToday(prev => prev + countToAdd);
 
@@ -335,6 +339,7 @@ export const StrepenScreen: React.FC = () => {
             </h2>
             {loading && <span className="text-xs text-gray-400">Laden...</span>}
           </div>
+
           <div className="bg-white dark:bg-[#1e2330] p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 transition-colors">
 
             {/* Header: User Info only */}

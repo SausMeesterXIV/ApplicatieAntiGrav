@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { FryItem, CartItem, Order, User } from '../types';
 import { ChevronBack } from '../components/ChevronBack';
+import { BottomSheet } from '../components/Modal';
+import { hapticSuccess } from '../lib/haptics';
+import { SkeletonCard } from '../components/Skeleton';
 // Users from context
 import { AppContextType } from '../App';
 
@@ -21,7 +24,8 @@ export const FriesScreen: React.FC = () => {
     fryItems: items,
     handleAddFryItem,
     handleUpdateFryItem,
-    handleDeleteFryItem
+    handleDeleteFryItem,
+    loading
   } = useOutletContext<AppContextType>();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [favoriteCart, setFavoriteCart] = useState<CartItem[]>(() => {
@@ -163,6 +167,7 @@ export const FriesScreen: React.FC = () => {
   const handlePlaceOrder = () => {
     if (!isOrderingOpen) return;
     setOrderPlaced(true);
+    hapticSuccess();
     // Simulate processing
     setTimeout(() => {
       // Pass orderingFor if set, otherwise undefined (defaults to current user in App.tsx)
@@ -217,6 +222,7 @@ export const FriesScreen: React.FC = () => {
     const price = parseFloat(newItemPrice.replace(',', '.'));
     if (!newItemName.trim() || isNaN(price)) return;
     
+    hapticSuccess();
     await handleAddFryItem({
       name: newItemName.trim(),
       price,
@@ -402,90 +408,80 @@ export const FriesScreen: React.FC = () => {
       )}
 
       {/* Order Summary Modal */}
-      {showOrderSummary && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowOrderSummary(false)} />
-          <div className="relative bg-white dark:bg-[#1e293b] w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden pb-[calc(env(safe-area-inset-bottom,0px)+5rem)] sm:pb-0">
-            <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">📋 Bestelling Overzicht</h2>
-                <p className="text-xs text-gray-400 mt-0.5">{allActiveOrders.length} bestellingen — {orderSummaryItems.reduce((a, i) => a + i.count, 0)} items</p>
-              </div>
-              <button onClick={() => setShowOrderSummary(false)} className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                <span className="material-icons-round text-gray-500 text-xl">close</span>
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-5 space-y-2">
-              {orderSummaryItems.length === 0 ? (
-                <p className="text-center text-gray-400 py-8">Geen bestellingen</p>
-              ) : (
-                orderSummaryItems.map(item => (
-                  <div key={item.name} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 flex items-center justify-center">
-                        <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">{item.count}x</span>
-                      </div>
-                      <span className="font-bold text-gray-900 dark:text-white text-sm">{item.name}</span>
+      <BottomSheet 
+        isOpen={showOrderSummary} 
+        onClose={() => setShowOrderSummary(false)} 
+        title="📋 Bestelling Overzicht"
+      >
+        <div className="flex flex-col h-full max-h-[60vh]">
+          <div className="flex-1 overflow-y-auto space-y-2 py-2">
+            {orderSummaryItems.length === 0 ? (
+              <p className="text-center text-gray-400 py-8">Geen bestellingen</p>
+            ) : (
+              orderSummaryItems.map(item => (
+                <div key={item.name} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 flex items-center justify-center">
+                      <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">{item.count}x</span>
                     </div>
-                    <span className="text-gray-500 text-sm font-medium">€ {item.price.toFixed(2).replace('.', ',')}</span>
+                    <span className="font-bold text-gray-900 dark:text-white text-sm">{item.name}</span>
                   </div>
-                ))
-              )}
+                  <span className="text-gray-500 text-sm font-medium">€ {item.price.toFixed(2).replace('.', ',')}</span>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="pt-4 mt-2 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex justify-between items-center mb-4">
+              <span className="font-bold text-gray-500 text-sm">Totaal</span>
+              <span className="font-bold text-xl text-gray-900 dark:text-white">€ {orderSummaryItems.reduce((a, i) => a + i.price, 0).toFixed(2).replace('.', ',')}</span>
             </div>
-            <div className="p-5 border-t border-gray-100 dark:border-gray-700">
-              <div className="flex justify-between items-center mb-3">
-                <span className="font-bold text-gray-500 text-sm">Totaal</span>
-                <span className="font-bold text-xl text-gray-900 dark:text-white">€ {orderSummaryItems.reduce((a, i) => a + i.price, 0).toFixed(2).replace('.', ',')}</span>
-              </div>
-              <button onClick={() => setShowOrderSummary(false)} className="w-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl text-sm">Sluiten</button>
-            </div>
+            <button onClick={() => setShowOrderSummary(false)} className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl text-sm shadow-lg shadow-blue-500/20">Sluiten</button>
           </div>
         </div>
-      )}
+      </BottomSheet>
 
       {/* Time Input Modal */}
-      {showTimeInput && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-20">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowTimeInput(false)} />
-          <div className="relative bg-white dark:bg-[#1e293b] w-full max-w-xs rounded-2xl shadow-2xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="material-icons-round text-green-600 text-2xl">schedule</span>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Hoe laat afhalen?</h3>
-            </div>
+      <BottomSheet 
+        isOpen={showTimeInput} 
+        onClose={() => setShowTimeInput(false)} 
+        title="Hoe laat afhalen?"
+      >
+        <div className="space-y-6">
+          <div className="flex items-center justify-center py-4">
             <input
               type="time"
               value={tempPickupTime}
               onChange={e => setTempPickupTime(e.target.value)}
-              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-2xl font-bold rounded-xl p-4 text-center mb-4 focus:ring-2 focus:ring-green-500 outline-none"
+              className="w-full max-w-[200px] bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-4xl font-black rounded-2xl p-6 text-center focus:ring-4 focus:ring-green-500/20 border-green-500/30 outline-none transition-all"
             />
-            <button
-              onClick={() => {
-                onSetPickupTime(tempPickupTime);
-                onSessionChange('ordered');
-                onAddNotification({
-                  type: 'order',
-                  sender: 'Friet Verantwoordelijke',
-                  role: 'ADMIN',
-                  title: 'Frieten Besteld! 🍟',
-                  content: `De bestelling is doorgegeven. Jullie mogen de frieten gaan afhalen om ${tempPickupTime}.`,
-                  time: 'Zonet',
-                  isRead: false,
-                  action: '',
-                  icon: 'fastfood',
-                  color: 'bg-yellow-100 dark:bg-yellow-600/20 text-yellow-600 dark:text-yellow-500'
-                });
-                setShowTimeInput(false);
-                setShowOrderSummary(false);
-              }}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 transition-all"
-            >
-              <span className="material-icons-round">check</span>
-              Bevestigen & Iedereen Verwittigen
-            </button>
-            <button onClick={() => setShowTimeInput(false)} className="w-full mt-2 text-sm text-gray-400 hover:text-gray-600 py-2">Annuleren</button>
           </div>
+          <button
+            onClick={() => {
+              onSetPickupTime(tempPickupTime);
+              onSessionChange('ordered');
+              onAddNotification({
+                type: 'order',
+                sender: 'Friet Verantwoordelijke',
+                role: 'ADMIN',
+                title: 'Frieten Besteld! 🍟',
+                content: `De bestelling is doorgegeven. Jullie mogen de frieten gaan afhalen om ${tempPickupTime}.`,
+                time: 'Zonet',
+                isRead: false,
+                action: '',
+                icon: 'fastfood',
+                color: 'bg-yellow-100 dark:bg-yellow-600/20 text-yellow-600 dark:text-yellow-500'
+              });
+              setShowTimeInput(false);
+              setShowOrderSummary(false);
+            }}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all"
+          >
+            <span className="material-icons-round">check_circle</span>
+            Bevestigen & Iedereen Verwittigen
+          </button>
         </div>
-      )}
+      </BottomSheet>
 
       {/* Search Bar */}
       <div className="px-4 pt-3 pb-1 bg-gray-50 dark:bg-[#0f172a] sticky top-[85px] z-40 transition-colors">
@@ -637,6 +633,14 @@ export const FriesScreen: React.FC = () => {
 
         {/* ITEMS GRID */}
         <div className="space-y-4 mb-8">
+          {loading ? (
+            <div className="grid grid-cols-1 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </div>
+          ) : (
+            <>
           {/* Search results info */}
           {searchQuery && (() => {
             const results = items.filter(i => i.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -801,7 +805,9 @@ export const FriesScreen: React.FC = () => {
               </div>
             );
           })}
-        </div>
+        </>
+      )}
+    </div>
 
         {/* ADD NEW ITEM - Admin Only */}
         {isAdmin && !searchQuery && (

@@ -2,6 +2,9 @@ import React, { useState, useMemo, useRef } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { AppContextType } from '../App';
+import { hapticSuccess } from '../lib/haptics';
+import { SkeletonRow, SkeletonAvatar, SkeletonText } from '../components/Skeleton';
+import { BottomSheet } from '../components/Modal';
 
 interface BierpongLeaderboardEntry {
   userId: string;
@@ -18,6 +21,7 @@ export const BierpongScreen: React.FC = () => {
     currentUser,
     duoBierpongWinners,
     handleAddBierpongGame,
+    loading
   } = useOutletContext<AppContextType>();
 
   const [showAllLeaders, setShowAllLeaders] = useState(false);
@@ -169,9 +173,37 @@ export const BierpongScreen: React.FC = () => {
       </header>
 
       <main className="flex-1 px-4 pb-nav-safe overflow-y-auto space-y-6 pt-2">
-
-        {/* ===== TOP 3 PODIUM ===== */}
-        {podiumLeaders.length >= 3 && (
+        {loading ? (
+          <>
+            {/* Skeleton Podium */}
+            <div className="flex items-end justify-center gap-3 pt-4 pb-2 h-48">
+              <div className="flex flex-col items-center w-24 space-y-2">
+                <SkeletonAvatar size="w-16 h-16" />
+                <SkeletonText width="w-20" height="h-3" />
+                <div className="w-full h-16 bg-gray-100 dark:bg-gray-800 rounded-t-lg" />
+              </div>
+              <div className="flex flex-col items-center w-28 space-y-2">
+                <SkeletonAvatar size="w-20 h-20" />
+                <SkeletonText width="w-24" height="h-4" />
+                <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 rounded-t-lg" />
+              </div>
+              <div className="flex flex-col items-center w-24 space-y-2">
+                <SkeletonAvatar size="w-16 h-16" />
+                <SkeletonText width="w-20" height="h-3" />
+                <div className="w-full h-12 bg-gray-100 dark:bg-gray-800 rounded-t-lg" />
+              </div>
+            </div>
+            {/* Skeleton Leaderboard */}
+            <div className="space-y-1">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonRow key={i} />
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* ===== TOP 3 PODIUM ===== */}
+            {podiumLeaders.length >= 3 && (
           <section className="relative">
             <div className="flex items-end justify-center gap-3 pt-4 pb-2">
               {/* #2 - Silver */}
@@ -460,10 +492,12 @@ export const BierpongScreen: React.FC = () => {
             )}
           </section>
         )}
+      </>
+    )}
       </main>
 
       {/* ===== SCORE INVULLEN MODAL ===== */}
-      {showScoreModal && (() => {
+      {(() => {
         const allSelected = gameMode === '1v1' ? selectedPlayers.length === 2 : (team1.length === 2 && team2.length === 2);
         const hasWinner = gameMode === '1v1' ? selectedWinnerIds.length > 0 : !!winningTeam;
         const needsMorePlayers = gameMode === '1v1'
@@ -487,7 +521,7 @@ export const BierpongScreen: React.FC = () => {
           const u = getUser(pid);
           const isMe = pid === currentUser.id;
           return (
-            <div key={pid} className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-white/60 dark:bg-gray-700/50">
+            <div key={pid} className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-gray-100 dark:bg-gray-800">
               <div className="w-7 h-7 rounded-full overflow-hidden border border-gray-200 dark:border-gray-600 shrink-0">
                 {u?.avatar ? (
                   <img src={u.avatar} alt="" className="w-full h-full object-cover" />
@@ -497,11 +531,11 @@ export const BierpongScreen: React.FC = () => {
                   </div>
                 )}
               </div>
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate">
-                {getUserName(pid)} {isMe && <span className="text-gray-400">(jij)</span>}
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate flex-1">
+                {getUserName(pid)} {isMe && <span className="text-gray-400 font-normal ml-1">(jij)</span>}
               </span>
               {removable && !isMe && onRemove && (
-                <button onClick={onRemove} className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center shrink-0 hover:bg-red-100 transition-colors ml-auto">
+                <button onClick={onRemove} className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0 hover:bg-red-100 transition-colors">
                   <span className="material-icons-round text-gray-400 hover:text-red-500" style={{ fontSize: '12px' }}>close</span>
                 </button>
               )}
@@ -510,33 +544,26 @@ export const BierpongScreen: React.FC = () => {
         };
 
         return (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowScoreModal(false)} />
-            <div className="relative bg-white dark:bg-[#1e293b] w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden pb-[calc(env(safe-area-inset-bottom,0px)+5rem)] sm:pb-0">
-              {/* Modal Header */}
-              <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">🏓 Score Invullen</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">{statusText}</p>
-                </div>
-                <button onClick={() => setShowScoreModal(false)} className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                  <span className="material-icons-round text-gray-500 text-xl">close</span>
-                </button>
-              </div>
+          <BottomSheet
+            isOpen={showScoreModal}
+            onClose={() => setShowScoreModal(false)}
+            title="Score Invullen"
+          >
+            <div className="space-y-5">
+                <p className="text-xs text-gray-400 -mt-2">{statusText}</p>
 
-              <div className="flex-1 overflow-y-auto p-5 space-y-4">
                 {/* Game Mode Toggle */}
                 {!scoreSaved && (
                   <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
                     <button
                       onClick={() => { setGameMode('1v1'); setSelectedPlayers([currentUser.id]); setSelectedWinnerIds([]); setTeam1([]); setTeam2([]); setWinningTeam(null); }}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${gameMode === '1v1' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${gameMode === '1v1' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}
                     >
                       1 vs 1
                     </button>
                     <button
                       onClick={() => { setGameMode('2v2'); setSelectedPlayers([]); setSelectedWinnerIds([]); setTeam1([currentUser.id]); setTeam2([]); setWinningTeam(null); }}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${gameMode === '2v2' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${gameMode === '2v2' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}
                     >
                       2 vs 2
                     </button>
@@ -548,11 +575,11 @@ export const BierpongScreen: React.FC = () => {
                   <>
                     {/* Selected players - click to select winner */}
                     {selectedPlayers.length > 0 && (
-                      <div>
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                      <div className="space-y-2">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                           {selectedWinnerIds.length > 0 ? '🏆 Tik om winnaar te wijzigen' : '👆 Tik op de winnaar'}
                         </p>
-                        <div className="flex flex-wrap gap-2 justify-center">
+                        <div className="grid grid-cols-2 gap-2">
                           {selectedPlayers.map(pid => {
                             const u = getUser(pid);
                             const isMe = pid === currentUser.id;
@@ -561,201 +588,170 @@ export const BierpongScreen: React.FC = () => {
                               <div
                                 key={pid}
                                 onClick={() => setSelectedWinnerIds([pid])}
-                                className={`flex items-center gap-2.5 py-2 px-3 rounded-xl cursor-pointer transition-all ${isWinner ? 'bg-green-50 dark:bg-green-900/20 ring-2 ring-green-500' : 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                                className={`flex items-center gap-2.5 py-2 px-3 rounded-xl cursor-pointer transition-all border-2 ${isWinner ? 'bg-green-50 dark:bg-green-900/20 border-green-500' : 'bg-gray-50 dark:bg-gray-800 border-transparent hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                               >
-                                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-600 shrink-0">
+                                <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-600 shrink-0">
                                   {u?.avatar ? (
                                     <img src={u.avatar} alt="" className="w-full h-full object-cover" />
                                   ) : (
-                                    <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold text-sm">
+                                    <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold text-xs">
                                       {getUserName(pid).charAt(0)}
                                     </div>
                                   )}
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate">
-                                    {getUserName(pid)} {isMe && <span className="text-gray-400">(jij)</span>}
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-[11px] font-bold text-gray-700 dark:text-gray-200 truncate">
+                                    {getUserName(pid)} {isMe && <span className="text-gray-400 font-normal">(jij)</span>}
                                   </p>
-                                  {isWinner && <span className="text-[10px] text-green-600 dark:text-green-400 font-bold">🏆 Winnaar</span>}
+                                  {isWinner && <span className="text-[9px] text-green-600 dark:text-green-400 font-bold uppercase">Winnaar</span>}
                                 </div>
                                 {!isMe && (
                                   <button
                                     onClick={e => { e.stopPropagation(); setSelectedPlayers(prev => prev.filter(p => p !== pid)); if (selectedWinnerIds.includes(pid)) setSelectedWinnerIds([]); }}
-                                    className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center shrink-0 hover:bg-red-100 transition-colors"
+                                    className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center shrink-0"
                                   >
-                                    <span className="material-icons-round text-gray-400 hover:text-red-500 text-sm">close</span>
+                                    <span className="material-icons-round text-gray-400 text-xs">close</span>
                                   </button>
                                 )}
                               </div>
                             );
                           })}
-                          {selectedPlayers.length < 2 && (
-                            <div className="flex items-center gap-2 py-2 px-3 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600">
-                              <span className="material-icons-round text-gray-300 dark:text-gray-600 text-xl">person_add</span>
-                              <span className="text-[10px] text-gray-400">Tegenstander</span>
-                            </div>
-                          )}
                         </div>
                       </div>
                     )}
 
                     {/* Search for 1v1 */}
                     {selectedPlayers.length < 2 && (
-                      <>
+                      <div className="space-y-3">
                         <div className="relative">
-                          <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl">search</span>
+                          <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                           <input type="text" value={playerSearch} onChange={e => setPlayerSearch(e.target.value)} placeholder="Zoek tegenstander..."
-                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" autoFocus />
+                            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
                         </div>
-                        <div className="space-y-1 max-h-52 overflow-y-auto">
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
                           {filteredUsers.map(u => (
                             <button key={u.id} onClick={() => { setSelectedPlayers(prev => [...prev, u.id]); setPlayerSearch(''); }}
-                              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left">
-                              <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700">
+                              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left">
+                              <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700">
                                 {u.avatar ? <img src={u.avatar} alt="" className="w-full h-full object-cover" /> : (
-                                  <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold text-sm">{(u.nickname || u.name || u.naam || '?').charAt(0)}</div>
+                                  <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold text-xs">{(u.nickname || u.name || u.naam || '?').charAt(0)}</div>
                                 )}
                               </div>
                               <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{u.nickname || u.name || u.naam}</span>
                             </button>
                           ))}
                         </div>
-                      </>
+                      </div>
                     )}
                   </>
                 )}
 
                 {/* ===== 2v2 MODE ===== */}
                 {gameMode === '2v2' && !scoreSaved && (
-                  <>
-                    {/* Team cards */}
-                    <div className="space-y-3">
+                  <div className="space-y-4">
+                    {/* Team selection */}
+                    <div className="grid grid-cols-2 gap-3">
                       {/* Team 1 */}
-                      <div className={`rounded-xl p-3 transition-all ${winningTeam === 'team1' ? 'bg-green-50 dark:bg-green-900/20 ring-2 ring-green-500' : 'bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800'}`}>
+                      <div
+                        onClick={() => team1.length === 2 && team2.length === 2 && setWinningTeam('team1')}
+                        className={`rounded-xl p-3 transition-all cursor-pointer border-2 ${winningTeam === 'team1' ? 'bg-green-50 dark:bg-green-900/20 border-green-500' : 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800'}`}>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Team 1 (jouw team)</span>
-                          {winningTeam === 'team1' && <span className="text-xs font-bold text-green-600 dark:text-green-400">🏆 Winnaar</span>}
+                          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Team 1</span>
+                          {winningTeam === 'team1' && <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">Winnaar</span>}
                         </div>
                         <div className="space-y-1.5">
                           {team1.map(pid => renderPlayerChip(pid, true, () => { if (pid !== currentUser.id) { setTeam1(prev => prev.filter(p => p !== pid)); setWinningTeam(null); } }))}
                           {team1.length < 2 && (
-                            <div className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg border border-dashed border-blue-300 dark:border-blue-700">
-                              <span className="material-icons-round text-blue-300 dark:text-blue-700 text-lg">person_add</span>
-                              <span className="text-[10px] text-blue-400">Teamgenoot</span>
+                            <div className="py-1.5 text-center rounded-lg border border-dashed border-blue-300 dark:border-blue-700">
+                              <span className="text-[10px] text-blue-400 font-bold uppercase">+ Speler</span>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      <div className="text-center text-xs font-black text-gray-300 dark:text-gray-600">VS</div>
-
                       {/* Team 2 */}
-                      <div className={`rounded-xl p-3 transition-all ${winningTeam === 'team2' ? 'bg-green-50 dark:bg-green-900/20 ring-2 ring-green-500' : 'bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800'}`}>
+                      <div
+                        onClick={() => team1.length === 2 && team2.length === 2 && setWinningTeam('team2')}
+                        className={`rounded-xl p-3 transition-all cursor-pointer border-2 ${winningTeam === 'team2' ? 'bg-green-50 dark:bg-green-900/20 border-green-500' : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'}`}>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Team 2</span>
-                          {winningTeam === 'team2' && <span className="text-xs font-bold text-green-600 dark:text-green-400">🏆 Winnaar</span>}
+                          <span className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Team 2</span>
+                          {winningTeam === 'team2' && <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">Winnaar</span>}
                         </div>
                         <div className="space-y-1.5">
                           {team2.map(pid => renderPlayerChip(pid, true, () => { setTeam2(prev => prev.filter(p => p !== pid)); setWinningTeam(null); }))}
-                          {team2.length < 2 && Array.from({ length: 2 - team2.length }).map((_, i) => (
-                            <div key={`t2-empty-${i}`} className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg border border-dashed border-red-300 dark:border-red-700">
-                              <span className="material-icons-round text-red-300 dark:text-red-700 text-lg">person_add</span>
-                              <span className="text-[10px] text-red-400">Tegenstander</span>
+                          {team2.length < 2 && (
+                            <div className="py-1.5 text-center rounded-lg border border-dashed border-red-300 dark:border-red-700">
+                              <span className="text-[10px] text-red-400 font-bold uppercase">+ Speler</span>
                             </div>
-                          ))}
+                          )}
                         </div>
                       </div>
                     </div>
 
                     {/* Search for 2v2 */}
                     {(team1.length < 2 || team2.length < 2) && (
-                      <>
+                      <div className="space-y-3">
                         <div className="relative">
-                          <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl">search</span>
+                          <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                           <input type="text" value={playerSearch} onChange={e => setPlayerSearch(e.target.value)}
-                            placeholder={team1.length < 2 ? 'Zoek teamgenoot...' : 'Zoek tegenstander...'}
-                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" autoFocus />
+                            placeholder={team1.length < 2 ? 'Teamgenoot zoeken...' : 'Tegenstander zoeken...'}
+                            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
                         </div>
-                        <div className="space-y-1 max-h-44 overflow-y-auto">
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
                           {filteredUsers.map(u => (
                             <button key={u.id} onClick={() => {
                               if (team1.length < 2) setTeam1(prev => [...prev, u.id]);
                               else setTeam2(prev => [...prev, u.id]);
                               setPlayerSearch('');
-                            }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left">
-                              <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700">
+                            }} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left">
+                              <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700">
                                 {u.avatar ? <img src={u.avatar} alt="" className="w-full h-full object-cover" /> : (
-                                  <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold text-sm">{(u.nickname || u.name || u.naam || '?').charAt(0)}</div>
+                                  <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold text-xs">{(u.nickname || u.name || u.naam || '?').charAt(0)}</div>
                                 )}
                               </div>
                               <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{u.nickname || u.name || u.naam}</span>
                             </button>
                           ))}
                         </div>
-                      </>
-                    )}
-
-                    {/* Team Winner Selection */}
-                    {team1.length === 2 && team2.length === 2 && !winningTeam && (
-                      <div>
-                        <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 text-center">Welk team heeft gewonnen?</p>
-                        <div className="flex gap-3">
-                          <button onClick={() => setWinningTeam('team1')} className="flex-1 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all text-center">
-                            <span className="text-sm font-bold text-blue-600 dark:text-blue-400">Team 1</span>
-                            <p className="text-[10px] text-gray-400 mt-0.5">Jouw team</p>
-                          </button>
-                          <button onClick={() => setWinningTeam('team2')} className="flex-1 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-700 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all text-center">
-                            <span className="text-sm font-bold text-red-600 dark:text-red-400">Team 2</span>
-                            <p className="text-[10px] text-gray-400 mt-0.5">Tegenstanders</p>
-                          </button>
-                        </div>
                       </div>
                     )}
-
-                    {/* Change winning team */}
-                    {winningTeam && (
-                      <button onClick={() => setWinningTeam(null)} className="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors py-1">
-                        Winnend team wijzigen
-                      </button>
-                    )}
-                  </>
+                  </div>
                 )}
 
                 {/* Success message */}
                 {scoreSaved && (
-                  <div className="text-center py-4">
-                    <span className="text-4xl">✅</span>
-                    <p className="text-lg font-bold text-green-600 dark:text-green-400 mt-2">Score opgeslagen!</p>
+                  <div className="text-center py-6">
+                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="material-icons-round text-green-600 dark:text-green-400 text-3xl">check</span>
+                    </div>
+                    <p className="text-lg font-bold text-green-600 dark:text-green-400">Score opgeslagen!</p>
                     <p className="text-sm text-gray-400 mt-1">Leaderboard is bijgewerkt</p>
                   </div>
                 )}
-              </div>
 
-              {/* Save Button */}
-              {allSelected && hasWinner && !scoreSaved && (
-                <div className="p-5 border-t border-gray-100 dark:border-gray-700">
+                {/* Save Button */}
+                {allSelected && hasWinner && !scoreSaved && (
                   <button
                     onClick={() => {
                       if (gameMode === '1v1') {
                         handleAddBierpongGame(selectedPlayers, selectedWinnerIds);
                       } else {
-                        // 2v2: save as 1 match with both winners
                         const winners = winningTeam === 'team1' ? team1 : team2;
                         const allPlayersDuo = [...team1, ...team2];
                         handleAddBierpongGame(allPlayersDuo, winners);
                       }
+                      hapticSuccess();
                       setScoreSaved(true);
                       setTimeout(() => setShowScoreModal(false), 1200);
                     }}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm shadow-lg shadow-green-500/20 transition-colors"
+                    className="w-full bg-green-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all"
                   >
-                    <span className="material-icons-round text-lg">save</span>
+                    <span className="material-icons-round">save</span>
                     Score Opslaan
                   </button>
-                </div>
-              )}
+                )}
             </div>
-          </div>
+          </BottomSheet>
         );
       })()}
     </div>

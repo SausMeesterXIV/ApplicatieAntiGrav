@@ -3,6 +3,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Event, QuoteItem, CountdownItem, User, Drink } from '../types';
 import { AppContextType } from '../App';
 import { hasRole } from '../lib/roleUtils';
+import { SkeletonWidget, SkeletonCard, SkeletonEvent } from '../components/Skeleton';
 
 export const HomeScreen: React.FC = () => {
   const {
@@ -12,7 +13,8 @@ export const HomeScreen: React.FC = () => {
     countdowns,
     currentUser,
     handleQuickStreep,
-    drinks
+    drinks,
+    loading
   } = useOutletContext<AppContextType>();
 
   const navigate = useNavigate();
@@ -137,7 +139,22 @@ export const HomeScreen: React.FC = () => {
 
         {/* --- DYNAMIC DASHBOARD WIDGETS --- */}
 
-        {/* 1. Quote of the Week (Splash) */}
+        {loading ? (
+          <div className="space-y-6">
+            <SkeletonCard lines={2} />
+            <div className="grid grid-cols-2 gap-3">
+              <SkeletonWidget />
+              <SkeletonWidget />
+            </div>
+            <div className="space-y-3">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-white px-1">Mijn Agenda</h2>
+              <SkeletonEvent />
+              <SkeletonEvent />
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* 1. Quote of the Week (Splash) */}
         {topQuote && (
           <section
             onClick={() => navigate('/quotes')}
@@ -464,6 +481,8 @@ export const HomeScreen: React.FC = () => {
               </div>
             </div>
           </section>
+        )}
+          </>
         )}
 
       </main>

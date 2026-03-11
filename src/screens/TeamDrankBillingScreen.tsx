@@ -5,12 +5,15 @@ import { AppContextType } from '../App';
 import * as db from '../lib/supabaseService';
 import { archiveConsumptiesPeriod, fetchBillingPeriods, fetchOpenBillingPeriod, updateBillingPeriod, calculateWerkjaar } from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
+import { Modal } from '../components/Modal';
+import { SkeletonRow } from '../components/Skeleton';
 
 export const TeamDrankBillingScreen: React.FC = () => {
   const navigate = useNavigate();
   const {
     users: appUsers, streaks, activePeriod, setActivePeriod, billingPeriods, setBillingPeriods,
-    gsheetId, setGsheetId, gsheetSharingEmail, setGsheetSharingEmail, syncToGoogleSheets
+    gsheetId, setGsheetId, gsheetSharingEmail, setGsheetSharingEmail, syncToGoogleSheets,
+    loading
   } = useOutletContext<AppContextType>();
 
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>('');
@@ -390,70 +393,78 @@ export const TeamDrankBillingScreen: React.FC = () => {
       <main className="flex-1 px-4 pb-32 overflow-y-auto pt-2">
         {/* Ledger List */}
         <div className="space-y-3">
-          {filteredUsers.map(user => (
-            <div
-              key={user.id}
-              className={`p-4 rounded-2xl border flex items-center justify-between transition-all shadow-sm group ${user.isPaid
-                ? 'bg-white dark:bg-[#1e293b] border-gray-100 dark:border-gray-800 opacity-75'
-                : 'bg-white dark:bg-[#1e293b] border-gray-100 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-700'
-                }`}
-            >
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                <div className="relative shrink-0">
-                  <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 overflow-hidden shadow-inner">
-                    <img src={user?.avatar} alt={user?.naam || user?.name || 'Gebruiker'} className="w-full h-full object-cover" />
+          {loading ? (
+            <>
+              {[...Array(8)].map((_, i) => (
+                <SkeletonRow key={i} />
+              ))}
+            </>
+          ) : (
+            filteredUsers.map(user => (
+              <div
+                key={user.id}
+                className={`p-4 rounded-2xl border flex items-center justify-between transition-all shadow-sm group ${user.isPaid
+                  ? 'bg-white dark:bg-[#1e293b] border-gray-100 dark:border-gray-800 opacity-75'
+                  : 'bg-white dark:bg-[#1e293b] border-gray-100 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-700'
+                  }`}
+              >
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className="relative shrink-0">
+                    <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 overflow-hidden shadow-inner">
+                      <img src={user?.avatar} alt={user?.naam || user?.name || 'Gebruiker'} className="w-full h-full object-cover" />
+                    </div>
+                    <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-[#1e293b] ${user.isPaid ? 'bg-green-500' : 'bg-red-500'}`}></div>
                   </div>
-                  <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-[#1e293b] ${user.isPaid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-gray-900 dark:text-white text-sm truncate">{user?.naam || user?.name || 'Onbekend'}</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {user.userStrepen} strepen
+                      {user.totalCorrection !== 0 && (
+                        <span className={`ml-1 ${user.totalCorrection > 0 ? 'text-orange-500' : 'text-green-500'}`}>
+                          {user.totalCorrection > 0 ? '+' : ''}€{user.totalCorrection.toFixed(2).replace('.', ',')} correctie
+                        </span>
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-gray-900 dark:text-white text-sm truncate">{user?.naam || user?.name || 'Onbekend'}</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {user.userStrepen} strepen
-                    {user.totalCorrection !== 0 && (
-                      <span className={`ml-1 ${user.totalCorrection > 0 ? 'text-orange-500' : 'text-green-500'}`}>
-                        {user.totalCorrection > 0 ? '+' : ''}€{user.totalCorrection.toFixed(2).replace('.', ',')} correctie
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="text-right">
+                    <div className={`font-bold text-base ${user.isPaid ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+                      {user.isPaid ? 'Betaald' : `€ ${user.totaalSchuld.toFixed(2).replace('.', ',')}`}
+                    </div>
+                    {!user.isPaid && user.berekendBedrag > 0 && (
+                      <span className="text-[10px] text-gray-400">
+                        {user.userStrepen} × €{prijsPerStreep.toFixed(2).replace('.', ',')}
                       </span>
                     )}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="text-right">
-                  <div className={`font-bold text-base ${user.isPaid ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
-                    {user.isPaid ? 'Betaald' : `€ ${user.totaalSchuld.toFixed(2).replace('.', ',')}`}
                   </div>
-                  {!user.isPaid && user.berekendBedrag > 0 && (
-                    <span className="text-[10px] text-gray-400">
-                      {user.userStrepen} × €{prijsPerStreep.toFixed(2).replace('.', ',')}
-                    </span>
-                  )}
-                </div>
 
-                {/* Correction button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCorrectionModal({ userId: user.id, userName: user.naam || user.name || 'Onbekend' });
-                    setCorrectionAmount('');
-                    setCorrectionNote('');
-                  }}
-                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                  title="Correctie toevoegen"
-                >
-                  <span className="material-icons-round text-gray-400 text-sm">edit</span>
-                </button>
+                  {/* Correction button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCorrectionModal({ userId: user.id, userName: user.naam || user.name || 'Onbekend' });
+                      setCorrectionAmount('');
+                      setCorrectionNote('');
+                    }}
+                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    title="Correctie toevoegen"
+                  >
+                    <span className="material-icons-round text-gray-400 text-sm">edit</span>
+                  </button>
 
-                {/* Payment toggle */}
-                <div
-                  onClick={() => togglePayment(user.id, user.isPaid)}
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer ${user.isPaid ? 'bg-blue-600 border-blue-600' : 'border-gray-300 dark:border-gray-600 group-hover:border-blue-400'}`}
-                >
-                  {user.isPaid && <span className="material-icons-round text-white text-sm">check</span>}
+                  {/* Payment toggle */}
+                  <div
+                    onClick={() => togglePayment(user.id, user.isPaid)}
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer ${user.isPaid ? 'bg-blue-600 border-blue-600' : 'border-gray-300 dark:border-gray-600 group-hover:border-blue-400'}`}
+                  >
+                    {user.isPaid && <span className="material-icons-round text-white text-sm">check</span>}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </main>
 
@@ -464,60 +475,59 @@ export const TeamDrankBillingScreen: React.FC = () => {
           <span className="text-base font-bold">€ {totalOutstanding.toFixed(2).replace('.', ',')}</span>
         </div>
       </div>
-
       {/* Correction Modal */}
-      {correctionModal && (
-        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1e293b] w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-gray-100 dark:border-gray-700">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Correctie toevoegen</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">voor {correctionModal.userName}</p>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Bedrag (€)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-3 text-gray-500 text-sm">€</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={correctionAmount}
-                    onChange={(e) => setCorrectionAmount(e.target.value)}
-                    placeholder="bijv. 5.00 of -3.50"
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-7 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <p className="text-[10px] text-gray-400 mt-1">Positief = extra schuld, negatief = aftrek/korting</p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Notitie (optioneel)</label>
+      <Modal
+        isOpen={!!correctionModal}
+        onClose={() => setCorrectionModal(null)}
+        title="Correctie toevoegen"
+        subtitle={correctionModal ? `voor ${correctionModal.userName}` : ''}
+      >
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Bedrag (€)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-3 text-gray-500 text-sm">€</span>
                 <input
-                  type="text"
-                  value={correctionNote}
-                  onChange={(e) => setCorrectionNote(e.target.value)}
-                  placeholder="bijv. Frituurkosten, Kapot glas, ..."
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  type="number"
+                  step="0.01"
+                  value={correctionAmount}
+                  onChange={(e) => setCorrectionAmount(e.target.value)}
+                  placeholder="bijv. 5.00 of -3.50"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-7 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+              <p className="text-[10px] text-gray-400 mt-1">Positief = extra schuld, negatief = aftrek/korting</p>
             </div>
 
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setCorrectionModal(null)}
-                className="flex-1 py-3 rounded-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                Annuleren
-              </button>
-              <button
-                onClick={handleAddCorrection}
-                className="flex-1 py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20"
-              >
-                Opslaan
-              </button>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Notitie (optioneel)</label>
+              <input
+                type="text"
+                value={correctionNote}
+                onChange={(e) => setCorrectionNote(e.target.value)}
+                placeholder="bijv. Frituurkosten, Kapot glas, ..."
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
           </div>
+
+          <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <button
+              onClick={() => setCorrectionModal(null)}
+              className="flex-1 py-3.5 rounded-xl font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 transition-colors"
+            >
+              Annuleren
+            </button>
+            <button
+              onClick={handleAddCorrection}
+              className="flex-1 py-3.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 active:scale-[0.98]"
+            >
+              Opslaan
+            </button>
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };
