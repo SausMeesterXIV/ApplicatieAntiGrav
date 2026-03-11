@@ -4,14 +4,14 @@ import { User } from '../types';
 import { AppContextType } from '../App';
 import * as db from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
-import { hasRole } from '../lib/roleUtils';
+import { hasRole, isHoofdleiding as checkIsHoofdleiding } from '../lib/roleUtils';
 import { Modal, BottomSheet } from '../components/Modal';
 import { SkeletonRow } from '../components/Skeleton';
 
 export const RolesManageScreen: React.FC = () => {
   const navigate = useNavigate();
   const { users, setUsers: setUsersContext, availableRoles, handleSaveRoles, currentUser } = useOutletContext<AppContextType>();
-  const isHoofdleiding = hasRole(currentUser, 'admin');
+  const isUserHoofdleiding = checkIsHoofdleiding(currentUser);
 
   // Data from Supabase via context
   const [localUsers, setLocalUsers] = useState<User[]>([]);
@@ -102,6 +102,23 @@ export const RolesManageScreen: React.FC = () => {
     if (!user) return;
 
     const hasRole = (user.roles || []).includes(role);
+    const HOOFDLEIDING_LABEL = 'Hoofdleiding';
+
+    if (role === HOOFDLEIDING_LABEL) {
+      if (!hasRole && userId === currentUser.id) {
+        showToast('Je kunt jezelf niet tot hoofdleiding maken', 'error');
+        return;
+      }
+      
+      if (hasRole) {
+        const hoofdleidingCount = localUsers.filter(u => (u.roles || []).includes(HOOFDLEIDING_LABEL)).length;
+        if (hoofdleidingCount <= 1) {
+          showToast('Er moet altijd minstens één hoofdleiding blijven', 'error');
+          return;
+        }
+      }
+    }
+
     let newRoles = [...(user.roles || [])];
 
     if (hasRole) {
@@ -145,7 +162,26 @@ export const RolesManageScreen: React.FC = () => {
     if (!selectedUser) return;
 
     // Construct new roles based on toggles
+    const HOOFDLEIDING_LABEL = 'Hoofdleiding';
     const newRoles = availableRoles.filter(r => toggles[r.label]).map(r => r.label);
+
+    // Business Logic for Hoofdleiding
+    const hadHoofdleiding = (selectedUser.roles || []).includes(HOOFDLEIDING_LABEL);
+    const willHaveHoofdleiding = newRoles.includes(HOOFDLEIDING_LABEL);
+
+    if (hadHoofdleiding && !willHaveHoofdleiding) {
+      const hoofdleidingCount = localUsers.filter(u => (u.roles || []).includes(HOOFDLEIDING_LABEL)).length;
+      if (hoofdleidingCount <= 1) {
+        showToast('Er moet altijd minstens één hoofdleiding blijven', 'error');
+        return;
+      }
+    }
+
+    if (!hadHoofdleiding && willHaveHoofdleiding && selectedUser.id === currentUser.id) {
+      showToast('Je kunt jezelf niet tot hoofdleiding maken', 'error');
+      // Reset toggle for UI consistency if we don't close modal (but we do close it below, so it's fine)
+      return;
+    }
 
     const otherRoles = (selectedUser.roles || []).filter((r: string) => !availableRoles.find(ar => ar.label === r));
     const finalRoles = [...newRoles, ...otherRoles];
@@ -238,7 +274,7 @@ export const RolesManageScreen: React.FC = () => {
                 </div>
               );
             })}
-            {isHoofdleiding && (
+            {isUserHoofdleiding && (
               <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() => setIsAddingRole(true)}
