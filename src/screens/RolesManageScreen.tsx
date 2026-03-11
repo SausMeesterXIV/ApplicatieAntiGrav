@@ -366,7 +366,7 @@ export const RolesManageScreen: React.FC = () => {
       {selectedUser && (
         <>
           <div className="fixed inset-0 bg-black/40 dark:bg-black/60 z-40 backdrop-blur-sm transition-colors" onClick={() => setSelectedUser(null)}></div>
-          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 rounded-t-[2rem] p-6 z-50 animate-in slide-in-from-bottom-full duration-300 shadow-2xl">
+          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 rounded-t-[2rem] p-6 pb-[calc(1.5rem + env(safe-area-inset-bottom, 24px))] z-[60] animate-in slide-in-from-bottom-full duration-300 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div className="w-12 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-6"></div>
 
             <div className="flex justify-between items-start mb-6">
@@ -453,7 +453,7 @@ export const RolesManageScreen: React.FC = () => {
 
       {/* Add Role Modal */}
       {isAddingRole && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pb-20 pointer-events-none">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto" onClick={() => setIsAddingRole(false)}></div>
           <div className="bg-white dark:bg-[#1e293b] w-full max-w-sm rounded-3xl pointer-events-auto animate-in fade-in zoom-in-95 duration-200 shadow-2xl overflow-hidden relative z-10 p-6 border border-gray-200 dark:border-gray-800">
             <h2 className="text-xl font-bold mb-4">Nieuwe Rol Toevoegen</h2>
@@ -472,13 +472,30 @@ export const RolesManageScreen: React.FC = () => {
 
               <div>
                 <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Icoon (Material Icon)</label>
-                <input
-                  type="text"
-                  value={newRoleIcon}
-                  onChange={(e) => setNewRoleIcon(e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white"
-                  placeholder="bv. tag"
-                />
+                <div className="relative">
+                  <span className="material-icons-round absolute left-4 top-3 text-gray-500">{newRoleIcon}</span>
+                  <select
+                    value={newRoleIcon}
+                    onChange={(e) => setNewRoleIcon(e.target.value)}
+                    className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl pl-11 pr-4 py-3 text-sm text-gray-900 dark:text-white appearance-none"
+                  >
+                    <option value="star">Ster</option>
+                    <option value="person">Persoon</option>
+                    <option value="groups">Groep</option>
+                    <option value="admin_panel_settings">Schild</option>
+                    <option value="build">Gereedschap</option>
+                    <option value="local_bar">Drank</option>
+                    <option value="restaurant">Bestek</option>
+                    <option value="celebration">Feest</option>
+                    <option value="account_balance">Bank</option>
+                    <option value="photo_camera">Camera</option>
+                    <option value="campaign">Megafoon</option>
+                    <option value="sports_soccer">Bal</option>
+                    <option value="music_note">Muziek</option>
+                    <option value="volunteer_activism">Hart</option>
+                    <option value="pets">Dier</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -510,7 +527,7 @@ export const RolesManageScreen: React.FC = () => {
 
       {/* Manage Roles Modal */}
       {isDeletingRoles && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pb-20">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsDeletingRoles(false)}></div>
           <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-3xl animate-in fade-in zoom-in-95 duration-200 shadow-2xl overflow-hidden relative z-10 p-6 border border-gray-200 dark:border-gray-800">
             <h2 className="text-xl font-bold mb-1">Rollen Beheren</h2>
