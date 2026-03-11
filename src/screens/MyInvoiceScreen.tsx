@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useDrink } from '../contexts/DrinkContext';
+import { useFries } from '../contexts/FriesContext';
 import { ChevronBack } from '../components/ChevronBack';
 
 import { User, Streak, Drink, Order } from '../types';
-import { AppContextType } from '../App';
 
 export interface MyInvoiceScreenProps {
   onBack?: () => void;
@@ -21,13 +23,14 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
   friesOrders: propFriesOrders
 }) => {
   const navigate = useNavigate();
-  const context = useOutletContext<AppContextType | null>();
+  const { currentUser: authUser } = useAuth();
+  const { streaks, activePeriod } = useDrink();
+  const { friesOrders } = useFries();
 
   // Use props if provided, otherwise context
-  const currentUser = propCurrentUser || context?.currentUser;
-  const allStreaks = propStreaks || context?.streaks || [];
-  const allFriesOrders = propFriesOrders || context?.friesOrders || [];
-  const activePeriod = context?.activePeriod;
+  const currentUser = propCurrentUser || authUser;
+  const allStreaks = propStreaks || streaks || [];
+  const allFriesOrders = propFriesOrders || friesOrders || [];
 
   // ========== DYNAMIC PRICING ==========
   // Filter streaks for the active (open) period

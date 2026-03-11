@@ -1,13 +1,17 @@
 import React, { useState, useMemo } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useDrink } from '../contexts/DrinkContext';
+import { useFries } from '../contexts/FriesContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
-import { AppContextType } from '../App';
 import { showToast } from '../components/Toast';
 import { hasRole } from '../lib/roleUtils';
 
 export const TeamDrankDashboardScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { streaks, users, activePeriod, handleDeleteStreak, friesOrders, currentUser } = useOutletContext<AppContextType>();
+    const { users, currentUser } = useAuth();
+  const { streaks, activePeriod, handleRemoveCost : handleDeleteStreak } = useDrink();
+  const { friesOrders } = useFries();
   
   const canAccess = hasRole(currentUser, 'drank');
 

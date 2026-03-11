@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useAgenda } from '../contexts/AgendaContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { Notification } from '../types';
-import { AppContextType } from '../App';
 import { SkeletonRow } from '../components/Skeleton';
 
 export const NotificationsScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { notifications, handleMarkNotificationAsRead: onMarkAsRead, loading } = useOutletContext<AppContextType>();
+    const { loading } = useAuth();
+  const { notifications, handleMarkNotificationAsRead: onMarkAsRead } = useAgenda();
   const [filter, setFilter] = useState<'Alles' | 'Nudges' | 'Officieel'>('Alles');
 
   const filteredData = filter === 'Alles'

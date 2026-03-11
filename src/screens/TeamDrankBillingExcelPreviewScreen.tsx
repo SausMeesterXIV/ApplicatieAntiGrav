@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useDrink } from '../contexts/DrinkContext';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import { AppContextType } from '../App';
 import { BillingCorrection } from '../types';
 import * as db from '../lib/supabaseService';
 
@@ -12,7 +13,8 @@ export interface TeamDrankBillingExcelPreviewScreenProps {
 export const TeamDrankBillingExcelPreviewScreen: React.FC<TeamDrankBillingExcelPreviewScreenProps> = ({ onBack }) => {
    const navigate = useNavigate();
    const location = useLocation();
-   const { users, drinks, streaks: allStreaks, billingPeriods, activePeriod } = useOutletContext<AppContextType>();
+     const { users } = useAuth();
+  const { dranken : drinks, streaks: allStreaks, billingPeriods, activePeriod } = useDrink();
    const [isGenerating, setIsGenerating] = useState(false);
    const [generated, setGenerated] = useState(false);
    const [corrections, setCorrections] = useState<BillingCorrection[]>([]);

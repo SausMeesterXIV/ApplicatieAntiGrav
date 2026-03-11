@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useAgenda } from '../contexts/AgendaContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
-import { AppContextType } from '../App';
 import { SkeletonEvent } from '../components/Skeleton';
 
 export const AgendaScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { notifications, handleMarkNotificationAsRead, events, loading } = useOutletContext<AppContextType>();
+    const { loading } = useAuth();
+  const { notifications, handleMarkNotificationAsRead, events } = useAgenda();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showNewEvents, setShowNewEvents] = useState(false);

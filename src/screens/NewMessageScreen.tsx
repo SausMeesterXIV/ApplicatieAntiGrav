@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { AppContextType } from '../App';
 
 export const NewMessageScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -10,7 +10,7 @@ export const NewMessageScreen: React.FC = () => {
   const [isOfficial, setIsOfficial] = useState(true);
 
   // Users from Supabase via context
-  const { users } = useOutletContext<AppContextType>();
+    const { users } = useAuth();
 
   const toggleUser = (id: string) => {
     if (selectedUsers.includes(id)) {

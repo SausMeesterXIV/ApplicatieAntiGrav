@@ -1,21 +1,17 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useDrink } from '../contexts/DrinkContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { StockItem, Drink } from '../types';
-import { AppContextType } from '../App';
 import { showToast } from '../components/Toast';
 import { Modal, BottomSheet } from '../components/Modal';
 import { SkeletonRow } from '../components/Skeleton';
 
 export const TeamDrankStockScreen: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    stockItems,
-    setStockItems: onUpdateStock,
-    drinks,
-    setDrinks: onUpdateDrinks,
-    loading
-  } = useOutletContext<AppContextType>();
+    const { loading } = useAuth();
+  const { stockItems, setStockItems: onUpdateStock, dranken : drinks, setDrinks: onUpdateDrinks } = useDrink();
   const [activeMainTab, setActiveMainTab] = useState<'voorraad' | 'dranken'>('voorraad');
   const [activeFilter, setActiveFilter] = useState('Standaard');
   const [searchQuery, setSearchQuery] = useState('');

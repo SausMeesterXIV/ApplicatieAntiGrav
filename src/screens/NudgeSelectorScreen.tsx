@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { AppContextType } from '../App';
 import * as db from '../lib/supabaseService';
 
 export const NudgeSelectorScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { users, currentUser } = useOutletContext<AppContextType>();
+    const { users, currentUser } = useAuth();
   const [search, setSearch] = useState('');
   const [nudgedIds, setNudgedIds] = useState<string[]>([]); // Start empty instead of assuming '3'
   const [showToast, setShowToast] = useState(false);
@@ -22,7 +22,7 @@ export const NudgeSelectorScreen: React.FC = () => {
     try {
       const senderName = currentUser?.nickname || currentUser?.name || 'Iemand';
       await db.addNotificatie(
-        currentUser.id, 
+        (currentUser?.id || ''), 
         id, 
         'Nudge ontvangen! 👀', 
         `${senderName} herinnert je eraan om je streepjes aan te vullen!`, 

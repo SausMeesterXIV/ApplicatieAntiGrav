@@ -1,28 +1,27 @@
 import React, { useMemo } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useDrink } from '../contexts/DrinkContext';
+import { useAgenda } from '../contexts/AgendaContext';
 import { Event, QuoteItem, CountdownItem, User, Drink } from '../types';
-import { AppContextType } from '../App';
+
 import { hasRole } from '../lib/roleUtils';
 import { SkeletonWidget, SkeletonCard, SkeletonEvent } from '../components/Skeleton';
 
 export const HomeScreen: React.FC = () => {
-  const {
-    balance,
-    events,
-    quotes,
-    countdowns,
-    currentUser,
-    handleQuickStreep,
-    drinks,
-    loading
-  } = useOutletContext<AppContextType>();
+  const { currentUser, loading: authLoading } = useAuth();
+  const { balances, handleQuickStreep, dranken: drinks, loading: drinkLoading } = useDrink();
+  const { events, quotes, countdowns } = useAgenda();
+  
+  const loading = authLoading || drinkLoading;
+  const balance = balances && currentUser ? balances[currentUser?.id] || 0 : 0;
 
   const navigate = useNavigate();
   // We use the same 'quickDrink' lookup that used to happen in App.tsx
   const quickDrinkFallback = drinks.length > 0 ? String(drinks[0].id) : null;
-  const quickDrink = drinks.find(d => String(d.id) === String(currentUser.quickDrinkId || quickDrinkFallback));
+  const quickDrink = drinks.find(d => String(d.id) === String(currentUser?.quickDrinkId || quickDrinkFallback));
 
-  const displayName = currentUser.nickname || currentUser.name?.split(' ')[0] || 'Lid';
+  const displayName = currentUser?.nickname || currentUser?.name?.split(' ')[0] || 'Lid';
 
   // Logic to find next 2 upcoming events
   const now = new Date();
@@ -128,7 +127,7 @@ export const HomeScreen: React.FC = () => {
           className="h-16 w-16 rounded-full border-2 border-white dark:border-gray-700 shadow-md overflow-hidden cursor-pointer active:scale-95 transition-transform"
         >
           <img
-            src={currentUser.avatar}
+            src={currentUser?.avatar}
             alt="Profile"
             className="h-full w-full object-cover"
           />

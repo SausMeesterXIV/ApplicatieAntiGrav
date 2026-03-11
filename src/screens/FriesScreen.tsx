@@ -1,32 +1,28 @@
 import React, { useState } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useFries } from '../contexts/FriesContext';
+import { useAgenda } from '../contexts/AgendaContext';
 import { FryItem, CartItem, Order, User } from '../types';
 import { ChevronBack } from '../components/ChevronBack';
 import { BottomSheet } from '../components/Modal';
 import { hapticSuccess } from '../lib/haptics';
 import { SkeletonCard } from '../components/Skeleton';
-// Users from context
-import { AppContextType } from '../App';
+
 
 export const FriesScreen: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    handlePlaceFryOrder: onPlaceOrder,
-    handleRemoveFryOrder: onRemoveOrder,
-    friesOrders: myOrders,
-    friesSessionStatus: sessionStatus,
-    setFriesSessionStatus: onSessionChange,
-    friesPickupTime: pickupTime,
-    setFriesPickupTime: onSetPickupTime,
-    handleAddNotification: onAddNotification,
-    currentUser,
-    users,
-    fryItems: items,
-    handleAddFryItem,
-    handleUpdateFryItem,
-    handleDeleteFryItem,
-    loading
-  } = useOutletContext<AppContextType>();
+  const { currentUser, users, loading: authLoading } = useAuth();
+  const { handleAddNotification: onAddNotification } = useAgenda();
+  const { 
+    handlePlaceFryOrder: onPlaceOrder, handleRemoveFryOrder: onRemoveOrder, 
+    friesOrders: myOrders, activeFrituurSession, setFriesSessionStatus: onSessionChange, 
+    setFriesPickupTime: onSetPickupTime, fryItems: items, handleAddFryItem, 
+    handleUpdateFryItem, handleDeleteFryItem, loading: friesLoading 
+  } = useFries();
+  const loading = authLoading || friesLoading;
+  const sessionStatus = activeFrituurSession?.status || 'closed';
+  const pickupTime = activeFrituurSession?.pickupTime;
   const [cart, setCart] = useState<CartItem[]>([]);
   const [favoriteCart, setFavoriteCart] = useState<CartItem[]>(() => {
     try {
@@ -101,7 +97,7 @@ export const FriesScreen: React.FC = () => {
   const showTodayAsHistory = sessionStatus === 'ordered';
 
   // Filter orders to only show the ones for the current user in the main UI
-  const myOwnOrders = myOrders.filter(o => o.userId === currentUser.id);
+  const myOwnOrders = myOrders.filter(o => o.userId === currentUser?.id);
 
   const todayOrders = myOwnOrders.filter(o => isToday(o.date) && o.status === 'pending' && !showTodayAsHistory);
 
@@ -238,7 +234,7 @@ export const FriesScreen: React.FC = () => {
   // --- User Search Logic ---
   const filteredUsers = users.filter(u =>
     (u.naam || '').toLowerCase().includes(userSearchQuery.toLowerCase()) &&
-    u.id !== currentUser.id // Don't search for yourself
+    u.id !== currentUser?.id // Don't search for yourself
   );
 
   const selectUserForOrder = (user: User) => {
@@ -334,7 +330,7 @@ export const FriesScreen: React.FC = () => {
         {!orderingFor && (
           <div className="mt-2 flex justify-between items-center">
             <div className="text-xs text-gray-500 dark:text-gray-400 pl-8">
-              Bestelling voor <span className="font-bold text-gray-900 dark:text-white">{currentUser.naam}</span>
+              Bestelling voor <span className="font-bold text-gray-900 dark:text-white">{currentUser?.naam}</span>
             </div>
             {isAdmin && (
               <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded border border-blue-200 animate-pulse">

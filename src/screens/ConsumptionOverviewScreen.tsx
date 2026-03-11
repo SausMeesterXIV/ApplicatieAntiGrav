@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useDrink } from '../contexts/DrinkContext';
 import { ChevronBack } from '../components/ChevronBack';
 import { BottomSheet } from '../components/Modal';
 import { User, Drink, Streak } from '../types';
-import { AppContextType } from '../App';
 import { SkeletonRow } from '../components/Skeleton';
 
 export interface ConsumptionOverviewScreenProps {
@@ -20,14 +21,15 @@ export const ConsumptionOverviewScreen: React.FC<ConsumptionOverviewScreenProps>
   streaks: propStreaks
 }) => {
   const navigate = useNavigate();
-  const context = useOutletContext<AppContextType | null>();
+  const auth = useAuth();
+  const drink = useDrink();
 
   // Use props if provided (e.g., when embedded in another screen), otherwise fall back to context
-  const users = propUsers || context?.users || [];
-  const drinks = propDrinks || context?.drinks || [];
-  const streaks = propStreaks || context?.streaks || [];
-  const currentUser = context?.currentUser;
-  const loading = context?.loading;
+  const users = propUsers || auth.users || [];
+  const drinks = propDrinks || drink.dranken || [];
+  const streaks = propStreaks || drink.streaks || [];
+  const currentUser = auth.currentUser;
+  const loading = auth.loading || drink.loading;
 
   const handleBack = () => {
     if (propOnBack) propOnBack();

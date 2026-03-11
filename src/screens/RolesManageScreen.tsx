@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { User } from '../types';
-import { AppContextType } from '../App';
 import * as db from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
 import { hasRole, isHoofdleiding as checkIsHoofdleiding } from '../lib/roleUtils';
@@ -10,7 +10,7 @@ import { SkeletonRow } from '../components/Skeleton';
 
 export const RolesManageScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { users, setUsers: setUsersContext, availableRoles, handleSaveRoles, currentUser } = useOutletContext<AppContextType>();
+    const { users, setUsers: setUsersContext, availableRoles, handleSaveRoles, handleSaveAvailableRoles, currentUser } = useAuth();
   const isUserHoofdleiding = checkIsHoofdleiding(currentUser);
 
   // Data from Supabase via context
@@ -59,7 +59,7 @@ export const RolesManageScreen: React.FC = () => {
       icon: newRoleIcon,
       color: newRoleColor
     };
-    handleSaveRoles([...availableRoles, newRole]);
+    handleSaveAvailableRoles([...availableRoles, newRole]);
     setIsAddingRole(false);
     setNewRoleLabel('');
     setNewRoleIcon('star');
@@ -67,7 +67,7 @@ export const RolesManageScreen: React.FC = () => {
   
   const handleDeleteRole = (id: string, label: string) => {
     if(window.confirm(`Ben je zeker dat je de rol ${label} wilt verwijderen?`)) {
-      handleSaveRoles(availableRoles.filter(r => r.id !== id));
+      handleSaveAvailableRoles(availableRoles.filter(r => r.id !== id));
       setActiveAssignRole(null);
     }
   };
@@ -105,7 +105,7 @@ export const RolesManageScreen: React.FC = () => {
     const HOOFDLEIDING_LABEL = 'Hoofdleiding';
 
     if (role === HOOFDLEIDING_LABEL) {
-      if (!hasRole && userId === currentUser.id) {
+      if (!hasRole && userId === currentUser?.id) {
         showToast('Je kunt jezelf niet tot hoofdleiding maken', 'error');
         return;
       }
@@ -113,7 +113,7 @@ export const RolesManageScreen: React.FC = () => {
       if (hasRole) {
         const hoofdleidingCount = localUsers.filter(u => (u.roles || []).includes(HOOFDLEIDING_LABEL)).length;
         if (hoofdleidingCount <= 1) {
-          showToast('Er moet altijd minstens één hoofdleiding blijven', 'error');
+          showToast('Er moet altijd minstens Ã©Ã©n hoofdleiding blijven', 'error');
           return;
         }
       }
@@ -172,12 +172,12 @@ export const RolesManageScreen: React.FC = () => {
     if (hadHoofdleiding && !willHaveHoofdleiding) {
       const hoofdleidingCount = localUsers.filter(u => (u.roles || []).includes(HOOFDLEIDING_LABEL)).length;
       if (hoofdleidingCount <= 1) {
-        showToast('Er moet altijd minstens één hoofdleiding blijven', 'error');
+        showToast('Er moet altijd minstens Ã©Ã©n hoofdleiding blijven', 'error');
         return;
       }
     }
 
-    if (!hadHoofdleiding && willHaveHoofdleiding && selectedUser.id === currentUser.id) {
+    if (!hadHoofdleiding && willHaveHoofdleiding && selectedUser.id === currentUser?.id) {
       showToast('Je kunt jezelf niet tot hoofdleiding maken', 'error');
       // Reset toggle for UI consistency if we don't close modal (but we do close it below, so it's fine)
       return;
@@ -649,3 +649,4 @@ export const RolesManageScreen: React.FC = () => {
     </div>
   );
 };
+

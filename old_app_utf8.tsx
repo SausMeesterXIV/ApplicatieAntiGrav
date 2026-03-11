@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { Session } from '@supabase/supabase-js';
@@ -7,7 +7,6 @@ import * as db from './lib/supabaseService';
 import { showToast, ToastContainer } from './components/Toast';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
-import { useRealtimeSubscriptions } from './lib/useRealtime';
 
 import { BottomNav } from './components/BottomNav';
 import { SplashScreen } from './components/SplashScreen';
@@ -151,14 +150,6 @@ function App() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [activePeriod, setActivePeriod] = useState<BillingPeriod | null>(null);
     const [billingPeriods, setBillingPeriods] = useState<BillingPeriod[]>([]);
-
-    // ==================== REALTIME SUBSCRIPTIONS ====================
-
-    useRealtimeSubscriptions({
-        userId: session?.user?.id || null,
-        setNotifications,
-        setBierpongGames,
-    });
 
     // ==================== AUTH & INITIAL DATA LOAD ====================
 
@@ -307,7 +298,7 @@ function App() {
             if (!loadedRoles || loadedRoles.length === 0) {
                 const defaultRoles = [
                     { id: '1', label: 'Hoofdleiding', icon: 'admin_panel_settings', color: 'bg-red-100 text-red-700 border-red-200' },
-                    { id: '2', label: 'Financiën', icon: 'account_balance', color: 'bg-green-100 text-green-700 border-green-200' },
+                    { id: '2', label: 'Financi├½n', icon: 'account_balance', color: 'bg-green-100 text-green-700 border-green-200' },
                     { id: '3', label: 'Sfeerbeheer', icon: 'celebration', color: 'bg-purple-100 text-purple-700 border-purple-200' },
                     { id: '4', label: 'Drank', icon: 'local_bar', color: 'bg-blue-100 text-blue-700 border-blue-200' },
                     { id: '5', label: 'Materiaal', icon: 'build', color: 'bg-orange-100 text-orange-700 border-orange-200' },
@@ -356,7 +347,7 @@ function App() {
             const realId = await db.addConsumptie(currentUser.id, String(drink.id), quantity, activePeriod?.id, currentUser.naam);
             // Replace temp ID with the real one
             setStreaks(prev => prev.map(s => s.id === tempId ? { ...s, id: realId } : s));
-            showToast(`${quantity}x ${drink.name} gestreept! (+€${(amount * quantity).toFixed(2)})`, 'success');
+            showToast(`${quantity}x ${drink.name} gestreept! (+Ôé¼${(amount * quantity).toFixed(2)})`, 'success');
         } catch (error) {
             // Offline Mode Logic (Save to localStorage)
             if (!navigator.onLine) {
@@ -440,7 +431,7 @@ function App() {
                 activePeriod?.id
             );
             setFriesOrders(prev => prev.map(o => o.id === tempId ? { ...o, id: realId } : o));
-            showToast('Bestelling geplaatst! 🍟', 'success');
+            showToast('Bestelling geplaatst! ­ƒìƒ', 'success');
         } catch (error) {
             setFriesOrders(prev => prev.filter(o => o.id !== tempId));
             // Rollback balance
@@ -501,7 +492,7 @@ function App() {
             const expectedAmount = friesOrders.filter(o => o.status === 'pending').reduce((acc, o) => acc + o.totalPrice, 0);
 
             if (Math.abs(actualAmount - expectedAmount) > 0.01) {
-                // Price mismatch detected — notify Hoofdleiding and Team Drank
+                // Price mismatch detected ÔÇö notify Hoofdleiding and Team Drank
                 const targetUsers = users.filter(u => {
                     const roles = (u.roles || []).map(r => r.toLowerCase());
                     return roles.includes('hoofdleiding') ||
@@ -511,14 +502,14 @@ function App() {
                            u.rol === 'team_drank';
                 });
 
-                const formattedActual = `€${actualAmount.toFixed(2).replace('.', ',')}`;
-                const formattedExpected = `€${expectedAmount.toFixed(2).replace('.', ',')}`;
+                const formattedActual = `Ôé¼${actualAmount.toFixed(2).replace('.', ',')}`;
+                const formattedExpected = `Ôé¼${expectedAmount.toFixed(2).replace('.', ',')}`;
                 const diff = actualAmount - expectedAmount;
-                const formattedDiff = `${diff > 0 ? '+' : ''}€${diff.toFixed(2).replace('.', ',')}`;
+                const formattedDiff = `${diff > 0 ? '+' : ''}Ôé¼${diff.toFixed(2).replace('.', ',')}`;
 
-                const notifTitle = '🍟 Prijswijziging Frituur?';
+                const notifTitle = '­ƒìƒ Prijswijziging Frituur?';
                 const notifContent = `Het betaalde bedrag (${formattedActual}) wijkt af van het verwachte bedrag in de app (${formattedExpected}). Verschil: ${formattedDiff}. Dit kan wijzen op een prijswijziging bij de frituur.`;
-                // Action format: "LABEL|URL" — parsed by NotificationCard
+                // Action format: "LABEL|URL" ÔÇö parsed by NotificationCard
                 const notifAction = `Ga naar rekening & bestelling|/fries-comparison?sessionId=${frituurSessieId}`;
 
                 targetUsers.forEach(user => {
@@ -547,7 +538,7 @@ function App() {
                 });
 
                 handleArchiveFriesSession();
-                showToast('Betaling afgerond — prijsverschil gemeld aan leiding', 'warning');
+                showToast('Betaling afgerond ÔÇö prijsverschil gemeld aan leiding', 'warning');
             } else {
                 handleArchiveFriesSession();
                 showToast('Betaling succesvol afgerond!', 'success');
@@ -600,7 +591,7 @@ function App() {
         try {
             const realQuote = await db.addQuote(text, authorName, context, currentUser.id);
             setQuotes(prev => prev.map(q => q.id === tempId ? realQuote : q));
-            showToast('Quote toegevoegd! 💬', 'success');
+            showToast('Quote toegevoegd! ­ƒÆ¼', 'success');
         } catch (error) {
             setQuotes(prev => prev.filter(q => q.id !== tempId));
             showToast('Fout bij het toevoegen van de quote', 'error');

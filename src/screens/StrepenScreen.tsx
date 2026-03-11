@@ -1,26 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useDrink } from '../contexts/DrinkContext';
 import { Drink, User } from '../types';
 import { ChevronBack } from '../components/ChevronBack';
 import { supabase } from '../lib/supabase';
-import { AppContextType } from '../App';
+
 import { SkeletonRow } from '../components/Skeleton';
 import { hapticSuccess } from '../lib/haptics';
 // Users now come from context (useOutletContext)
 
 export const StrepenScreen: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    balance: currentBalance,
-    handleAddCost: onAddCost,
-    currentUser,
-    setCurrentUser: onUpdateUser,
-    drinks,
-    setDrinks: onUpdateDrinks,
-    users,
-    streaks,
-    activePeriod
-  } = useOutletContext<AppContextType>();
+  const { currentUser, setCurrentUser: onUpdateUser, users } = useAuth();
+  const { balances, handleAddCost: onAddCost, dranken: drinks, setDrinks: onUpdateDrinks, streaks, activePeriod } = useDrink();
+  const currentBalance = balances && currentUser ? balances[(currentUser?.id || '')] || 0 : 0;
   // State to store count PER drink ID. Key = drinkId (string), Value = count (number)
   // Value 0 represents an empty input (user cleared it)
   const [drinkCounts, setDrinkCounts] = useState<Record<string, number>>({});
@@ -270,7 +264,7 @@ export const StrepenScreen: React.FC = () => {
     const cost = countToAdd * selectedDrink.price;
 
     // Update global balance with quantity
-    onAddCost(selectedDrink.price, selectedDrink, countToAdd);
+    onAddCost(currentUser?.id || '', selectedDrink.id, countToAdd, currentUser?.naam);
 
     hapticSuccess();
 
@@ -435,7 +429,7 @@ export const StrepenScreen: React.FC = () => {
                 <button
                   onClick={() => {
                     const bak = drinks.find(d => d.name === 'Bak Freedom')!;
-                    onAddCost(bak.price, bak, 1);
+                    onAddCost(currentUser?.id || '', bak.id, 1, currentUser?.naam);
                     setTotalToday(prev => prev + 1);
                   }}
                   className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-5 rounded-xl shadow-md shadow-amber-500/10 flex items-center justify-between active:scale-[0.98] transition-all group"
@@ -673,14 +667,14 @@ export const StrepenScreen: React.FC = () => {
               {drinks.filter(d => d.name !== 'Bak Freedom').map(drink => (
                 <button
                   key={`quick-${drink.id}`}
-                  onClick={() => onUpdateUser({ ...currentUser, quickDrinkId: String(drink.id) })}
-                  className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center justify-between ${String(currentUser.quickDrinkId || (drinks.length > 0 ? drinks[0].id : null)) === String(drink.id)
+                  onClick={() => onUpdateUser({ ...currentUser, id: currentUser?.id || '', quickDrinkId: String(drink.id) } as User)}
+                  className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center justify-between ${String(currentUser?.quickDrinkId || (drinks.length > 0 ? drinks[0].id : null)) === String(drink.id)
                     ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400'
                     : 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                 >
                   <span className="truncate">{drink.name}</span>
-                  {String(currentUser.quickDrinkId || (drinks.length > 0 ? drinks[0].id : null)) === String(drink.id) && (
+                  {String(currentUser?.quickDrinkId || (drinks.length > 0 ? drinks[0].id : null)) === String(drink.id) && (
                     <span className="material-icons-round text-sm">check_circle</span>
                   )}
                 </button>

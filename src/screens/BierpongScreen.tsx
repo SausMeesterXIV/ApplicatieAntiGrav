@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useAgenda } from '../contexts/AgendaContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
-import { AppContextType } from '../App';
 import { hapticSuccess } from '../lib/haptics';
 import { SkeletonRow, SkeletonAvatar, SkeletonText } from '../components/Skeleton';
 import { BottomSheet } from '../components/Modal';
@@ -15,14 +16,8 @@ interface BierpongLeaderboardEntry {
 
 export const BierpongScreen: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    bierpongGames,
-    users,
-    currentUser,
-    duoBierpongWinners,
-    handleAddBierpongGame,
-    loading
-  } = useOutletContext<AppContextType>();
+    const { users, currentUser, loading } = useAuth();
+  const { bierpongGames, duoBierpongWinners, handleAddBierpongGame } = useAgenda();
 
   const [showAllLeaders, setShowAllLeaders] = useState(false);
   const [sortBy, setSortBy] = useState<'gamesPlayed' | 'winRatio' | 'score'>('gamesPlayed');
@@ -164,7 +159,7 @@ export const BierpongScreen: React.FC = () => {
           <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Leaderboard & Kampioenen</p>
         </div>
         <button
-          onClick={() => { setShowScoreModal(true); setSelectedPlayers([currentUser.id]); setSelectedWinnerIds([]); setPlayerSearch(''); setScoreSaved(false); setGameMode('1v1'); }}
+          onClick={() => { setShowScoreModal(true); setSelectedPlayers([(currentUser?.id || '')]); setSelectedWinnerIds([]); setPlayerSearch(''); setScoreSaved(false); setGameMode('1v1'); }}
           className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl flex items-center gap-2 text-sm shadow-sm transition-colors"
         >
           <span className="material-icons-round text-lg">add</span>
@@ -519,7 +514,7 @@ export const BierpongScreen: React.FC = () => {
 
         const renderPlayerChip = (pid: string, removable: boolean, onRemove?: () => void) => {
           const u = getUser(pid);
-          const isMe = pid === currentUser.id;
+          const isMe = pid === (currentUser?.id || '');
           return (
             <div key={pid} className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-gray-100 dark:bg-gray-800">
               <div className="w-7 h-7 rounded-full overflow-hidden border border-gray-200 dark:border-gray-600 shrink-0">
@@ -556,13 +551,13 @@ export const BierpongScreen: React.FC = () => {
                 {!scoreSaved && (
                   <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
                     <button
-                      onClick={() => { setGameMode('1v1'); setSelectedPlayers([currentUser.id]); setSelectedWinnerIds([]); setTeam1([]); setTeam2([]); setWinningTeam(null); }}
+                      onClick={() => { setGameMode('1v1'); setSelectedPlayers([(currentUser?.id || '')]); setSelectedWinnerIds([]); setTeam1([]); setTeam2([]); setWinningTeam(null); }}
                       className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${gameMode === '1v1' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}
                     >
                       1 vs 1
                     </button>
                     <button
-                      onClick={() => { setGameMode('2v2'); setSelectedPlayers([]); setSelectedWinnerIds([]); setTeam1([currentUser.id]); setTeam2([]); setWinningTeam(null); }}
+                      onClick={() => { setGameMode('2v2'); setSelectedPlayers([]); setSelectedWinnerIds([]); setTeam1([(currentUser?.id || '')]); setTeam2([]); setWinningTeam(null); }}
                       className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${gameMode === '2v2' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}
                     >
                       2 vs 2
@@ -582,7 +577,7 @@ export const BierpongScreen: React.FC = () => {
                         <div className="grid grid-cols-2 gap-2">
                           {selectedPlayers.map(pid => {
                             const u = getUser(pid);
-                            const isMe = pid === currentUser.id;
+                            const isMe = pid === (currentUser?.id || '');
                             const isWinner = selectedWinnerIds.includes(pid);
                             return (
                               <div
@@ -660,7 +655,7 @@ export const BierpongScreen: React.FC = () => {
                           {winningTeam === 'team1' && <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">Winnaar</span>}
                         </div>
                         <div className="space-y-1.5">
-                          {team1.map(pid => renderPlayerChip(pid, true, () => { if (pid !== currentUser.id) { setTeam1(prev => prev.filter(p => p !== pid)); setWinningTeam(null); } }))}
+                          {team1.map(pid => renderPlayerChip(pid, true, () => { if (pid !== (currentUser?.id || '')) { setTeam1(prev => prev.filter(p => p !== pid)); setWinningTeam(null); } }))}
                           {team1.length < 2 && (
                             <div className="py-1.5 text-center rounded-lg border border-dashed border-blue-300 dark:border-blue-700">
                               <span className="text-[10px] text-blue-400 font-bold uppercase">+ Speler</span>

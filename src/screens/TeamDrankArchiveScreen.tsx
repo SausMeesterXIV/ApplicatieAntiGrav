@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { AppContextType } from '../App';
 
 export const TeamDrankArchiveScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { users } = useOutletContext<AppContextType>();
+    const { users } = useAuth();
   const [activeTab, setActiveTab] = useState<'orders' | 'bills'>('orders');
   const [selectedPeriod, setSelectedPeriod] = useState('2023');
 

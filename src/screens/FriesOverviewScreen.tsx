@@ -1,22 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useFries } from '../contexts/FriesContext';
+import { useAgenda } from '../contexts/AgendaContext';
 import { Order, Notification, User } from '../types';
-import { AppContextType } from '../App';
+
 import { BottomSheet } from '../components/BottomSheet';
 
 export const FriesOverviewScreen: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    friesOrders: orders,
-    friesSessionStatus: sessionStatus,
-    setFriesSessionStatus: onSessionChange,
-    friesPickupTime: pickupTime,
-    setFriesPickupTime: onSetPickupTime,
-    handleArchiveFriesSession: onArchiveSession,
-    handleCompleteFriesPayment: onCompletePayment,
-    handleAddNotification: onAddNotification,
-    currentUser
-  } = useOutletContext<AppContextType>();
+  const { currentUser } = useAuth();
+  const { handleAddNotification: onAddNotification } = useAgenda();
+  const { friesOrders: orders, activeFrituurSession, setFriesSessionStatus: onSessionChange, setFriesPickupTime: onSetPickupTime, handleArchiveFriesSession: onArchiveSession, handleCompleteFriesPayment: onCompletePayment } = useFries();
+  const sessionStatus = activeFrituurSession?.status || 'closed';
+  const pickupTime = activeFrituurSession?.pickupTime;
   const [activeTab, setActiveTab] = useState<'Alles' | 'Frieten' | 'Snacks' | 'Sauzen'>('Alles');
   const [aggregatedItems, setAggregatedItems] = useState<any[]>([]);
   const [showReopenConfirmation, setShowReopenConfirmation] = useState(false);

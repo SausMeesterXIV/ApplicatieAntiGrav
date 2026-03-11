@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
+import { useDrink } from '../contexts/DrinkContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import { AppContextType } from '../App';
 
 export const TeamDrankExcelPreviewScreen: React.FC = () => {
    const navigate = useNavigate();
-   const { stockItems, drinks } = useOutletContext<AppContextType>();
+     const { stockItems, dranken : drinks } = useDrink();
    const [isGenerating, setIsGenerating] = useState(false);
    const [generated, setGenerated] = useState(false);
 

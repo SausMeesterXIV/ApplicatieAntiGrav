@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useDrink } from '../contexts/DrinkContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { BillingPeriod, BillingCorrection } from '../types';
-import { AppContextType } from '../App';
 import * as db from '../lib/supabaseService';
 import { archiveConsumptiesPeriod, fetchBillingPeriods, fetchOpenBillingPeriod, updateBillingPeriod, calculateWerkjaar } from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
@@ -10,11 +11,8 @@ import { SkeletonRow } from '../components/Skeleton';
 
 export const TeamDrankBillingScreen: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    users: appUsers, streaks, activePeriod, setActivePeriod, billingPeriods, setBillingPeriods,
-    gsheetId, setGsheetId, gsheetSharingEmail, setGsheetSharingEmail, syncToGoogleSheets,
-    loading
-  } = useOutletContext<AppContextType>();
+    const { users: appUsers, loading } = useAuth();
+  const { streaks, activePeriod, setActivePeriod, billingPeriods, setBillingPeriods, gsheetId, setGsheetId, gsheetSharingEmail, setGsheetSharingEmail, syncToGoogleSheets } = useDrink();
 
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>('');
   const [corrections, setCorrections] = useState<BillingCorrection[]>([]);

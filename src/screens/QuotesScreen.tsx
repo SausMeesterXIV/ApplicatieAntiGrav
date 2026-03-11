@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useAgenda } from '../contexts/AgendaContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { QuoteItem, User } from '../types';
-import { AppContextType } from '../App';
 import { hasRole } from '../lib/roleUtils';
 import { hapticSuccess } from '../lib/haptics';
 import { SkeletonCard } from '../components/Skeleton';
@@ -16,15 +17,8 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
   enableManagement = false,
 }) => {
   const navigate = useNavigate();
-  const {
-    quotes,
-    handleVoteQuote: onVote,
-    handleAddQuote: onAddQuote,
-    handleDeleteQuote: onDeleteQuote,
-    currentUser,
-    users,
-    loading
-  } = useOutletContext<AppContextType>();
+    const { currentUser, users, loading } = useAuth();
+  const { quotes, handleVoteQuote: onVote, handleAddQuote: onAddQuote, handleDeleteQuote: onDeleteQuote } = useAgenda();
   const [isAdding, setIsAdding] = useState(false);
   const [newQuoteText, setNewQuoteText] = useState('');
 
@@ -182,8 +176,8 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
             const isLegend = viewMode === 'archive' && index < 3;
 
             // Current User Vote State
-            const hasLiked = (quote.likes || []).includes(currentUser.id);
-            const hasDisliked = (quote.dislikes || []).includes(currentUser.id);
+            const hasLiked = (quote.likes || []).includes((currentUser?.id || ''));
+            const hasDisliked = (quote.dislikes || []).includes((currentUser?.id || ''));
 
             return (
               <div key={quote.id} className={`bg-white dark:bg-[#1e293b] rounded-2xl p-5 shadow-sm border relative transition-all 

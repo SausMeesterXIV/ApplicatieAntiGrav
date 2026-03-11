@@ -1,20 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useAgenda } from '../contexts/AgendaContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { Event, CountdownItem } from '../types';
-import { AppContextType } from '../App';
 
 export const AgendaManageScreen: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    handleAddNotification: onAddNotification,
-    events,
-    handleSaveEvent: onSaveEvent,
-    handleDeleteEvent: onDeleteEvent,
-    countdowns,
-    handleSaveCountdowns: onSaveCountdowns,
-    availableRoles
-  } = useOutletContext<AppContextType>();
+    const { availableRoles } = useAuth();
+  const { handleAddNotification: onAddNotification, events, handleSaveEvent: onSaveEvent, handleDeleteEvent: onDeleteEvent, countdowns, handleSaveCountdowns: onSaveCountdowns } = useAgenda();
 
   // Countdown State (2 Slots fixed ID '1' and '2')
   const [cd1Active, setCd1Active] = useState(false);

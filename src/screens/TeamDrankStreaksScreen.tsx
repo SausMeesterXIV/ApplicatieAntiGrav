@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useDrink } from '../contexts/DrinkContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
-import { AppContextType } from '../App';
 import { ConsumptionOverviewScreen } from './ConsumptionOverviewScreen';
 
 export const TeamDrankStreaksScreen: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    streaks,
-    users,
-    drinks,
-    handleDeleteStreak: onDeleteStreak,
-  } = useOutletContext<AppContextType>();
+    const { users } = useAuth();
+  const { streaks, dranken : drinks, handleDeleteStreak: onDeleteStreak } = useDrink();
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     const today = new Date();
     const dayOfWeek = today.getDay(); // Sunday - 0, Monday - 1, ..., Saturday - 6

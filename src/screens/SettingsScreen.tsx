@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { User } from '../types';
-import { AppContextType } from '../App';
 import { supabase } from '../lib/supabase';
 import * as db from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
@@ -10,7 +10,7 @@ import { isHapticEnabled, setHapticEnabled as saveHapticPref } from '../lib/hapt
 
 export const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, setCurrentUser } = useOutletContext<AppContextType>();
+    const { currentUser, setCurrentUser } = useAuth();
 
   const onUpdateUser = async (user: User) => {
     setCurrentUser(user);
@@ -27,13 +27,13 @@ export const SettingsScreen: React.FC = () => {
   };
   const [isDark, setIsDark] = useState(false);
   const [hapticOn, setHapticOn] = useState(false);
-  const [nickname, setNickname] = useState(currentUser.nickname || '');
-  const [avatar, setAvatar] = useState(currentUser.avatar);
+  const [nickname, setNickname] = useState(currentUser?.nickname || '');
+  const [avatar, setAvatar] = useState(currentUser?.avatar);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setNickname(currentUser.nickname || '');
-    setAvatar(currentUser.avatar);
+    setNickname(currentUser?.nickname || '');
+    setAvatar(currentUser?.avatar);
   }, [currentUser]);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const handleSaveNickname = () => {
-    onUpdateUser({ ...currentUser, nickname });
+    onUpdateUser({ ...currentUser, id: currentUser?.id || '', nickname } as User);
     alert('Bijnaam opgeslagen!');
   };
 
@@ -69,9 +69,9 @@ export const SettingsScreen: React.FC = () => {
     if (!file) return;
 
     try {
-      const publicUrl = await db.uploadAvatar(currentUser.id, file);
+      const publicUrl = await db.uploadAvatar((currentUser?.id || ''), file);
       setAvatar(publicUrl);
-      setCurrentUser({ ...currentUser, avatar: publicUrl });
+      setCurrentUser({ ...currentUser, id: currentUser?.id || '', avatar: publicUrl } as User);
       showToast('Profielfoto opgeslagen!', 'success');
     } catch (error: any) {
       console.error('Avatar upload error:', error);
@@ -121,7 +121,7 @@ export const SettingsScreen: React.FC = () => {
               <span className="material-icons-round text-sm block">edit</span>
             </button>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{currentUser.nickname || currentUser.name}</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{currentUser?.nickname || currentUser?.name}</h2>
           <p className="text-gray-500 dark:text-gray-400 font-medium">KSA Aalter</p>
         </section>
 
@@ -133,7 +133,7 @@ export const SettingsScreen: React.FC = () => {
               <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Naam (Niet aanpasbaar)</label>
               <input
                 type="text"
-                value={currentUser.name}
+                value={currentUser?.name}
                 disabled
                 className="w-full bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-500 dark:text-gray-400 cursor-not-allowed"
               />
@@ -164,8 +164,8 @@ export const SettingsScreen: React.FC = () => {
         <section className="p-4 pt-0">
           <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 px-1">Jouw Rollen</h3>
           <div className="flex flex-wrap gap-2">
-            {currentUser.roles && currentUser.roles.length > 0 ? (
-              currentUser.roles.map(role => (
+            {currentUser?.roles && currentUser?.roles.length > 0 ? (
+              currentUser?.roles.map(role => (
                 <span key={role} className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold border text-blue-600 bg-blue-50 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800">
                   <span className="material-icons-round text-lg mr-1.5">verified</span>
                   {role}
