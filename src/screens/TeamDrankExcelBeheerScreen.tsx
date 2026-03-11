@@ -13,7 +13,7 @@ export const TeamDrankExcelBeheerScreen: React.FC = () => {
     const navigate = useNavigate();
     const {
         streaks, setStreaks, users, setUsers, drinks, setDrinks,
-        activePeriod, billingPeriods, gsheetId, syncToGoogleSheets
+        activePeriod, setActivePeriod, billingPeriods, gsheetId, syncToGoogleSheets
     } = useOutletContext<AppContextType>();
     const [activeSheet, setActiveSheet] = useState<SheetTab>('consumpties');
     const [selectedCell, setSelectedCell] = useState<CellKey | null>(null);
@@ -276,7 +276,27 @@ export const TeamDrankExcelBeheerScreen: React.FC = () => {
 
         setIsSaving(true);
         try {
-            // Prepare data for the current active sheet
+            let currentSheetId = activePeriod.gsheet_sheet_id;
+
+            // 1. Ensure the sheet exists (named after the period)
+            try {
+                const res = await syncToGoogleSheets('add_sheet', {
+                    spreadsheetId: gsheetId,
+                    title: activePeriod.naam
+                });
+                
+                // If it returned a sheetId, store it if we didn't have it
+                if (res.sheetId && !currentSheetId) {
+                    currentSheetId = String(res.sheetId);
+                    await db.updateBillingPeriod(activePeriod.id, { gsheet_sheet_id: currentSheetId } as any);
+                    // Update local state
+                    setActivePeriod({ ...activePeriod, gsheet_sheet_id: currentSheetId });
+                }
+            } catch (err: any) {
+                console.log('Sheet existence check/creation note:', err);
+            }
+
+            // 2. Prepare data for the current active sheet
             const cols = getColumns();
             const rows = getRowCount();
             const values = [cols]; // Header row
@@ -290,10 +310,11 @@ export const TeamDrankExcelBeheerScreen: React.FC = () => {
                 values.push(row);
             }
 
-            // Sync to the tab named after the period
+            // 3. Sync to the tab (using sheetId if available to handle renames)
             await syncToGoogleSheets('update_values', {
                 spreadsheetId: gsheetId,
-                range: `'${activePeriod.naam}'!A1`,
+                sheetId: currentSheetId, // This allows the backend to find the sheet even if renamed
+                range: currentSheetId ? 'A1' : `'${activePeriod.naam}'!A1`, // Fallback to name if ID unknown
                 values
             });
             showToast('Google Sheet gesynchroniseerd!', 'success');

@@ -7,7 +7,8 @@ import { showToast } from '../components/Toast';
 
 export const RolesManageScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { users, setUsers: setUsersContext } = useOutletContext<AppContextType>();
+  const { users, setUsers: setUsersContext, availableRoles, handleSaveRoles, currentUser } = useOutletContext<AppContextType>();
+  const isHoofdleiding = currentUser.rol === 'admin' || (currentUser.roles || []).includes('Hoofdleiding');
 
   // Data from Supabase via context
   const [localUsers, setLocalUsers] = useState<User[]>([]);
@@ -38,26 +39,38 @@ export const RolesManageScreen: React.FC = () => {
   });
 
   // Role toggles state (for the modal)
-  const [toggles, setToggles] = useState({
-    sfeer: false,
-    drank: false,
-    finance: false,
-  });
+  const [toggles, setToggles] = useState<Record<string, boolean>>({});
 
-  const availableRoles = [
-    { label: 'Financiën', id: 'Financiën', icon: 'euro' },
-    { label: 'Sfeerbeheer', id: 'Sfeerbeheer', icon: 'celebration' },
-    { label: 'Drank', id: 'Drank', icon: 'local_bar' },
-    { label: 'Materiaal', id: 'Materiaal', icon: 'build' },
-  ];
+  const [isAddingRole, setIsAddingRole] = useState(false);
+  const [newRoleLabel, setNewRoleLabel] = useState('');
+  const [newRoleIcon, setNewRoleIcon] = useState('star');
+  const [newRoleColor, setNewRoleColor] = useState('bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800');
 
-  const roleColors: { [key: string]: string } = {
-    'Financiën': 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
-    'Sfeerbeheer': 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800',
-    'Drank': 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
-    'Materiaal': 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800',
-    'Hoofdleiding': 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800',
+  const handleCreateRole = () => {
+    if (!newRoleLabel) return;
+    const newRole = {
+      id: Date.now().toString(),
+      label: newRoleLabel,
+      icon: newRoleIcon,
+      color: newRoleColor
+    };
+    handleSaveRoles([...availableRoles, newRole]);
+    setIsAddingRole(false);
+    setNewRoleLabel('');
+    setNewRoleIcon('star');
   };
+  
+  const handleDeleteRole = (id: string, label: string) => {
+    if(window.confirm(`Ben je zeker dat je de rol ${label} wilt verwijderen?`)) {
+      handleSaveRoles(availableRoles.filter(r => r.id !== id));
+      setActiveAssignRole(null);
+    }
+  };
+
+  const roleColors: { [key: string]: string } = availableRoles.reduce((acc, r) => {
+    acc[r.label] = r.color;
+    return acc;
+  }, {} as Record<string, string>);
 
   // Handle clicking a user card
   const handleUserClick = (user: User) => {
@@ -72,11 +85,11 @@ export const RolesManageScreen: React.FC = () => {
 
   const handleOpenUser = (user: User) => {
     setSelectedUser(user);
-    setToggles({
-      sfeer: (user.roles || []).includes('Sfeerbeheer'),
-      drank: (user.roles || []).includes('Drank'),
-      finance: (user.roles || []).includes('Financiën'),
+    const newToggles: Record<string, boolean> = {};
+    availableRoles.forEach(r => {
+      newToggles[r.label] = (user.roles || []).includes(r.label);
     });
+    setToggles(newToggles);
   };
 
   const toggleRoleForUser = async (userId: string, role: string) => {
@@ -127,12 +140,9 @@ export const RolesManageScreen: React.FC = () => {
     if (!selectedUser) return;
 
     // Construct new roles based on toggles
-    const newRoles: string[] = [];
-    if (toggles.sfeer) newRoles.push('Sfeerbeheer');
-    if (toggles.drank) newRoles.push('Drank');
-    if (toggles.finance) newRoles.push('Financiën');
-    // Preserve other roles not in the toggle list
-    const otherRoles = (selectedUser.roles || []).filter((r: string) => !['Sfeerbeheer', 'Drank', 'Financiën'].includes(r));
+    const newRoles = availableRoles.filter(r => toggles[r.label]).map(r => r.label);
+
+    const otherRoles = (selectedUser.roles || []).filter((r: string) => !availableRoles.find(ar => ar.label === r));
     const finalRoles = [...newRoles, ...otherRoles];
 
     const updatedUser = { ...selectedUser, roles: finalRoles };
@@ -205,24 +215,39 @@ export const RolesManageScreen: React.FC = () => {
           <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Snelle Rol Toewijzing</h2>
           <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
             {availableRoles.map(role => {
-              const isActive = activeAssignRole === role.id;
-              const baseColor = roleColors[role.id] || 'bg-gray-100 text-gray-500';
+              const isActive = activeAssignRole === role.label;
+              const baseColor = role.color;
 
               return (
-                <button
-                  key={role.id}
-                  onClick={() => setActiveAssignRole(isActive ? null : role.id)}
-                  className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all whitespace-nowrap ${isActive
-                    ? `${baseColor} ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-[#0f172a] scale-105 shadow-md`
-                    : 'bg-white dark:bg-[#1e293b] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                    }`}
-                >
-                  <span className={`material-icons-round text-lg ${isActive ? '' : 'text-gray-400'}`}>{role.icon}</span>
-                  <span className="font-bold text-sm">{role.label}</span>
-                  {isActive && <span className="material-icons-round text-sm ml-1">check_circle</span>}
-                </button>
+                <div key={role.id} className="flex flex-col items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => setActiveAssignRole(isActive ? null : role.label)}
+                    className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all whitespace-nowrap ${isActive
+                      ? `${baseColor} ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-[#0f172a] scale-105 shadow-md`
+                      : 'bg-white dark:bg-[#1e293b] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      }`}
+                  >
+                    <span className={`material-icons-round text-lg ${isActive ? '' : 'text-gray-400'}`}>{role.icon}</span>
+                    <span className="font-bold text-sm">{role.label}</span>
+                    {isActive && <span className="material-icons-round text-sm ml-1">check_circle</span>}
+                  </button>
+                  {isHoofdleiding && isActive && (
+                    <button onClick={() => handleDeleteRole(role.id, role.label)} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1 rounded-full transition-colors flex items-center justify-center w-full">
+                      <span className="material-icons-round text-xs">delete</span>
+                    </button>
+                  )}
+                </div>
               );
             })}
+            {isHoofdleiding && (
+                <button
+                  onClick={() => setIsAddingRole(true)}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-gray-400 text-gray-500 text-sm font-bold transition-all whitespace-nowrap shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  <span className="material-icons-round text-lg text-gray-400">add</span>
+                  Nieuwe Rol
+                </button>
+            )}
           </div>
 
           {/* Active Mode Banner */}
@@ -361,56 +386,30 @@ export const RolesManageScreen: React.FC = () => {
 
             <div className="space-y-4 mb-8">
               {/* Role Items */}
-              <div className="bg-gray-50 dark:bg-[#1e293b] rounded-xl p-4 flex items-center justify-between transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
-                    <span className="material-icons-round text-lg">celebration</span>
-                  </div>
-                  <span className="font-medium text-gray-700 dark:text-gray-200">Team Sfeerbeheer</span>
-                </div>
-                <button
-                  onClick={() => setToggles({ ...toggles, sfeer: !toggles.sfeer })}
-                  className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${toggles.sfeer ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
-                >
-                  <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${toggles.sfeer ? 'translate-x-6' : 'translate-x-0'}`}>
-                    {toggles.sfeer && <span className="absolute inset-0 flex items-center justify-center"><span className="material-icons-round text-[10px] text-blue-600">check</span></span>}
-                  </span>
-                </button>
-              </div>
+              {availableRoles.map(role => {
+                const isToggled = toggles[role.label] || false;
+                // Parse tailwind classes safely from color
+                const colorClasses = role.color.split(' ').slice(0,3).join(' ');
 
-              <div className="bg-gray-50 dark:bg-[#1e293b] rounded-xl p-4 flex items-center justify-between transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
-                    <span className="material-icons-round text-lg">local_bar</span>
+                return (
+                  <div key={role.id} className="bg-gray-50 dark:bg-[#1e293b] rounded-xl p-4 flex items-center justify-between transition-colors mb-4 border border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${colorClasses}`}>
+                        <span className="material-icons-round text-lg">{role.icon}</span>
+                      </div>
+                      <span className="font-medium text-gray-700 dark:text-gray-200">{role.label}</span>
+                    </div>
+                    <button
+                      onClick={() => setToggles({ ...toggles, [role.label]: !isToggled })}
+                      className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${isToggled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                    >
+                      <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${isToggled ? 'translate-x-6' : 'translate-x-0'}`}>
+                        {isToggled && <span className="absolute inset-0 flex items-center justify-center"><span className="material-icons-round text-[10px] text-blue-600">check</span></span>}
+                      </span>
+                    </button>
                   </div>
-                  <span className="font-medium text-gray-700 dark:text-gray-200">Team Drank</span>
-                </div>
-                <button
-                  onClick={() => setToggles({ ...toggles, drank: !toggles.drank })}
-                  className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${toggles.drank ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
-                >
-                  <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${toggles.drank ? 'translate-x-6' : 'translate-x-0'}`}>
-                    {toggles.drank && <span className="absolute inset-0 flex items-center justify-center"><span className="material-icons-round text-[10px] text-blue-600">check</span></span>}
-                  </span>
-                </button>
-              </div>
-
-              <div className="bg-gray-50 dark:bg-[#1e293b] rounded-xl p-4 flex items-center justify-between transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                    <span className="material-icons-round text-lg">euro</span>
-                  </div>
-                  <span className="font-medium text-gray-700 dark:text-gray-200">Financiën</span>
-                </div>
-                <button
-                  onClick={() => setToggles({ ...toggles, finance: !toggles.finance })}
-                  className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${toggles.finance ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
-                >
-                  <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${toggles.finance ? 'translate-x-6' : 'translate-x-0'}`}>
-                    {toggles.finance && <span className="absolute inset-0 flex items-center justify-center"><span className="material-icons-round text-[10px] text-blue-600">check</span></span>}
-                  </span>
-                </button>
-              </div>
+                );
+              })}
 
               {/* Account Status Toggle */}
               <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -445,6 +444,64 @@ export const RolesManageScreen: React.FC = () => {
           </div>
         </>
       )}
+
+      {/* Add Role Modal */}
+      {isAddingRole && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto" onClick={() => setIsAddingRole(false)}></div>
+          <div className="bg-white dark:bg-[#1e293b] w-full max-w-sm rounded-3xl pointer-events-auto animate-in fade-in zoom-in-95 duration-200 shadow-2xl overflow-hidden relative z-10 p-6 border border-gray-200 dark:border-gray-800">
+            <h2 className="text-xl font-bold mb-4">Nieuwe Rol Toevoegen</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Naam</label>
+                <input
+                  type="text"
+                  value={newRoleLabel}
+                  onChange={(e) => setNewRoleLabel(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white"
+                  placeholder="bv. Social Media"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Icoon (Material Icon)</label>
+                <input
+                  type="text"
+                  value={newRoleIcon}
+                  onChange={(e) => setNewRoleIcon(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white"
+                  placeholder="bv. tag"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Kleur Palette</label>
+                <select 
+                  value={newRoleColor}
+                  onChange={(e) => setNewRoleColor(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white appearance-none"
+                >
+                  <option value="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800">Blauw</option>
+                  <option value="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800">Paars</option>
+                  <option value="bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-400 border-pink-200 dark:border-pink-800">Roze</option>
+                  <option value="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">Groen</option>
+                  <option value="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800">Geel</option>
+                  <option value="bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800">Oranje</option>
+                  <option value="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800">Rood</option>
+                  <option value="bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-800">Grijs</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-8">
+              <button onClick={() => setIsAddingRole(false)} className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">Annuleren</button>
+              <button disabled={!newRoleLabel || !newRoleIcon} onClick={handleCreateRole} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-500 disabled:opacity-50 transition-colors">Aanmaken</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

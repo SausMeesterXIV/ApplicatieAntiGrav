@@ -12,17 +12,9 @@ export const AgendaManageScreen: React.FC = () => {
     handleSaveEvent: onSaveEvent,
     handleDeleteEvent: onDeleteEvent,
     countdowns,
-    handleSaveCountdowns: onSaveCountdowns
+    handleSaveCountdowns: onSaveCountdowns,
+    availableRoles
   } = useOutletContext<AppContextType>();
-  const roles = [
-    'Hoofdleiding',
-    'Sfeerbeheer',
-    'Drank',
-    'Financiën',
-    'Materiaal',
-    'Leiding',
-    'Kookploeg'
-  ];
 
   // Countdown State (2 Slots fixed ID '1' and '2')
   const [cd1Active, setCd1Active] = useState(false);
@@ -363,9 +355,9 @@ export const AgendaManageScreen: React.FC = () => {
                 className="w-full bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 appearance-none shadow-sm"
               >
                 <option value="" disabled>Organisator</option>
-                {roles.map(role => (
-                  <option key={role} value={role}>
-                    {role}
+                {availableRoles.map(role => (
+                  <option key={role.id} value={role.label}>
+                    {role.label}
                   </option>
                 ))}
               </select>

@@ -72,10 +72,36 @@ serve(async (req) => {
         })
       })
       result = await res.json()
-      if (result.error) throw new Error(`Sheets API (add_sheet): ${result.error.message} | Details: ${JSON.stringify(result.error)}`)
+      
+      if (result.error) {
+        if (result.error.message.includes('already exists')) {
+          // If already exists, find the ID of the existing sheet with that title
+          const getRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`, { headers: authHeader })
+          const meta = await getRes.json()
+          const sheet = meta.sheets?.find((s: any) => s.properties.title === title)
+          result = { success: true, message: 'Sheet already exists', sheetId: sheet?.properties.sheetId }
+        } else {
+          throw new Error(`Sheets API (add_sheet): ${result.error.message} | Details: ${JSON.stringify(result.error)}`)
+        }
+      } else {
+        // Return the new sheetId
+        result = { success: true, sheetId: result.replies[0].addSheet.properties.sheetId }
+      }
 
     } else if (command === 'update_values') {
-      const { spreadsheetId, range, values } = payload
+      let { spreadsheetId, range, values, sheetId } = payload
+      
+      // If sheetId is provided, resolve the current title
+      if (sheetId) {
+        const getRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`, { headers: authHeader })
+        const meta = await getRes.json()
+        const sheet = meta.sheets?.find((s: any) => String(s.properties.sheetId) === String(sheetId))
+        if (!sheet) throw new Error(`Sheet with ID ${sheetId} not found in spreadsheet`)
+        const currentTitle = sheet.properties.title
+        // Rebuild range with the current title (assuming A1 if not specified in range)
+        range = `'${currentTitle}'!${range.includes('!') ? range.split('!')[1] : 'A1'}`
+      }
+
       const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED`, {
         method: 'PUT',
         headers: authHeader,

@@ -110,9 +110,6 @@ export const NewMessageScreen: React.FC = () => {
                 placeholder="Typ hier je bericht voor de leiding..."
                 className="w-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 resize-none shadow-sm"
               ></textarea>
-              <button className="absolute bottom-3 right-3 p-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-500 dark:text-gray-300 transition-colors">
-                <span className="material-icons-round text-lg">attach_file</span>
-              </button>
             </div>
           </div>
         </section>

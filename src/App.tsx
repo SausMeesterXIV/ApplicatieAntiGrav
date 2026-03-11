@@ -57,6 +57,9 @@ export type AppContextType = {
     setStreaks: React.Dispatch<React.SetStateAction<Streak[]>>;
     stockItems: StockItem[];
     setStockItems: React.Dispatch<React.SetStateAction<StockItem[]>>;
+    availableRoles: import('./types').RoleDefinition[];
+    setAvailableRoles: React.Dispatch<React.SetStateAction<import('./types').RoleDefinition[]>>;
+    handleSaveRoles: (roles: import('./types').RoleDefinition[]) => void;
     balance: number;
     setBalance: React.Dispatch<React.SetStateAction<number>>;
     friesOrders: Order[];
@@ -121,6 +124,7 @@ function App() {
     const [currentUser, setCurrentUser] = useState<User>(DEFAULT_USER);
     const [users, setUsers] = useState<User[]>([]);
     const [drinks, setDrinks] = useState<Drink[]>([]);
+    const [availableRoles, setAvailableRoles] = useState<import('./types').RoleDefinition[]>([]);
     const [streaks, setStreaks] = useState<Streak[]>([]);
     const [stockItems, setStockItems] = useState<StockItem[]>([]);
     const [balance, setBalance] = useState(0);
@@ -239,6 +243,7 @@ function App() {
                 db.fetchBillingPeriods(),
                 db.fetchSetting('gsheet_id'),
                 db.fetchSetting('gsheet_sharing_email'),
+                db.fetchAvailableRoles(),
             ]);
 
             const me = profilesData.find(p => p.id === userId);
@@ -273,6 +278,24 @@ function App() {
             setFriesOrders(allOrders);
             setGsheetId(gsheetIdSetting);
             setGsheetSharingEmail(gsheetSharingEmailSetting);
+
+            // Default roles if none in db
+            const loadedRoles = arguments[16] || []; // since it's the 17th item in the array returned by Promise.all
+            if (loadedRoles.length === 0) {
+                const defaultRoles = [
+                    { id: '1', label: 'Financiën', icon: 'account_balance', color: 'bg-green-100 text-green-700' },
+                    { id: '2', label: 'Sfeerbeheer', icon: 'celebration', color: 'bg-purple-100 text-purple-700' },
+                    { id: '3', label: 'Drank', icon: 'local_bar', color: 'bg-blue-100 text-blue-700' },
+                    { id: '4', label: 'Materiaal', icon: 'build', color: 'bg-orange-100 text-orange-700' },
+                    { id: '5', label: 'Hoofdleiding', icon: 'admin_panel_settings', color: 'bg-red-100 text-red-700' },
+                    { id: '6', label: 'Leiding', icon: 'person', color: 'bg-gray-100 text-gray-700' },
+                    { id: '7', label: 'Kookploeg', icon: 'restaurant', color: 'bg-yellow-100 text-yellow-700' },
+                ];
+                setAvailableRoles(defaultRoles);
+                db.saveAvailableRoles(defaultRoles).catch(e => console.error("Failed to save default roles", e));
+            } else {
+                setAvailableRoles(loadedRoles);
+            }
         } catch (error) {
             console.error('Error loading data:', error);
             showToast('Fout bij het laden van de gegevens', 'error');
@@ -583,6 +606,17 @@ function App() {
     const contextValue: AppContextType = {
         currentUser, setCurrentUser, users, setUsers, drinks, setDrinks,
         streaks, setStreaks, stockItems, setStockItems, balance, setBalance,
+        availableRoles, setAvailableRoles,
+        handleSaveRoles: async (roles) => {
+            try {
+                setAvailableRoles(roles);
+                await db.saveAvailableRoles(roles);
+                showToast('Rollen succesvol opgeslagen', 'success');
+            } catch (error) {
+                console.error('Failed to save roles:', error);
+                showToast('Fout bij opslaan rollen', 'error');
+            }
+        },
         friesOrders, setFriesOrders, friesSessionStatus, setFriesSessionStatus,
         friesPickupTime, setFriesPickupTime, countdowns, setCountdowns,
         bierpongGames, setBierpongGames, duoBierpongWinners, setDuoBierpongWinners,

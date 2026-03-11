@@ -22,6 +22,7 @@ export interface BillingPeriod {
     is_closed: boolean;
     geschatte_kost: number;
     werkjaar?: string;
+    gsheet_sheet_id?: string;
     created_at: string;
 }
 
@@ -146,6 +147,7 @@ export interface StockItem {
     count: number;
     unit: string;
     exp: string;
+    urgent?: boolean;
     icon: string;
     color: string;
 }
@@ -166,4 +168,11 @@ export interface BierpongGame {
     playerIds: string[];
     winnerIds: string[];
     timestamp: Date;
+}
+
+export interface RoleDefinition {
+    id: string;
+    label: string;
+    icon: string;
+    color: string;
 }

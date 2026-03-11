@@ -847,6 +847,7 @@ export async function updateBillingPeriod(id: string, updates: Partial<{
   is_closed: boolean;
   geschatte_kost: number;
   werkjaar: string;
+  gsheet_sheet_id: string;
 }>): Promise<void> {
   const { error } = await supabase
     .from('billing_periods')
@@ -880,6 +881,7 @@ function mapBillingPeriod(p: any): BillingPeriod {
     is_closed: p.is_closed || false,
     geschatte_kost: Number(p.geschatte_kost || 0),
     werkjaar: p.werkjaar || undefined,
+    gsheet_sheet_id: p.gsheet_sheet_id || undefined,
     created_at: p.created_at,
   };
 }
@@ -953,6 +955,22 @@ export async function updateSetting(key: string, value: string): Promise<void> {
     .upsert({ key, value, updated_at: new Date().toISOString() });
   
   if (error) throw error;
+}
+
+export async function fetchAvailableRoles(): Promise<import('../types').RoleDefinition[]> {
+  const data = await fetchSetting('available_roles');
+  if (data) {
+    try {
+      return JSON.parse(data);
+    } catch (e) {
+      console.error("Failed to parse available_roles", e);
+    }
+  }
+  return [];
+}
+
+export async function saveAvailableRoles(roles: import('../types').RoleDefinition[]): Promise<void> {
+  await updateSetting('available_roles', JSON.stringify(roles));
 }
 
 // Keep backward compat alias
