@@ -16,44 +16,58 @@ export const ShopDashboardScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] pb-20">
-      <header className="px-6 py-4 flex items-center gap-4 bg-white dark:bg-[#1e2330] shadow-sm sticky top-0 z-10 font-bold">
+      <header className="px-6 py-6 flex items-center gap-4 bg-gray-50 dark:bg-[#0f172a] sticky top-0 z-10">
         <ChevronBack onClick={() => navigate(-1)} />
-        <h1 className="text-xl text-gray-900 dark:text-white">Winkeltje Dashboard</h1>
+        <div className="flex flex-col">
+          <span className="text-sm font-bold text-primary dark:text-blue-500 uppercase tracking-wider mb-1">KSA Winkeltje</span>
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white leading-none">Dashboard</h1>
+        </div>
       </header>
 
-      <main className="p-4 space-y-4">
-        <div
-          onClick={() => navigate('/winkeltje/voorraad/tellen')}
-          className="bg-primary text-white p-6 rounded-2xl shadow-lg shadow-primary/20 flex items-center gap-4 cursor-pointer active:scale-95 transition-all"
-        >
-          <div className="p-4 bg-white/20 rounded-2xl">
-            <span className="material-icons-round text-2xl text-white">inventory</span>
-          </div>
-          <div>
-            <h3 className="font-bold text-lg text-white">Producten Tellen</h3>
-            <p className="text-white/80 text-sm">Inventaris opmaken (alles in 1 lijst)</p>
-          </div>
-          <span className="material-icons-round ml-auto text-white">chevron_right</span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {CATEGORIES.map((cat) => (
-            <div
-              key={cat.id}
-              onClick={() => navigate(`/winkeltje/category/${cat.id}`)}
-              className="bg-white dark:bg-[#1e2330] p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 cursor-pointer active:scale-95 transition-all"
-            >
-              <div className={`p-4 ${cat.color} rounded-2xl`}>
-                <span className="material-icons-round text-2xl">{cat.icon}</span>
-              </div>
-              <div>
-                <h3 className="font-bold text-lg text-gray-900 dark:text-white">{cat.name}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Beheer voorraad</p>
-              </div>
-              <span className="material-icons-round ml-auto text-gray-400">chevron_right</span>
+      <main className="p-4 space-y-6">
+        {/* Knop nu in zelfde stijl als categorie-kaarten */}
+        <section>
+          <div
+            onClick={() => navigate('/winkeltje/voorraad/tellen')}
+            className="bg-white dark:bg-[#1e2330] p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-5 cursor-pointer active:scale-[0.98] transition-all hover:shadow-md group"
+          >
+            <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center shrink-0 border border-primary/5 group-hover:scale-110 transition-transform">
+              <span className="material-icons-round text-3xl">inventory</span>
             </div>
-          ))}
-        </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-xl text-gray-900 dark:text-white">Producten Tellen</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Inventaris opmaken (alles in 1 lijst)</p>
+            </div>
+            <span className="material-icons-round text-gray-300 group-hover:translate-x-1 transition-transform">chevron_right</span>
+          </div>
+        </section>
+
+        <section>
+          <div className="flex items-center gap-2 mb-4 px-1">
+            <span className="material-icons-round text-primary text-sm">category</span>
+            <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Categorieën</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {CATEGORIES.map((cat) => (
+              <div
+                key={cat.id}
+                onClick={() => navigate(`/winkeltje/category/${cat.id}`)}
+                className="bg-white dark:bg-[#1e2330] p-5 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all hover:shadow-md group"
+              >
+                {/* Forceer vierkante aspect ratio met w-14 h-14 en shrink-0 */}
+                <div className={`w-14 h-14 ${cat.color.replace('bg-', 'bg-').replace('text-', 'text-')} rounded-2xl flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform`}>
+                  <span className="material-icons-round text-2xl">{cat.icon}</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg text-gray-900 dark:text-white">{cat.name}</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Beheer voorraad</p>
+                </div>
+                <span className="material-icons-round text-gray-300 group-hover:translate-x-1 transition-transform">chevron_right</span>
+              </div>
+            ))}
+          </div>
+        </section>
       </main>
     </div>
   );
