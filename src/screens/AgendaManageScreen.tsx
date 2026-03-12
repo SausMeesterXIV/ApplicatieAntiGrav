@@ -4,6 +4,7 @@ import { useAgenda } from '../contexts/AgendaContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { Event, CountdownItem } from '../types';
+import { showToast } from '../components/Toast';
 
 export const AgendaManageScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -186,7 +187,7 @@ export const AgendaManageScreen: React.FC = () => {
     onSaveCountdowns(newCountdowns);
 
     // Provide visual feedback and go back
-    alert('Aftelklokken bijgewerkt!');
+    showToast('Aftelklokken bijgewerkt!', 'success');
     navigate(-1);
   };
 

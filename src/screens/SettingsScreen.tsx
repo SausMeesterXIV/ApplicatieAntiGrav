@@ -61,7 +61,7 @@ export const SettingsScreen: React.FC = () => {
 
   const handleSaveNickname = () => {
     onUpdateUser({ ...currentUser, id: currentUser?.id || '', nickname } as User);
-    alert('Bijnaam opgeslagen!');
+    showToast('Bijnaam opgeslagen!', 'success');
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
