@@ -5,7 +5,8 @@ import { ChevronBack } from '../components/ChevronBack';
 const CATEGORIES = [
   { id: 'hemden', name: 'Hemden', icon: 'checkroom', color: 'bg-blue-100 text-blue-600' },
   { id: 't-shirts', name: 'T-shirts', icon: 'dry_cleaning', color: 'bg-indigo-100 text-indigo-600' },
-  { id: 'truien', name: 'Truien', icon: 'styler', color: 'bg-purple-100 text-purple-600' },
+  { id: 'truien', name: 'Truien', icon: 'layers', color: 'bg-purple-100 text-purple-600' },
+  { id: 'sjaaltjes', name: 'Sjaaltjes', icon: 'accessibility_new', color: 'bg-red-100 text-red-600' },
   { id: 'schildjes', name: 'Schildjes', icon: 'verified', color: 'bg-orange-100 text-orange-600' },
   { id: 'extras', name: 'Extra\'s', icon: 'more_horiz', color: 'bg-teal-100 text-teal-600' },
 ];
@@ -26,13 +27,13 @@ export const ShopDashboardScreen: React.FC = () => {
           className="bg-primary text-white p-6 rounded-2xl shadow-lg shadow-primary/20 flex items-center gap-4 cursor-pointer active:scale-95 transition-all"
         >
           <div className="p-4 bg-white/20 rounded-2xl">
-            <span className="material-icons-round text-2xl">inventory</span>
+            <span className="material-icons-round text-2xl text-white">inventory</span>
           </div>
           <div>
-            <h3 className="font-bold text-lg">Producten Tellen</h3>
+            <h3 className="font-bold text-lg text-white">Producten Tellen</h3>
             <p className="text-white/80 text-sm">Inventaris opmaken (alles in 1 lijst)</p>
           </div>
-          <span className="material-icons-round ml-auto">chevron_right</span>
+          <span className="material-icons-round ml-auto text-white">chevron_right</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -49,7 +50,7 @@ export const ShopDashboardScreen: React.FC = () => {
                 <h3 className="font-bold text-lg text-gray-900 dark:text-white">{cat.name}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Beheer voorraad</p>
               </div>
-              <span className="material-icons-round ml-auto text-gray-300">chevron_right</span>
+              <span className="material-icons-round ml-auto text-gray-400">chevron_right</span>
             </div>
           ))}
         </div>

@@ -180,7 +180,7 @@ export interface RoleDefinition {
 export interface ShopProduct {
     id: string;
     name: string;
-    category: 'hemden' | 't-shirts' | 'truien' | 'schildjes' | 'extras';
+    category: 'hemden' | 't-shirts' | 'truien' | 'schildjes' | 'extras' | 'sjaaltjes';
     image_url?: string;
     created_at?: string;
     variants?: ShopVariant[];
