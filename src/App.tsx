@@ -43,6 +43,14 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { RolesManageScreen } from './screens/RolesManageScreen';
 import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
 import { BillingPeriodsManageScreen } from './screens/BillingPeriodsManageScreen';
+import { AuthProvider } from './contexts/AuthContext';
+import { DrinkProvider } from './contexts/DrinkContext';
+import { AgendaProvider } from './contexts/AgendaContext';
+import { FriesProvider } from './contexts/FriesContext';
+import { ShopDashboardScreen } from './screens/ShopDashboardScreen';
+import { ShopCategoryScreen } from './screens/ShopCategoryScreen';
+import { ShopInventoryScreen } from './screens/ShopInventoryScreen';
+
 
 // Export the context type so screens can use it
 export type AppContextType = {
@@ -803,62 +811,75 @@ function App() {
 
     return (
         <BrowserRouter>
-            <Analytics />
-            <SpeedInsights />
-            <ToastContainer />
-            <ScrollToTop />
-            <Routes>
-                <Route path="/login" element={!session ? <CredentialsScreen /> : <Navigate to="/" />} />
-                <Route path="/reset-password" element={!session ? <ResetPasswordScreen /> : <Navigate to="/" />} />
-                <Route path="/credits" element={<CreditsScreen />} />
+            <AuthProvider>
+                <DrinkProvider>
+                    <AgendaProvider>
+                        <FriesProvider>
+                            <Analytics />
+                            <SpeedInsights />
+                            <ToastContainer />
+                            <ScrollToTop />
+                            <Routes>
+                                <Route path="/login" element={!session ? <CredentialsScreen /> : <Navigate to="/" />} />
+                                <Route path="/reset-password" element={!session ? <ResetPasswordScreen /> : <Navigate to="/" />} />
+                                <Route path="/credits" element={<CreditsScreen />} />
 
-                {/* Protected Routes */}
-                {session ? (
-                    <Route element={<MainLayout />}>
-                        <Route index element={<HomeScreen />} />
+                                {/* Protected Routes */}
+                                {session ? (
+                                    <Route element={<MainLayout />}>
+                                        <Route index element={<HomeScreen />} />
 
-                        <Route path="agenda" element={<AgendaScreen />} />
-                        <Route path="agenda/beheer" element={<AgendaManageScreen />} />
+                                        <Route path="agenda" element={<AgendaScreen />} />
+                                        <Route path="agenda/beheer" element={<AgendaManageScreen />} />
 
-                        <Route path="notificaties" element={<NotificationsScreen />} />
-                        <Route path="notificaties/nieuw" element={<NewMessageScreen />} />
-                        <Route path="nudges" element={<NudgeSelectorScreen />} />
+                                        <Route path="notificaties" element={<NotificationsScreen />} />
+                                        <Route path="notificaties/nieuw" element={<NewMessageScreen />} />
+                                        <Route path="nudges" element={<NudgeSelectorScreen />} />
 
-                        <Route path="frituur" element={<FriesScreen />} />
-                        <Route path="/fries-overview" element={<FriesOverviewScreen />} />
-                        <Route path="/fries-comparison" element={<FriesComparisonScreen />} />
-                        <Route path="frituur/geschiedenis" element={<FriesHistoryScreen />} />
-                        <Route path="/billing-dashboard" element={<TeamDrankDashboardScreen />} />
+                                        <Route path="frituur" element={<FriesScreen />} />
+                                        <Route path="/fries-overview" element={<FriesOverviewScreen />} />
+                                        <Route path="/fries-comparison" element={<FriesComparisonScreen />} />
+                                        <Route path="frituur/geschiedenis" element={<FriesHistoryScreen />} />
+                                        <Route path="/billing-dashboard" element={<TeamDrankDashboardScreen />} />
 
-                        <Route path="strepen" element={<StrepenScreen />} />
-                        <Route path="strepen/geschiedenis" element={<StrepenHistoryScreen adminMode={false} />} />
-                        <Route path="strepen/geschiedenis-alle" element={<StrepenHistoryScreen adminMode={true} />} />
-                        <Route path="strepen/dashboard" element={<TeamDrankDashboardScreen />} />
-                        <Route path="strepen/voorraad" element={<TeamDrankStockScreen />} />
-                        <Route path="strepen/streaks" element={<TeamDrankStreaksScreen />} />
-                        <Route path="strepen/facturatie" element={<TeamDrankInvoicesScreen />} />
-                        <Route path="strepen/facturatie/nieuw" element={<TeamDrankBillingScreen />} />
-                        <Route path="strepen/facturatie/archief" element={<TeamDrankArchiveScreen />} />
-                        <Route path="strepen/facturatie/archief/:periodId" element={<TeamDrankInvoicesScreen />} />
-                        <Route path="strepen/facturatie/periodes" element={<BillingPeriodsManageScreen />} />
-                        <Route path="strepen/facturatie/excel" element={<TeamDrankExcelPreviewScreen />} />
-                        <Route path="strepen/facturatie/billing-excel" element={<TeamDrankBillingExcelPreviewScreen />} />
-                        <Route path="strepen/facturatie/beheer" element={<TeamDrankExcelBeheerScreen />} />
-                        <Route path="strepen/overzicht" element={<ConsumptionOverviewScreen users={users} drinks={drinks} streaks={streaks} />} />
+                                        <Route path="strepen" element={<StrepenScreen />} />
+                                        <Route path="strepen/geschiedenis" element={<StrepenHistoryScreen adminMode={false} />} />
+                                        <Route path="strepen/geschiedenis-alle" element={<StrepenHistoryScreen adminMode={true} />} />
+                                        <Route path="strepen/dashboard" element={<TeamDrankDashboardScreen />} />
+                                        <Route path="strepen/voorraad" element={<TeamDrankStockScreen />} />
+                                        <Route path="strepen/streaks" element={<TeamDrankStreaksScreen />} />
+                                        <Route path="strepen/facturatie" element={<TeamDrankInvoicesScreen />} />
+                                        <Route path="strepen/facturatie/nieuw" element={<TeamDrankBillingScreen />} />
+                                        <Route path="strepen/facturatie/archief" element={<TeamDrankArchiveScreen />} />
+                                        <Route path="strepen/facturatie/archief/:periodId" element={<TeamDrankInvoicesScreen />} />
+                                        <Route path="strepen/facturatie/periodes" element={<BillingPeriodsManageScreen />} />
+                                        <Route path="strepen/facturatie/excel" element={<TeamDrankExcelPreviewScreen />} />
+                                        <Route path="strepen/facturatie/billing-excel" element={<TeamDrankBillingExcelPreviewScreen />} />
+                                        <Route path="strepen/facturatie/beheer" element={<TeamDrankExcelBeheerScreen />} />
+                                        <Route path="strepen/overzicht" element={<ConsumptionOverviewScreen users={users} drinks={drinks} streaks={streaks} />} />
 
-                        <Route path="mijn-factuur" element={<MyInvoiceScreen balance={balance} currentUser={currentUser} streaks={streaks} friesOrders={friesOrders} />} />
-                        <Route path="bierpong" element={<BierpongScreen />} />
-                        <Route path="bierpong/beheer" element={<BierpongManageScreen />} />
-                        <Route path="quotes" element={<QuotesScreen />} />
-                        <Route path="quotes/beheer" element={<QuotesScreen enableManagement={true} />} />
+                                        <Route path="mijn-factuur" element={<MyInvoiceScreen balance={balance} currentUser={currentUser} streaks={streaks} friesOrders={friesOrders} />} />
+                                        <Route path="bierpong" element={<BierpongScreen />} />
+                                        <Route path="bierpong/beheer" element={<BierpongManageScreen />} />
+                                        <Route path="quotes" element={<QuotesScreen />} />
+                                        <Route path="quotes/beheer" element={<QuotesScreen enableManagement={true} />} />
 
-                        <Route path="settings" element={<SettingsScreen />} />
-                        <Route path="admin/rollen" element={<RolesManageScreen />} />
-                    </Route>
-                ) : (
-                    <Route path="*" element={<Navigate to="/login" />} />
-                )}
-            </Routes>
+                                        <Route path="/winkeltje/dashboard" element={<ShopDashboardScreen />} />
+                                        <Route path="/winkeltje/category/:categoryId" element={<ShopCategoryScreen />} />
+                                        <Route path="/winkeltje/voorraad/tellen" element={<ShopInventoryScreen />} />
+
+                                        <Route path="settings" element={<SettingsScreen />} />
+                                        <Route path="admin/rollen" element={<RolesManageScreen />} />
+
+                                    </Route>
+                                ) : (
+                                    <Route path="*" element={<Navigate to="/login" />} />
+                                )}
+                            </Routes>
+                        </FriesProvider>
+                    </AgendaProvider>
+                </DrinkProvider>
+            </AuthProvider>
         </BrowserRouter>
     );
 }

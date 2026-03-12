@@ -1050,3 +1050,64 @@ export async function saveAvailableRoles(roles: import('../types').RoleDefinitio
 
 // Keep backward compat alias
 export const fetchActiveBillingPeriod = fetchOpenBillingPeriod;
+
+// ==================== SHOP ====================
+
+export async function fetchShopProducts(category?: string): Promise<import('../types').ShopProduct[]> {
+    let query = supabase.from('shop_products').select('*, variants:shop_variants(*)');
+    if (category) query = query.eq('category', category);
+    const { data, error } = await query.order('name');
+    if (error) throw error;
+    return data || [];
+}
+
+export async function saveShopProduct(product: Partial<import('../types').ShopProduct>): Promise<import('../types').ShopProduct> {
+    const { data, error } = await supabase
+        .from('shop_products')
+        .upsert(product)
+        .select('*, variants:shop_variants(*)')
+        .single();
+    if (error) throw error;
+    return data;
+}
+
+export async function deleteShopProduct(id: string): Promise<void> {
+    const { error } = await supabase.from('shop_products').delete().eq('id', id);
+    if (error) throw error;
+}
+
+export async function updateShopVariantStock(variantId: string, newStock: number): Promise<void> {
+    const { error } = await supabase.from('shop_variants').update({ stock: newStock }).eq('id', variantId);
+    if (error) throw error;
+}
+
+export async function addShopVariant(productId: string, name: string, stock: number = 0): Promise<import('../types').ShopVariant> {
+    const { data, error } = await supabase
+        .from('shop_variants')
+        .insert([{ product_id: productId, name, stock }])
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+}
+
+export async function deleteShopVariant(id: string): Promise<void> {
+    const { error } = await supabase.from('shop_variants').delete().eq('id', id);
+    if (error) throw error;
+}
+
+export async function uploadShopImage(productId: string, file: File): Promise<string> {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `shop-${productId}-${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from('shop-images')
+        .upload(filePath, file, { upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage.from('shop-images').getPublicUrl(filePath);
+    return data.publicUrl;
+}
+

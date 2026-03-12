@@ -87,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           { id: '11', label: 'JIM', icon: 'groups', color: 'bg-orange-50 text-orange-600 border-orange-100' },
           { id: '12', label: 'SIM', icon: 'groups', color: 'bg-purple-50 text-purple-600 border-purple-100' },
           { id: '13', label: 'KIM', icon: 'groups', color: 'bg-red-50 text-red-600 border-red-100' },
+          { id: '14', label: 'winkeltje', icon: 'shopping_bag', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
         ];
         setAvailableRoles(defaultRoles);
         db.saveAvailableRoles(defaultRoles).catch(e => console.error("Failed to save default roles", e));

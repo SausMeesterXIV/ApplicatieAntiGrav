@@ -3,7 +3,7 @@ export interface User {
     naam: string;
     name: string; // Alias for naam, required for consistency
     email: string;
-    rol: 'admin' | 'team_drank' | 'standaard' | 'sfeerbeheer' | 'godmode' | 'team drank';
+    rol: 'admin' | 'team_drank' | 'standaard' | 'sfeerbeheer' | 'godmode' | 'team drank' | 'winkeltje';
     actief: boolean;
     nickname?: string; // New field for display name
     role?: string; // Display role e.g. "Hoofdleiding"
@@ -176,3 +176,21 @@ export interface RoleDefinition {
     icon: string;
     color: string;
 }
+
+export interface ShopProduct {
+    id: string;
+    name: string;
+    category: 'hemden' | 't-shirts' | 'truien' | 'schildjes' | 'extras';
+    image_url?: string;
+    created_at?: string;
+    variants?: ShopVariant[];
+}
+
+export interface ShopVariant {
+    id: string;
+    product_id: string;
+    name: string;
+    stock: number;
+    created_at?: string;
+}
+

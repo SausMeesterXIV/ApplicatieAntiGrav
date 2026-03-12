@@ -4,7 +4,7 @@ import { User } from '../types';
  * Checks if a user has administrative or team-specific permissions.
  * This helper centralizes the logic to handle role name variations (e.g., 'team_drank' vs 'team drank').
  */
-export const hasRole = (user: User | null | undefined, roleName: 'admin' | 'drank' | 'sfeerbeheer' | 'hoofdleiding'): boolean => {
+export const hasRole = (user: User | null | undefined, roleName: 'admin' | 'drank' | 'sfeerbeheer' | 'hoofdleiding' | 'winkeltje'): boolean => {
   if (!user) return false;
 
   const roles = user.roles || [];
@@ -32,6 +32,11 @@ export const hasRole = (user: User | null | undefined, roleName: 'admin' | 'dran
       return (
         user.rol === 'sfeerbeheer' || 
         normalizedRoles.includes('sfeerbeheer')
+      );
+    case 'winkeltje':
+      return (
+        user.rol === 'winkeltje' || 
+        normalizedRoles.includes('winkeltje')
       );
     default:
       return false;
