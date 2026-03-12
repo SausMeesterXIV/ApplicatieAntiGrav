@@ -10,6 +10,7 @@ interface AgendaContextType {
   countdowns: CountdownItem[];
   notifications: Notification[];
   setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+  handleMarkNotificationAsRead: (id: string) => Promise<void>;
   bierpongGames: BierpongGame[];
   setBierpongGames: React.Dispatch<React.SetStateAction<BierpongGame[]>>;
   duoBierpongWinners: string[];
@@ -24,7 +25,6 @@ interface AgendaContextType {
   handleSaveEvent: (event: Event) => Promise<void>;
   handleDeleteEvent: (id: string) => Promise<void>;
   handleAddNotification: (notification: Omit<Notification, 'id'>) => Promise<void>;
-  handleMarkNotificationAsRead: (id: number) => Promise<void>;
 }
 
 const AgendaContext = createContext<AgendaContextType | undefined>(undefined);
@@ -106,22 +106,18 @@ export function AgendaProvider({ children }: { children: ReactNode }) {
 
   const handleAddNotification = async (n: Omit<Notification, 'id'>) => {
     if (!currentUser) return;
-    const tempNotif = { ...n, id: Date.now() };
+    const tempNotif = { ...n, id: Date.now().toString() } as any;
     setNotifications(prev => [tempNotif, ...prev]);
     try {
-        await db.addNotificatie(currentUser.id, 'all', n.title, n.content, currentUser.naam || currentUser.name || 'Systeem');
+        await db.addNotificatie(currentUser.id, 'all', (n as any).title || (n as any).titel, (n as any).content || (n as any).bericht, currentUser.naam || currentUser.name || 'Systeem');
     } catch (error) {}
   };
 
-  const handleMarkNotificationAsRead = async (id: number) => {
+  const handleMarkNotificationAsRead = async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-    const notif = notifications.find(n => n.id === id);
-    const supabaseId = (notif as any)?._supabaseId;
-    if (supabaseId) {
-        try {
-            await db.markNotificatieGelezen(supabaseId);
-        } catch (error) {}
-    }
+    try {
+        await db.markNotificatieGelezen(id);
+    } catch (error) {}
   };
 
   const handleSaveCountdowns = async (newCountdowns: CountdownItem[]) => {
@@ -179,9 +175,20 @@ export function AgendaProvider({ children }: { children: ReactNode }) {
     if (!currentUser?.id) return;
     const tempId = Date.now().toString();
     const newQuote: QuoteItem = {
-      id: tempId, text, authorId, authorName: authorId, 
-      context, date: new Date(), likes: [], dislikes: [], addedBy: currentUser.id,
-    };
+      id: tempId,
+      tekst: text,
+      auteur: authorId,
+      authorName: authorId,
+      context,
+      datum: new Date().toISOString(),
+      text: text,
+      upvotes: 0,
+      created_at: new Date().toISOString(),
+      toegevoegd_door: currentUser.id,
+      likes: [],
+      dislikes: [],
+      addedBy: currentUser.id,
+    } as any;
     setQuotes(prev => [newQuote, ...prev]);
 
     try {

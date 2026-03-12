@@ -149,11 +149,11 @@ export const RolesManageScreen: React.FC = () => {
 
     setLocalUsers(prevUsers => prevUsers.map(u => {
       if (u.id !== userId) return u;
-      return { ...u, nickname: undefined };
+      return { ...u, nickname: null };
     }));
     // Also update selectedUser if open
     if (selectedUser && selectedUser.id === userId) {
-      setSelectedUser((prev: User | null) => prev ? { ...prev, nickname: undefined } : null);
+      setSelectedUser((prev: User | null) => prev ? { ...prev, nickname: null } : null);
     }
   };
 

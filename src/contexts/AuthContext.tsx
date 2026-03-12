@@ -58,12 +58,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!cUser && session?.user?.email) {
         cUser = {
           id: userId,
-          naam: session.user.user_metadata?.name || 'Onbekend',
-          name: session.user.user_metadata?.name || 'Onbekend',
-          email: session.user.email,
+          naam: (session.user.user_metadata as any)?.name || 'Onbekend',
+          name: (session.user.user_metadata as any)?.name || 'Onbekend',
+          email: session.user.email || '',
           rol: 'standaard',
           actief: true,
-          roles: []
+          roles: [],
+          nickname: null,
+          avatar_url: null,
+          created_at: new Date().toISOString(),
+          quick_drink_id: null
         };
         const updatedUsers = [...usersData, cUser];
         setUsers(updatedUsers);

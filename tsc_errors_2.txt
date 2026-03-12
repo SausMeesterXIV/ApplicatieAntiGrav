@@ -1,0 +1,106 @@
+﻿src/App.tsx(124,7): error TS2739: Type '{ id: string; naam: string; name: string; email: string; rol: "standaard"; actief: true; avatar: string; }' is missing the following properties from type 'User': roles, nickname, avatar_url, quick_drink_id, created_at
+src/App.tsx(604,65): error TS2353: Object literal may only specify known properties, and 'addedBy' does not exist in type 'QuoteItem'.
+src/contexts/AgendaContext.tsx(183,59): error TS2353: Object literal may only specify known properties, and 'addedBy' does not exist in type 'QuoteItem'.
+src/contexts/AuthContext.tsx(59,9): error TS2739: Type '{ id: string; naam: any; name: any; email: string; rol: "standaard"; actief: true; roles: never[]; }' is missing the following properties from type 'User': nickname, avatar_url, quick_drink_id, created_at
+src/contexts/AuthContext.tsx(69,18): error TS2345: Argument of type '(User | null)[]' is not assignable to parameter of type 'SetStateAction<User[]>'.
+  Type '(User | null)[]' is not assignable to type 'User[]'.
+    Type 'User | null' is not assignable to type 'User'.
+      Type 'null' is not assignable to type 'User'.
+src/lib/roleUtils.ts(38,9): error TS2367: This comparison appears to be unintentional because the types '"admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank"' and '"winkeltje"' have no overlap.
+src/lib/supabaseService.ts(38,13): error TS2345: Argument of type 'Partial<{ naam: string; nickname: string; avatar_url: string; rol: string; actief: boolean; quick_drink_id: string | null; roles: string[]; }>' is not assignable to parameter of type '{ actief?: boolean | undefined; avatar_url?: string | null | undefined; created_at?: string | undefined; email?: string | undefined; id?: string | undefined; naam?: string | undefined; nickname?: string | ... 1 more ... | undefined; quick_drink_id?: string | ... 1 more ... | undefined; rol?: "admin" | ... 5 more ......'.
+  Types of property 'rol' are incompatible.
+    Type 'string | undefined' is not assignable to type '"admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank" | undefined'.
+      Type 'string' is not assignable to type '"admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank" | undefined'.
+src/lib/supabaseService.ts(44,3): error TS2739: Type '{ id: any; naam: any; name: any; email: any; rol: any; actief: any; nickname: any; avatar: any; quickDrinkId: any; roles: any; balance: number; }' is missing the following properties from type 'User': avatar_url, quick_drink_id, created_at
+src/lib/supabaseService.ts(94,3): error TS2322: Type '{ id: string; name: string; price: number; icon: undefined; isTemporary: boolean; validUntil: string | undefined; }[]' is not assignable to type 'Drink[]'.
+  Type '{ id: string; name: string; price: number; icon: undefined; isTemporary: boolean; validUntil: string | undefined; }' is missing the following properties from type 'Drink': categorie, created_at, huidige_voorraad, is_temporary, and 3 more.
+src/lib/supabaseService.ts(111,3): error TS2740: Type '{ id: string; name: string; price: number; isTemporary: boolean; validUntil: string | null; }' is missing the following properties from type 'Drink': categorie, created_at, huidige_voorraad, is_temporary, and 3 more.
+src/lib/supabaseService.ts(118,15): error TS2345: Argument of type 'string | number' is not assignable to parameter of type 'string'.
+  Type 'number' is not assignable to type 'string'.
+src/lib/supabaseService.ts(126,15): error TS2345: Argument of type 'string | number' is not assignable to parameter of type 'string'.
+  Type 'number' is not assignable to type 'string'.
+src/lib/supabaseService.ts(240,3): error TS2322: Type '{ id: string; title: string; date: Date; location: string; type: string; startTime: string; endTime: string | undefined; responsible: string | undefined; description: string | undefined; }[]' is not assignable to type 'Event[]'.
+  Type '{ id: string; title: string; date: Date; location: string; type: string; startTime: string; endTime: string | undefined; responsible: string | undefined; description: string | undefined; }' is missing the following properties from type 'Event': beschrijving, created_at, datum, end_time, and 4 more.
+src/lib/supabaseService.ts(291,3): error TS2740: Type '{ id: any; title: any; date: Date; location: any; type: any; startTime: any; endTime: any; responsible: any; description: any; }' is missing the following properties from type 'Event': beschrijving, created_at, datum, end_time, and 4 more.
+src/lib/supabaseService.ts(325,3): error TS2322: Type '{ id: string; text: string; authorId: string; authorName: string; context: string | undefined; date: Date; likes: string[]; dislikes: string[]; addedBy: string; }[]' is not assignable to type 'QuoteItem[]'.
+  Type '{ id: string; text: string; authorId: string; authorName: string; context: string | undefined; date: Date; likes: string[]; dislikes: string[]; addedBy: string; }' is missing the following properties from type 'QuoteItem': auteur, created_at, datum, tekst, and 2 more.
+src/lib/supabaseService.ts(357,5): error TS2353: Object literal may only specify known properties, and 'addedBy' does not exist in type 'QuoteItem'.
+src/lib/supabaseService.ts(510,3): error TS2322: Type '{ id: string; userId: string; userName: string; items: string | number | true | { [key: string]: Json | undefined; } | Json[]; totalPrice: number; date: Date; status: "pending" | "completed"; periodId: string | null; }[]' is not assignable to type 'Order[]'.
+  Type '{ id: string; userId: string; userName: string; items: string | number | true | { [key: string]: Json | undefined; } | Json[]; totalPrice: number; date: Date; status: "pending" | "completed"; periodId: string | null; }' is not assignable to type 'Order'.
+    Types of property 'items' are incompatible.
+      Type 'string | number | true | { [key: string]: Json | undefined; } | Json[]' is not assignable to type 'CartItem[]'.
+        Type 'string' is not assignable to type 'CartItem[]'.
+src/lib/supabaseService.ts(532,3): error TS2322: Type '{ id: string; name: string; price: number; category: any; description: string | undefined; }[]' is not assignable to type 'FryItem[]'.
+  Property 'created_at' is missing in type '{ id: string; name: string; price: number; category: any; description: string | undefined; }' but required in type 'FryItem'.
+src/lib/supabaseService.ts(624,3): error TS2322: Type '{ id: string; playerIds: string[]; winnerIds: string[]; timestamp: Date; }[]' is not assignable to type 'BierpongGame[]'.
+  Type '{ id: string; playerIds: string[]; winnerIds: string[]; timestamp: Date; }' is missing the following properties from type 'BierpongGame': created_at, player_ids, winner_id, winner_ids
+src/lib/supabaseService.ts(635,6): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { created_at?: string | undefined; id?: string | undefined; player_ids: string[]; winner_id: string; winner_ids?: string[] | null | undefined; }, options?: { count?: "exact" | "planned" | "estimated" | undefined; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Argument of type '{ player_ids: string[]; winner_ids: string[]; }[]' is not assignable to parameter of type '{ created_at?: string | undefined; id?: string | undefined; player_ids: string[]; winner_id: string; winner_ids?: string[] | null | undefined; }'.
+      Type '{ player_ids: string[]; winner_ids: string[]; }[]' is missing the following properties from type '{ created_at?: string | undefined; id?: string | undefined; player_ids: string[]; winner_id: string; winner_ids?: string[] | null | undefined; }': player_ids, winner_id
+  Overload 2 of 2, '(values: { created_at?: string | undefined; id?: string | undefined; player_ids: string[]; winner_id: string; winner_ids?: string[] | null | undefined; }[], options?: { count?: "exact" | "planned" | "estimated" | undefined; defaultToNull?: boolean | undefined; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Property 'winner_id' is missing in type '{ player_ids: string[]; winner_ids: string[]; }' but required in type '{ created_at?: string | undefined; id?: string | undefined; player_ids: string[]; winner_id: string; winner_ids?: string[] | null | undefined; }'.
+src/lib/supabaseService.ts(642,5): error TS2322: Type 'string[] | null' is not assignable to type 'string[]'.
+  Type 'null' is not assignable to type 'string[]'.
+src/lib/supabaseService.ts(675,3): error TS2322: Type '{ id: number; name: string; label: string; category: string; count: number; unit: string; exp: string; urgent: boolean; icon: string; color: string; _supabaseId: string; }[]' is not assignable to type 'StockItem[]'.
+  Type '{ id: number; name: string; label: string; category: string; count: number; unit: string; exp: string; urgent: boolean; icon: string; color: string; _supabaseId: string; }' is missing the following properties from type 'StockItem': created_at, expiry_date
+src/lib/supabaseService.ts(693,6): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { category?: string | null | undefined; color?: string | null | undefined; count?: number | undefined; created_at?: string | undefined; expiry_date?: string | null | undefined; icon?: string | ... 1 more ... | undefined; ... 4 more ...; urgent?: boolean | ... 1 more ... | undefined; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Argument of type '{ name: string | undefined; label: string | null | undefined; category: string | null | undefined; count: number | undefined; unit: string | null | undefined; expiry_date: string | null; urgent: boolean | undefined; icon: string | ... 1 more ... | undefined; color: string | ... 1 more ... | undefined; }[]' is not assignable to parameter of type '{ category?: string | null | undefined; color?: string | null | undefined; count?: number | undefined; created_at?: string | undefined; expiry_date?: string | null | undefined; icon?: string | ... 1 more ... | undefined; ... 4 more ...; urgent?: boolean | ... 1 more ... | undefined; }'.
+      Property 'name' is missing in type '{ name: string | undefined; label: string | null | undefined; category: string | null | undefined; count: number | undefined; unit: string | null | undefined; expiry_date: string | null; urgent: boolean | undefined; icon: string | ... 1 more ... | undefined; color: string | ... 1 more ... | undefined; }[]' but required in type '{ category?: string | null | undefined; color?: string | null | undefined; count?: number | undefined; created_at?: string | undefined; expiry_date?: string | null | undefined; icon?: string | ... 1 more ... | undefined; ... 4 more ...; urgent?: boolean | ... 1 more ... | undefined; }'.
+  Overload 2 of 2, '(values: { category?: string | null | undefined; color?: string | null | undefined; count?: number | undefined; created_at?: string | undefined; expiry_date?: string | null | undefined; icon?: string | ... 1 more ... | undefined; ... 4 more ...; urgent?: boolean | ... 1 more ... | undefined; }[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/lib/supabaseService.ts(797,3): error TS2322: Type '{ id: any; title: any; targetDate: Date; }[]' is not assignable to type 'CountdownItem[]'.
+  Property 'target_date' is missing in type '{ id: any; title: any; targetDate: Date; }' but required in type 'CountdownItem'.
+src/lib/supabaseService.ts(947,3): error TS2322: Type 'Json' is not assignable to type '{ closed_period_id: string | null; new_period_id: string; }'.
+  Type 'null' is not assignable to type '{ closed_period_id: string | null; new_period_id: string; }'.
+src/lib/supabaseService.ts(974,3): error TS2322: Type '{ id: any; user_id: any; period_id: any; correctie_bedrag: number; notitie: any; created_at: any; }[]' is not assignable to type '{ correctie_bedrag: number; created_at: string; id: string; notitie: string | null; period_id: string; user_id: string; user_naam: string | null; }[]'.
+  Property 'user_naam' is missing in type '{ id: any; user_id: any; period_id: any; correctie_bedrag: number; notitie: any; created_at: any; }' but required in type '{ correctie_bedrag: number; created_at: string; id: string; notitie: string | null; period_id: string; user_id: string; user_naam: string | null; }'.
+src/lib/supabaseService.ts(1009,5): error TS2322: Type 'string | undefined' is not assignable to type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+src/lib/supabaseService.ts(1067,17): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { category: string; created_at?: string | undefined; id?: string | undefined; image_url?: string | null | undefined; name: string; }, options?: { onConflict?: string | undefined; ignoreDuplicates?: boolean | undefined; count?: "exact" | ... 2 more ... | undefined; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Argument of type 'Partial<ShopProduct>' is not assignable to parameter of type '{ category: string; created_at?: string | undefined; id?: string | undefined; image_url?: string | null | undefined; name: string; }'.
+      Types of property 'category' are incompatible.
+        Type 'string | undefined' is not assignable to type 'string'.
+          Type 'undefined' is not assignable to type 'string'.
+  Overload 2 of 2, '(values: { category: string; created_at?: string | undefined; id?: string | undefined; image_url?: string | null | undefined; name: string; }[], options?: { onConflict?: string | undefined; ignoreDuplicates?: boolean | undefined; count?: "exact" | ... 2 more ... | undefined; defaultToNull?: boolean | undefined; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Argument of type 'Partial<ShopProduct>' is not assignable to parameter of type '{ category: string; created_at?: string | undefined; id?: string | undefined; image_url?: string | null | undefined; name: string; }[]'.
+      Type 'Partial<ShopProduct>' is missing the following properties from type '{ category: string; created_at?: string | undefined; id?: string | undefined; image_url?: string | null | undefined; name: string; }[]': length, pop, push, concat, and 29 more.
+src/lib/useRealtime.ts(125,17): error TS2739: Type '{ id: any; playerIds: any; winnerIds: any; timestamp: Date; }' is missing the following properties from type 'BierpongGame': created_at, player_ids, winner_id, winner_ids
+src/screens/AgendaManageScreen.tsx(114,11): error TS2740: Type '{ id: string; title: string; date: Date; location: string; startTime: string; description: string; type: string; responsible: string; }' is missing the following properties from type 'Event': beschrijving, created_at, datum, end_time, and 4 more.
+src/screens/AgendaManageScreen.tsx(172,26): error TS2345: Argument of type '{ id: string; title: string; targetDate: Date; }' is not assignable to parameter of type 'CountdownItem'.
+  Property 'target_date' is missing in type '{ id: string; title: string; targetDate: Date; }' but required in type 'CountdownItem'.
+src/screens/AgendaManageScreen.tsx(180,26): error TS2345: Argument of type '{ id: string; title: string; targetDate: Date; }' is not assignable to parameter of type 'CountdownItem'.
+  Property 'target_date' is missing in type '{ id: string; title: string; targetDate: Date; }' but required in type 'CountdownItem'.
+src/screens/FriesScreen.tsx(119,28): error TS2345: Argument of type '{ name: string; price: number; category: "frieten" | "snacks" | "sauzen" | "huisbereid" | "burgers" | "spaghetti"; }' is not assignable to parameter of type 'Omit<FryItem, "id">'.
+  Type '{ name: string; price: number; category: "frieten" | "snacks" | "sauzen" | "huisbereid" | "burgers" | "spaghetti"; }' is missing the following properties from type 'Omit<FryItem, "id">': created_at, description
+src/screens/RolesManageScreen.tsx(150,19): error TS2345: Argument of type '(prevUsers: User[]) => (User | { nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: "admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank"; ... 8 more ...; created_at: string; })[]' is not assignable to parameter of type 'SetStateAction<User[]>'.
+  Type '(prevUsers: User[]) => (User | { nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: "admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank"; ... 8 more ...; created_at: string; })[]' is not assignable to type '(prevState: User[]) => User[]'.
+    Type '(User | { nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: "admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank"; ... 8 more ...; created_at: string; })[]' is not assignable to type 'User[]'.
+      Type 'User | { nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: "admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank"; ... 8 more ...; created_at: string; }' is not assignable to type 'User'.
+        Type '{ nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: Database["public"]["Enums"]["user_role"]; roles: string[]; avatar_url: string | null; ... 6 more ...; created_at: string; }' is not assignable to type 'User'.
+          Types of property 'nickname' are incompatible.
+            Type 'undefined' is not assignable to type 'string | null'.
+src/screens/RolesManageScreen.tsx(156,23): error TS2345: Argument of type '(prev: User | null) => { nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: Database["public"]["Enums"]["user_role"]; ... 8 more ...; created_at: string; } | null' is not assignable to parameter of type 'SetStateAction<User | null>'.
+  Type '(prev: User | null) => { nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: Database["public"]["Enums"]["user_role"]; ... 8 more ...; created_at: string; } | null' is not assignable to type '(prevState: User | null) => User | null'.
+    Type '{ nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: "admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank"; roles: string[]; ... 7 more ...; created_at: string; } | null' is not assignable to type 'User | null'.
+      Type '{ nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: Database["public"]["Enums"]["user_role"]; roles: string[]; avatar_url: string | null; ... 6 more ...; created_at: string; }' is not assignable to type 'User'.
+        Types of property 'nickname' are incompatible.
+          Type 'undefined' is not assignable to type 'string | null'.
+src/screens/SettingsScreen.tsx(22,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/screens/TeamDrankExcelBeheerScreen.tsx(96,33): error TS2551: Property 'category' does not exist on type 'Drink'. Did you mean 'categorie'?
+src/screens/TeamDrankStockScreen.tsx(53,9): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/screens/TeamDrankStockScreen.tsx(55,9): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/screens/TeamDrankStockScreen.tsx(56,9): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/screens/TeamDrankStockScreen.tsx(57,9): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/screens/TeamDrankStockScreen.tsx(84,9): error TS2322: Type 'number' is not assignable to type 'string'.
+src/screens/TeamDrankStockScreen.tsx(114,7): error TS2353: Object literal may only specify known properties, and 'icon' does not exist in type 'Drink'.
+src/screens/TeamDrankStockScreen.tsx(221,107): error TS2367: This comparison appears to be unintentional because the types 'string' and 'number' have no overlap.
+src/screens/TeamDrankStockScreen.tsx(222,77): error TS2367: This comparison appears to be unintentional because the types 'string' and 'number' have no overlap.

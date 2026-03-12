@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { User, Drink, Streak, StockItem, Order, QuoteItem, Notification, Event, BierpongGame, CountdownItem, BillingPeriod, BillingCorrection } from '../types';
+import { User, Drink, Streak, StockItem, Order, QuoteItem, Notification, Event, BierpongGame, CountdownItem, BillingPeriod, BillingCorrection, DbDrankRow, DbProfileRow, DbEventRow, DbQuoteRow, DbBierpongGameRow, DbShopProductRow, DbShopVariantRow } from '../types';
 
 // ==================== PROFILES ====================
 
@@ -24,15 +24,7 @@ export async function fetchAllProfiles(): Promise<User[]> {
   return (data || []).map(mapProfileToUser);
 }
 
-export async function updateProfile(userId: string, updates: Partial<{
-  naam: string;
-  nickname: string;
-  avatar_url: string;
-  rol: string;
-  actief: boolean;
-  quick_drink_id: string | null;
-  roles: string[];
-}>): Promise<void> {
+export async function updateProfile(userId: string, updates: Partial<DbProfileRow>): Promise<void> {
   const { error } = await supabase
     .from('profiles')
     .update(updates)
@@ -40,18 +32,13 @@ export async function updateProfile(userId: string, updates: Partial<{
   if (error) throw error;
 }
 
-function mapProfileToUser(p: any): User {
+function mapProfileToUser(p: DbProfileRow): User {
   return {
-    id: p.id,
-    naam: p.naam || p.name || '',
-    name: p.naam || p.name || '',
-    email: p.email,
-    rol: p.rol,
-    actief: p.actief,
-    nickname: p.nickname || undefined,
+    ...p,
+    name: p.naam,
+    roles: p.roles || [],
     avatar: p.avatar_url || `https://i.pravatar.cc/150?u=${p.id}`,
     quickDrinkId: p.quick_drink_id || undefined,
-    roles: p.roles || [],
     balance: 0, // Calculated separately
   };
 }
@@ -91,14 +78,18 @@ export async function fetchDranken(): Promise<Drink[]> {
     .select('*')
     .order('naam');
   if (error) throw error;
-  return (data || []).map(d => ({
-    id: d.id,
+  return (data || []).map(mapDrank);
+}
+
+function mapDrank(d: DbDrankRow): Drink {
+  return {
+    ...d,
     name: d.naam,
     price: Number(d.prijs),
-    icon: undefined,
-    isTemporary: d.is_temporary || false,
+    isTemporary: d.is_temporary,
     validUntil: d.valid_until || undefined,
-  }));
+    categorie: d.categorie,
+  };
 }
 
 export async function addDrank(naam: string, prijs: number, isTemporary = false, validUntil?: string): Promise<Drink> {
@@ -108,14 +99,14 @@ export async function addDrank(naam: string, prijs: number, isTemporary = false,
     .select()
     .single();
   if (error) throw error;
-  return { id: data.id, name: data.naam, price: Number(data.prijs), isTemporary: data.is_temporary, validUntil: data.valid_until };
+  return mapDrank(data);
 }
 
 export async function updateDrank(id: string | number, naam: string, prijs: number): Promise<void> {
   const { error } = await supabase
     .from('dranken')
     .update({ naam, prijs })
-    .eq('id', id);
+    .eq('id', String(id));
   if (error) throw error;
 }
 
@@ -123,7 +114,7 @@ export async function deleteDrank(id: string | number): Promise<void> {
   const { error } = await supabase
     .from('dranken')
     .delete()
-    .eq('id', id);
+    .eq('id', String(id));
   if (error) throw error;
 }
 
@@ -156,7 +147,7 @@ export async function fetchConsumpties(userId?: string): Promise<Streak[]> {
 export async function addConsumptie(userId: string, drankId: string, aantal: number = 1, periodId?: string, userNaam?: string): Promise<string> {
   const { data, error } = await supabase
     .from('consumpties')
-    .insert([{ user_id: userId, drank_id: drankId, aantal, period_id: periodId, user_naam: userNaam || null }])
+    .insert([{ user_id: userId, drank_id: drankId, aantal, period_id: periodId || null, user_naam: userNaam || null }])
     .select('id')
     .single();
   if (error) throw error;
@@ -237,23 +228,13 @@ export async function fetchEvents(): Promise<Event[]> {
     .order('datum', { ascending: true });
 
   if (error) throw error;
-  return (data || []).map(e => ({
-    id: e.id,
-    title: e.titel,
-    date: new Date(e.datum),
-    location: e.locatie,
-    type: e.type || 'vergadering',
-    startTime: e.start_time || e.tijd || '20:00',
-    endTime: e.end_time || undefined,
-    responsible: e.responsible || undefined,
-    description: e.beschrijving || undefined,
-  }));
+  return (data || []).map(mapEvent);
 }
 
 export async function saveEvent(event: Event): Promise<Event> {
   const payload = {
     titel: event.title,
-    datum: event.date instanceof Date ? `${event.date.getFullYear()}-${String(event.date.getMonth() + 1).padStart(2, '0')}-${String(event.date.getDate()).padStart(2, '0')}` : event.date,
+    datum: event.date instanceof Date ? `${event.date.getFullYear()}-${String(event.date.getMonth() + 1).padStart(2, '0')}-${String(event.date.getDate()).padStart(2, '0')}` : String(event.date),
     tijd: event.startTime || '20:00',
     locatie: event.location,
     type: event.type,
@@ -287,17 +268,17 @@ export async function saveEvent(event: Event): Promise<Event> {
   }
 }
 
-function mapEvent(e: any): Event {
+function mapEvent(e: DbEventRow): Event {
   return {
-    id: e.id,
+    ...e,
     title: e.titel,
     date: new Date(e.datum),
     location: e.locatie,
     type: e.type || 'vergadering',
     startTime: e.start_time || e.tijd || '20:00',
-    endTime: e.end_time || undefined,
-    responsible: e.responsible || undefined,
-    description: e.beschrijving || undefined,
+    endTime: e.end_time ?? null,
+    responsible: e.responsible ?? null,
+    description: e.beschrijving ?? null,
   };
 }
 
@@ -324,18 +305,22 @@ export async function fetchQuotes(): Promise<QuoteItem[]> {
 
   return (quotesData || []).map(q => {
     const votes = (votesData || []).filter(v => v.quote_id === q.id);
+    return mapQuote(q, votes);
+  });
+}
+
+function mapQuote(q: DbQuoteRow, votes: any[] = []): QuoteItem {
     return {
-      id: q.id,
+      ...q,
       text: q.tekst,
       authorId: q.auteur, // This stores the author name or ID
       authorName: q.auteur,
-      context: q.context || undefined,
+      context: q.context || null,
       date: new Date(q.datum),
       likes: votes.filter(v => v.vote_type === 'like').map(v => v.user_id),
       dislikes: votes.filter(v => v.vote_type === 'dislike').map(v => v.user_id),
       addedBy: q.toegevoegd_door || q.auteur,
     };
-  });
 }
 
 export async function addQuote(tekst: string, auteur: string, context: string, toegevoegdDoor: string): Promise<QuoteItem> {
@@ -345,17 +330,7 @@ export async function addQuote(tekst: string, auteur: string, context: string, t
     .select()
     .single();
   if (error) throw error;
-  return {
-    id: data.id,
-    text: data.tekst,
-    authorId: data.auteur,
-    authorName: data.auteur,
-    context: data.context,
-    date: new Date(data.datum),
-    likes: [],
-    dislikes: [],
-    addedBy: data.toegevoegd_door || data.auteur,
-  };
+  return mapQuote(data);
 }
 
 export async function deleteQuote(id: string): Promise<void> {
@@ -399,20 +374,20 @@ export async function fetchNotificaties(userId: string): Promise<Notification[]>
     .order('datum', { ascending: false });
 
   if (error) throw error;
-  return (data || []).map((n, index) => ({
-    id: n.id ? stableNumericId(n.id) : index, // Stable numeric ID from UUID
+  return (data || []).map((n) => ({
+    ...n,
+    id: n.id,
     type: 'official' as const,
-    sender: (n as any).profiles?.naam || 'Systeem',
-    role: '',
+    sender: (n as any).profiles?.naam || n.zender_naam || 'Systeem',
+    role: 'Lid',
     title: n.titel,
     content: n.bericht || '',
     time: formatTimeAgo(new Date(n.datum)),
     isRead: n.gelezen,
-    action: n.action || '',
+    action: n.action,
     icon: 'notifications',
     color: 'bg-blue-100 text-blue-600',
-    _supabaseId: n.id, // Keep the UUID for updates
-  }));
+  })) as Notification[];
 }
 
 export async function addNotificatie(
@@ -462,12 +437,7 @@ export async function createFrituurSessie(createdBy: string): Promise<string> {
   return data.id;
 }
 
-export async function updateFrituurSessie(sessieId: string, updates: { 
-  status?: string; 
-  pickup_time?: string | null;
-  actual_amount?: number;
-  receipt_url?: string;
-}): Promise<void> {
+export async function updateFrituurSessie(sessieId: string, updates: any): Promise<void> {
   const { error } = await supabase
     .from('frituur_sessies')
     .update(updates)
@@ -511,11 +481,11 @@ export async function fetchFrituurBestellingen(sessieId?: string): Promise<Order
     id: b.id,
     userId: b.user_id,
     userName: b.user_name || 'Onbekend',
-    items: b.items || [],
+    items: (b.items as any) || [],
     totalPrice: Number(b.totaal_prijs || 0),
     date: new Date(b.created_at),
     status: b.status === 'geleverd' ? 'completed' as const : 'pending' as const,
-    periodId: b.period_id,
+    periodId: b.period_id || undefined,
   }));
 }
 
@@ -530,18 +500,16 @@ export async function fetchFryItems(): Promise<import('../types').FryItem[]> {
   
   if (error) throw error;
   return (data || []).map(i => ({
-    id: i.id,
-    name: i.name,
-    price: Number(i.price),
+    ...i,
     category: i.category as any,
-    description: i.description || undefined
-  }));
+    description: i.description ?? null
+  })) as import('../types').FryItem[];
 }
 
 export async function addFryItem(item: Omit<import('../types').FryItem, 'id'>): Promise<string> {
   const { data, error } = await supabase
     .from('frituur_items')
-    .insert([item])
+    .insert([item as any])
     .select('id')
     .single();
   
@@ -552,7 +520,7 @@ export async function addFryItem(item: Omit<import('../types').FryItem, 'id'>): 
 export async function updateFryItem(id: string, updates: Partial<import('../types').FryItem>): Promise<void> {
   const { error } = await supabase
     .from('frituur_items')
-    .update(updates)
+    .update(updates as any)
     .eq('id', id);
   
   if (error) throw error;
@@ -582,10 +550,10 @@ export async function addFrituurBestelling(
       user_name: userName,
       sessie_id: sessieId,
       snack_naam: items.map(i => i.name).join(', '),
-      items: items,
+      items: items as any,
       totaal_prijs: totaalPrijs,
       status: 'open',
-      period_id: periodId,
+      period_id: periodId || null,
     }])
     .select('id')
     .single();
@@ -622,7 +590,7 @@ export async function fetchBierpongGames(): Promise<BierpongGame[]> {
 
   if (error) throw error;
   return (data || []).map(g => ({
-    id: g.id,
+    ...g,
     playerIds: g.player_ids || [],
     winnerIds: g.winner_ids || (g.winner_id ? [g.winner_id] : []), // Fallback just in case
     timestamp: new Date(g.created_at),
@@ -632,14 +600,14 @@ export async function fetchBierpongGames(): Promise<BierpongGame[]> {
 export async function addBierpongGame(playerIds: string[], winnerIds: string[]): Promise<BierpongGame> {
   const { data, error } = await supabase
     .from('bierpong_games')
-    .insert([{ player_ids: playerIds, winner_ids: winnerIds }])
+    .insert([{ player_ids: playerIds, winner_ids: winnerIds, winner_id: winnerIds[0] }])
     .select()
     .single();
   if (error) throw error;
   return {
-    id: data.id,
+    ...data,
     playerIds: data.player_ids,
-    winnerIds: data.winner_ids,
+    winnerIds: data.winner_ids || [data.winner_id],
     timestamp: new Date(data.created_at),
   };
 }
@@ -673,13 +641,12 @@ export async function fetchStockItems(): Promise<StockItem[]> {
 
   if (error) throw error;
   return (data || []).map((s, index) => ({
-    id: index + 1,
-    name: s.name,
+    ...s,
+    id: s.id, // Using UUID as id to match StockItem.id (string)
     label: s.label || '',
     category: s.category || 'Standaard',
-    count: s.count,
     unit: s.unit || 'stuks',
-    exp: s.expiry_date || '',
+    exp: s.expiry_date || null,
     urgent: s.urgent || false,
     icon: s.icon || 'inventory_2',
     color: s.color || 'bg-gray-500',
@@ -691,15 +658,15 @@ export async function addStockItem(item: Partial<StockItem>): Promise<void> {
   const { error } = await supabase
     .from('stock_items')
     .insert([{
-      name: item.name,
-      label: item.label,
-      category: item.category,
-      count: item.count,
-      unit: item.unit,
+      name: item.name || '',
+      label: item.label || null,
+      category: item.category || null,
+      count: item.count || 0,
+      unit: item.unit || null,
       expiry_date: item.exp || null,
-      urgent: item.urgent,
-      icon: item.icon,
-      color: item.color,
+      urgent: item.urgent || false,
+      icon: item.icon || null,
+      color: item.color || null,
     }]);
   if (error) throw error;
 }
@@ -794,9 +761,8 @@ function stableNumericId(uuid: string): number {
 export async function fetchCountdowns(): Promise<CountdownItem[]> {
   const { data, error } = await supabase.from('countdowns').select('*');
   if (error) throw error;
-  return (data || []).map((c: any) => ({
-    id: c.id,
-    title: c.title,
+  return (data || []).map((c) => ({
+    ...c,
     targetDate: new Date(c.target_date)
   }));
 }
@@ -915,15 +881,7 @@ export async function createBillingPeriod(payload: {
   return mapBillingPeriod(data);
 }
 
-export async function updateBillingPeriod(id: string, updates: Partial<{
-  naam: string;
-  start_datum: string;
-  eind_datum: string | null;
-  is_closed: boolean;
-  geschatte_kost: number;
-  werkjaar: string;
-  gsheet_sheet_id: string;
-}>): Promise<void> {
+export async function updateBillingPeriod(id: string, updates: any): Promise<void> {
   const { error } = await supabase
     .from('billing_periods')
     .update(updates)
@@ -944,20 +902,17 @@ export async function updateGeschatteKost(periodId: string, bedrag: number): Pro
 export async function archiveConsumptiesPeriod(): Promise<{ closed_period_id: string | null; new_period_id: string }> {
   const { data, error } = await supabase.rpc('archive_consumpties_period');
   if (error) throw error;
-  return data;
+  return (data as any) || { closed_period_id: null, new_period_id: '' };
 }
 
 function mapBillingPeriod(p: any): BillingPeriod {
   return {
-    id: p.id,
+    ...p,
     naam: p.naam || p.name || '',
     start_datum: p.start_datum || p.start_date || '',
     eind_datum: p.eind_datum || p.end_date || null,
     is_closed: p.is_closed || false,
     geschatte_kost: Number(p.geschatte_kost || 0),
-    werkjaar: p.werkjaar || undefined,
-    gsheet_sheet_id: p.gsheet_sheet_id || undefined,
-    created_at: p.created_at,
   };
 }
 
@@ -971,13 +926,9 @@ export async function fetchBillingCorrections(periodId: string): Promise<Billing
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return (data || []).map((c: any) => ({
-    id: c.id,
-    user_id: c.user_id,
-    period_id: c.period_id,
+  return (data || []).map((c) => ({
+    ...c,
     correctie_bedrag: Number(c.correctie_bedrag || 0),
-    notitie: c.notitie || undefined,
-    created_at: c.created_at,
   }));
 }
 
@@ -1002,12 +953,8 @@ export async function addBillingCorrection(
 
   if (error) throw error;
   return {
-    id: data.id,
-    user_id: data.user_id,
-    period_id: data.period_id,
+    ...data,
     correctie_bedrag: Number(data.correctie_bedrag),
-    notitie: data.notitie || undefined,
-    created_at: data.created_at,
   };
 }
 
@@ -1058,17 +1005,23 @@ export async function fetchShopProducts(category?: string): Promise<import('../t
     if (category) query = query.eq('category', category);
     const { data, error } = await query.order('name');
     if (error) throw error;
-    return data || [];
+    return (data || []).map(p => ({
+        ...p,
+        variants: (p as any).variants || []
+    }));
 }
 
 export async function saveShopProduct(product: Partial<import('../types').ShopProduct>): Promise<import('../types').ShopProduct> {
     const { data, error } = await supabase
         .from('shop_products')
-        .upsert(product)
+        .upsert(product as any)
         .select('*, variants:shop_variants(*)')
         .single();
     if (error) throw error;
-    return data;
+    return {
+        ...data,
+        variants: (data as any).variants || []
+    };
 }
 
 export async function deleteShopProduct(id: string): Promise<void> {
@@ -1082,13 +1035,13 @@ export async function updateShopVariantStock(variantId: string, newStock: number
 }
 
 export async function addShopVariant(productId: string, name: string, stock: number = 0): Promise<import('../types').ShopVariant> {
-    const { data, error } = await supabase
-        .from('shop_variants')
-        .insert([{ product_id: productId, name, stock }])
-        .select()
-        .single();
-    if (error) throw error;
-    return data;
+  const { data, error } = await supabase
+      .from('shop_variants')
+      .insert([{ product_id: productId, name, stock }])
+      .select()
+      .single();
+  if (error) throw error;
+  return data;
 }
 
 export async function deleteShopVariant(id: string): Promise<void> {
@@ -1110,4 +1063,3 @@ export async function uploadShopImage(productId: string, file: File): Promise<st
     const { data } = supabase.storage.from('shop-images').getPublicUrl(filePath);
     return data.publicUrl;
 }
-

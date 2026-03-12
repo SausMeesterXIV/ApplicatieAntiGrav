@@ -93,7 +93,7 @@ export const TeamDrankExcelBeheerScreen: React.FC = () => {
             case 0: return String(item.id);
             case 1: return item.name;
             case 2: return item.price.toFixed(2).replace('.', ',');
-            case 3: return item.category || 'bier';
+            case 3: return item.categorie || 'bier';
             case 4: return item.isTemporary ? 'Ja' : 'Nee';
             case 5: return item.validUntil ? `tot ${new Date(item.validUntil).toLocaleDateString('nl-BE')}` : 'Actief';
             default: return '';

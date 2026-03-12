@@ -17,9 +17,9 @@ export const SettingsScreen: React.FC = () => {
     try {
       await db.updateProfile(user.id, {
         naam: user.naam,
-        rol: user.rol as string,
         avatar_url: user.avatar,
-        nickname: user.nickname
+        nickname: user.nickname || null,
+        quick_drink_id: user.quick_drink_id
       });
     } catch (e) {
       console.error('Failed to sync profile:', e);

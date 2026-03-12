@@ -116,7 +116,7 @@ export const FriesScreen: React.FC = () => {
     const price = parseFloat(newItemPrice.replace(',', '.'));
     if (!newItemName.trim() || isNaN(price)) return;
     hapticSuccess();
-    await handleAddFryItem({ name: newItemName.trim(), price, category: newItemCategory });
+    await handleAddFryItem({ name: newItemName.trim(), price, category: newItemCategory, description: null, created_at: new Date().toISOString() } as any);
     setNewItemName(''); setNewItemPrice(''); setNewItemCategory('snacks'); setShowAddForm(false);
   };
 

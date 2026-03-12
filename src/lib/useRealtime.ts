@@ -65,25 +65,25 @@ export function useRealtimeSubscriptions({ userId, setNotifications, setBierpong
           // Skip if current user sent it (they already have optimistic update)
           if (n.zender_id === userId) return;
 
-          const mapped: Notification & { _supabaseId: string } = {
-            id: stableNumericId(n.id),
+          const mapped: Notification = {
+            ...n,
+            id: n.id,
             type: 'official',
             sender: n.zender_naam || 'Systeem',
-            role: '',
+            role: 'Lid',
             title: n.titel,
             content: n.bericht || '',
             time: formatTimeAgo(new Date(n.datum)),
-            isRead: false,
-            action: n.action || '',
+            isRead: n.gelezen,
+            action: n.action,
             icon: 'notifications',
             color: 'bg-blue-100 text-blue-600',
-            _supabaseId: n.id,
-          };
+          } as Notification;
 
           setNotifications(prev => {
             // Avoid duplicates
-            if (prev.some(existing => (existing as any)._supabaseId === n.id)) return prev;
-            return [mapped as any, ...prev];
+            if (prev.some(existing => existing.id === n.id)) return prev;
+            return [mapped, ...prev];
           });
 
           showToast(`📬 ${n.titel}`, 'info');
@@ -103,7 +103,7 @@ export function useRealtimeSubscriptions({ userId, setNotifications, setBierpong
 
           setNotifications(prev =>
             prev.map(notif => {
-              if ((notif as any)._supabaseId === n.id) {
+              if (notif.id === n.id) {
                 return { ...notif, isRead: n.gelezen };
               }
               return notif;
@@ -123,11 +123,12 @@ export function useRealtimeSubscriptions({ userId, setNotifications, setBierpong
           const g = payload.new as any;
 
           const mapped: BierpongGame = {
+            ...g,
             id: g.id,
             playerIds: g.player_ids || [],
             winnerIds: g.winner_ids || [],
             timestamp: new Date(g.created_at),
-          };
+          } as BierpongGame;
 
           setBierpongGames(prev => {
             // Avoid duplicates (in case the current user just added this game)

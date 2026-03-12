@@ -7,6 +7,7 @@ import { Event, QuoteItem, CountdownItem, User, Drink } from '../types';
 
 import { hasRole } from '../lib/roleUtils';
 import { SkeletonWidget, SkeletonCard, SkeletonEvent } from '../components/Skeleton';
+import { NavCard } from '../components/NavCard';
 
 export const HomeScreen: React.FC = () => {
   const { currentUser, loading: authLoading } = useAuth();
@@ -17,18 +18,26 @@ export const HomeScreen: React.FC = () => {
   const balance = balances && currentUser ? balances[currentUser?.id] || 0 : 0;
 
   const navigate = useNavigate();
-  // We use the same 'quickDrink' lookup that used to happen in App.tsx
-  const quickDrinkFallback = drinks.length > 0 ? String(drinks[0].id) : null;
-  const quickDrink = drinks.find(d => String(d.id) === String(currentUser?.quickDrinkId || quickDrinkFallback));
 
   const displayName = currentUser?.nickname || currentUser?.name?.split(' ')[0] || 'Lid';
 
-  // Logic to find next 2 upcoming events
-  const now = new Date();
-  const upcomingEvents = (events || [])
-    .filter(e => e && e.date && new Date(e.date) >= new Date(now.setHours(0, 0, 0, 0))) // Filter past events (keep today)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) // Sort by date ascending
-    .slice(0, 2); // Take first 2
+  // OPTIMALISATIE: Bereken de fallback en quickDrink enkel opnieuw als de drankenlijst of gebruikerkeuze wijzigt.
+  const quickDrink = useMemo(() => {
+    const fallback = drinks.length > 0 ? String(drinks[0].id) : null;
+    return drinks.find(d => String(d.id) === String(currentUser?.quickDrinkId || fallback));
+  }, [drinks, currentUser?.quickDrinkId]);
+
+  // OPTIMALISATIE: Gebruik useMemo om de events te filteren en te sorteren.
+  // Hierdoor berekenen we dit niet meer on-the-fly bij elke render van het scherm!
+  const upcomingEvents = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Vaste basis voor vergelijkingen
+    
+    return (events || [])
+      .filter(e => e && e.date && new Date(e.date) >= today) // Filter verleden (behalve vandaag)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) // Sorteer chronologisch
+      .slice(0, 2); // Neem de eerste 2
+  }, [events]);
 
   // Find Quote of the Week (Most likes - dislikes) from Recent Quotes only (< 4 weeks)
   const topQuote = useMemo(() => {
@@ -331,7 +340,6 @@ export const HomeScreen: React.FC = () => {
                       </div>
                       <span className="material-icons-round text-gray-300">chevron_right</span>
                     </div>
-                    {/* Add separator if it's the first item and there are more items */}
                     {index === 0 && upcomingEvents.length > 1 && (
                       <div className="h-px bg-gray-100 dark:bg-gray-800 mx-3"></div>
                     )}
@@ -344,12 +352,10 @@ export const HomeScreen: React.FC = () => {
               </div>
             )}
           </div>
-
         </section>
 
-        {/* --- ADMIN SECTIONS BELOW (Role-gated) --- */}
+        {/* --- ADMIN SECTIONS BELOW (Geoptimaliseerd met NavCard) --- */}
 
-        {/* Hoofdleiding Section — Admin only */}
         {hasRole(currentUser, 'admin') && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
@@ -357,160 +363,93 @@ export const HomeScreen: React.FC = () => {
               <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hoofdleiding</h2>
             </div>
             <div className="grid gap-3">
-              {/* Rollen & Beheer Card */}
-              <div
-                onClick={() => navigate('/admin/rollen')}
-                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
-                    <span className="material-icons-round">manage_accounts</span>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Rollen & Beheer</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Rechten aanpassen</p>
-                  </div>
-                </div>
-                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
-              </div>
-
-              {/* Send Message Card */}
-              <div
-                onClick={() => navigate('/notificaties/nieuw')}
-                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
-                    <span className="material-icons-round">send</span>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Bericht Versturen</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Naar leiding of groepen</p>
-                  </div>
-                </div>
-                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
-              </div>
+              <NavCard 
+                title="Rollen & Beheer" 
+                description="Rechten aanpassen" 
+                icon="manage_accounts" 
+                iconColorClass="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" 
+                onClick={() => navigate('/admin/rollen')} 
+              />
+              <NavCard 
+                title="Bericht Versturen" 
+                description="Naar leiding of groepen" 
+                icon="send" 
+                iconColorClass="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" 
+                onClick={() => navigate('/notificaties/nieuw')} 
+              />
             </div>
           </section>
         )}
 
-        {/* --- TEAM DRANK SECTIE --- */}
         {hasRole(currentUser, 'drank') && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="material-icons-round text-primary text-sm">local_drink</span>
               <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Team Drank</h2>
             </div>
-
             <div className="grid gap-3">
-              <div
-                onClick={() => navigate('/strepen/dashboard')}
-                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
-                    <span className="material-icons-round">local_bar</span>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Team Drank Beheer</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Dashboard, Strepen & Facturen</p>
-                  </div>
-                </div>
-                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
-              </div>
+              <NavCard 
+                title="Team Drank Beheer" 
+                description="Dashboard, Strepen & Facturen" 
+                icon="local_bar" 
+                iconColorClass="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" 
+                onClick={() => navigate('/strepen/dashboard')} 
+              />
             </div>
           </section>
         )}
 
-        {/* Sfeerbeheer Section — Admin only */}
         {hasRole(currentUser, 'sfeerbeheer') && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="material-icons-round text-primary text-sm">celebration</span>
               <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sfeerbeheer</h2>
             </div>
-
             <div className="grid gap-3">
-              <div
-                onClick={() => navigate('/agenda/beheer')}
-                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
-                    <span className="material-icons-round">edit_calendar</span>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Agenda & Aftelklok</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Events en sfeer beheren</p>
-                  </div>
-                </div>
-                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
-              </div>
-
-              {/* Bierpong Champions Card */}
-              <div
-                onClick={() => navigate('/bierpong/beheer')}
-                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
-                    <span className="material-icons-round">emoji_events</span>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Bierpong</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Bierpongtoernooi kampioenen</p>
-                  </div>
-                </div>
-                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
-              </div>
-              <div
-                onClick={() => navigate('/quotes/beheer')}
-                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-pink-100 dark:bg-pink-900/30 rounded-xl text-pink-600 dark:text-pink-400 group-hover:scale-110 transition-transform">
-                    <span className="material-icons-round">format_quote</span>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Quoteboek</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Wall of Shame / Fame</p>
-                  </div>
-                </div>
-                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
-              </div>
+              <NavCard 
+                title="Agenda & Aftelklok" 
+                description="Events en sfeer beheren" 
+                icon="edit_calendar" 
+                iconColorClass="bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400" 
+                onClick={() => navigate('/agenda/beheer')} 
+              />
+              <NavCard 
+                title="Bierpong" 
+                description="Bierpongtoernooi kampioenen" 
+                icon="emoji_events" 
+                iconColorClass="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" 
+                onClick={() => navigate('/bierpong/beheer')} 
+              />
+              <NavCard 
+                title="Quoteboek" 
+                description="Wall of Shame / Fame" 
+                icon="format_quote" 
+                iconColorClass="bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400" 
+                onClick={() => navigate('/quotes/beheer')} 
+              />
             </div>
           </section>
         )}
-        {/* --- WINKELTJE SECTIE --- */}
+
         {hasRole(currentUser, 'winkeltje') && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="material-icons-round text-primary text-sm">storefront</span>
               <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Winkeltje</h2>
             </div>
-
             <div className="grid gap-3">
-              <div
-                onClick={() => navigate('/winkeltje/dashboard')}
-                className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-teal-100 dark:bg-teal-900/30 rounded-xl text-teal-600 dark:text-teal-400 group-hover:scale-110 transition-transform">
-                    <span className="material-icons-round">dashboard</span>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Winkeltje Dashboard</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Beheer kledij en materiaal</p>
-                  </div>
-                </div>
-                <span className="material-icons-round text-gray-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
-              </div>
+              <NavCard 
+                title="Winkeltje Dashboard" 
+                description="Beheer kledij en materiaal" 
+                icon="dashboard" 
+                iconColorClass="bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400" 
+                onClick={() => navigate('/winkeltje/dashboard')} 
+              />
             </div>
           </section>
         )}
           </>
         )}
-
       </main>
     </div>
   );

@@ -112,14 +112,22 @@ export const AgendaManageScreen: React.FC = () => {
     }
 
     const eventPayload: Event = {
-      id: editingId || '', // Empty string triggers INSERT in service
+      id: editingId || '',
       title,
       date: eventDate,
-      location: location || 'TBD',
+      location: location || 'De Sjelter',
       startTime: timeStr || '00:00',
       description,
-      type: 'event', // You could add a type selector
-      responsible: selectedRole
+      type: 'event',
+      responsible: selectedRole,
+      titel: title,
+      datum: eventDate.toISOString(),
+      locatie: location || 'De Sjelter',
+      beschrijving: description || null,
+      start_time: timeStr || '00:00',
+      tijd: timeStr || '00:00',
+      end_time: null,
+      created_at: new Date().toISOString()
     };
 
     onSaveEvent(eventPayload);
@@ -137,7 +145,7 @@ export const AgendaManageScreen: React.FC = () => {
         action: 'Bekijken',
         icon: 'edit_calendar',
         color: 'bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-500'
-      });
+      } as any);
       setEditingId(null);
     } else {
       // Trigger Notification for NEW
@@ -152,7 +160,7 @@ export const AgendaManageScreen: React.FC = () => {
         action: 'Bekijken',
         icon: 'event',
         color: 'bg-green-100 dark:bg-green-600/20 text-green-600 dark:text-green-500'
-      });
+      } as any);
     }
 
     resetForm();
@@ -172,7 +180,8 @@ export const AgendaManageScreen: React.FC = () => {
       newCountdowns.push({
         id: '1',
         title: cd1Title,
-        targetDate: parseDate(cd1Date)
+        targetDate: parseDate(cd1Date),
+        target_date: parseDate(cd1Date).toISOString()
       });
     }
 
@@ -180,7 +189,8 @@ export const AgendaManageScreen: React.FC = () => {
       newCountdowns.push({
         id: '2',
         title: cd2Title,
-        targetDate: parseDate(cd2Date)
+        targetDate: parseDate(cd2Date),
+        target_date: parseDate(cd2Date).toISOString()
       });
     }
 

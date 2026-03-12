@@ -50,11 +50,11 @@ export const TeamDrankStockScreen: React.FC = () => {
       setEditingItem(item);
       setFormData({
         name: item.name,
-        category: item.category,
+        category: item.category || 'Standaard',
         count: item.count.toString(),
-        unit: item.unit,
-        exp: item.exp,
-        icon: item.icon
+        unit: item.unit || 'stuks',
+        exp: item.exp || '',
+        icon: item.icon || 'inventory_2'
       });
     } else {
       setEditingItem(null);
@@ -81,15 +81,18 @@ export const TeamDrankStockScreen: React.FC = () => {
       } : item));
     } else {
       const newItem: StockItem = {
-        id: Date.now(),
+        id: Date.now().toString(),
         name: formData.name,
         category: formData.category,
         count: parseInt(formData.count) || 0,
         unit: formData.unit,
         exp: formData.exp,
         icon: formData.icon,
-        label: '',
-        color: 'bg-blue-500' // Default color
+        label: null,
+        color: 'bg-blue-500', // Default color
+        urgent: false,
+        created_at: new Date().toISOString(),
+        expiry_date: formData.exp || null
       };
       onUpdateStock([newItem, ...stockItems]);
     }
@@ -111,8 +114,14 @@ export const TeamDrankStockScreen: React.FC = () => {
       price: parseFloat(drinkFormData.price.replace(',', '.')) || 0,
       isTemporary: true,
       validUntil: drinkFormData.validUntil || 'Einde periode',
-      icon: 'local_bar'
-    };
+      icon: 'local_bar',
+      categorie: 'bier',
+      created_at: new Date().toISOString(),
+      huidige_voorraad: 0,
+      is_temporary: true,
+      naam: drinkFormData.name,
+      prijs: parseFloat(drinkFormData.price.replace(',', '.')) || 0,
+    } as any;
     if (onUpdateDrinks) {
       onUpdateDrinks([...drinks, newDrink]);
       showToast('Tijdelijke drank toegevoegd!', 'success');
@@ -218,8 +227,8 @@ export const TeamDrankStockScreen: React.FC = () => {
                         onClick={() => handleOpenModal(item)}
                         className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 flex gap-4 group shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-[0.98]"
                       >
-                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${item.id === 3 ? 'bg-yellow-100' : 'bg-gray-50 dark:bg-gray-800'} relative`}>
-                          <span className={`material-icons-round text-2xl ${item.id === 3 ? 'text-yellow-600' : 'text-gray-400 dark:text-gray-500'}`}>{item.icon}</span>
+                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${item.id === '3' ? 'bg-yellow-100' : 'bg-gray-50 dark:bg-gray-800'} relative`}>
+                          <span className={`material-icons-round text-2xl ${item.id === '3' ? 'text-yellow-600' : 'text-gray-400 dark:text-gray-500'}`}>{item.icon}</span>
                         </div>
 
                         <div className="flex-1 min-w-0 flex flex-col justify-center">

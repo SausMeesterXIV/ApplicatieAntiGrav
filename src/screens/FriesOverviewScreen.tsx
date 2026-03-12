@@ -132,7 +132,7 @@ export const FriesOverviewScreen: React.FC = () => {
       action: '',
       icon: 'fastfood',
       color: 'bg-yellow-100 dark:bg-yellow-600/20 text-yellow-600 dark:text-yellow-500'
-    });
+    } as any);
 
     setShowTimeInput(false);
   };
@@ -140,7 +140,7 @@ export const FriesOverviewScreen: React.FC = () => {
   const handleFinishPayment = async () => {
     const amount = typeof actualAmount === 'string' ? parseFloat(actualAmount) : actualAmount;
     if (isNaN(amount)) {
-      alert('Voer een geldig bedrag in');
+      import('../components/Toast').then(m => m.showToast('Voer een geldig bedrag in', 'error'));
       return;
     }
 

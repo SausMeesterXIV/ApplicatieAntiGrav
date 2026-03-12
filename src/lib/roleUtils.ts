@@ -8,7 +8,7 @@ export const hasRole = (user: User | null | undefined, roleName: 'admin' | 'dran
   if (!user) return false;
 
   const roles = user.roles || [];
-  const normalizedRoles = roles.map((r: string) => r.toLowerCase());
+  const normalizedRoles = Array.isArray(roles) ? roles.map((r: any) => String(r).toLowerCase()) : [];
   
   // Hoofdleiding and Admins always have access to everything
   const isHead = normalizedRoles.includes('hoofdleiding') || 
@@ -50,6 +50,6 @@ export const hasRole = (user: User | null | undefined, roleName: 'admin' | 'dran
 export const isHoofdleiding = (user: User | null | undefined): boolean => {
   if (!user) return false;
   const roles = user.roles || [];
-  const normalizedRoles = roles.map((r: string) => r.toLowerCase());
+  const normalizedRoles = Array.isArray(roles) ? roles.map((r: any) => String(r).toLowerCase()) : [];
   return normalizedRoles.includes('hoofdleiding') || user.rol === 'admin' || user.rol === 'godmode';
 };

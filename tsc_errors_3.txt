@@ -1,0 +1,58 @@
+﻿src/App.tsx(124,7): error TS2739: Type '{ id: string; naam: string; name: string; email: string; rol: "standaard"; actief: true; avatar: string; }' is missing the following properties from type 'User': roles, nickname, avatar_url, quick_drink_id, created_at
+src/App.tsx(604,65): error TS2353: Object literal may only specify known properties, and 'addedBy' does not exist in type 'QuoteItem'.
+src/contexts/AgendaContext.tsx(183,59): error TS2353: Object literal may only specify known properties, and 'addedBy' does not exist in type 'QuoteItem'.
+src/contexts/AuthContext.tsx(59,9): error TS2739: Type '{ id: string; naam: any; name: any; email: string; rol: "standaard"; actief: true; roles: never[]; }' is missing the following properties from type 'User': nickname, avatar_url, quick_drink_id, created_at
+src/contexts/AuthContext.tsx(69,18): error TS2345: Argument of type '(User | null)[]' is not assignable to parameter of type 'SetStateAction<User[]>'.
+  Type '(User | null)[]' is not assignable to type 'User[]'.
+    Type 'User | null' is not assignable to type 'User'.
+      Type 'null' is not assignable to type 'User'.
+src/lib/roleUtils.ts(38,9): error TS2367: This comparison appears to be unintentional because the types '"admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank"' and '"winkeltje"' have no overlap.
+src/lib/supabaseService.ts(279,5): error TS2322: Type 'string | undefined' is not assignable to type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+src/lib/supabaseService.ts(317,7): error TS2322: Type 'string | undefined' is not assignable to type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+src/lib/supabaseService.ts(500,3): error TS2322: Type '{ category: any; description: string | undefined; created_at: string | null; id: string; name: string; price: number; }[]' is not assignable to type 'FryItem[]'.
+  Type '{ category: any; description: string | undefined; created_at: string | null; id: string; name: string; price: number; }' is not assignable to type 'FryItem'.
+    Types of property 'description' are incompatible.
+      Type 'string | undefined' is not assignable to type 'string | null'.
+        Type 'undefined' is not assignable to type 'string | null'.
+src/lib/supabaseService.ts(641,3): error TS2322: Type '{ id: number; label: string; category: string; unit: string; exp: string; urgent: boolean; icon: string; color: string; _supabaseId: string; count: number; created_at: string; expiry_date: string | null; name: string; }[]' is not assignable to type 'StockItem[]'.
+  Type '{ id: number; label: string; category: string; unit: string; exp: string; urgent: boolean; icon: string; color: string; _supabaseId: string; count: number; created_at: string; expiry_date: string | null; name: string; }' is not assignable to type 'StockItem'.
+    Types of property 'id' are incompatible.
+      Type 'number' is not assignable to type 'string'.
+src/lib/supabaseService.ts(691,74): error TS2304: Cannot find name 'id'.
+src/lib/useRealtime.ts(125,17): error TS2739: Type '{ id: any; playerIds: any; winnerIds: any; timestamp: Date; }' is missing the following properties from type 'BierpongGame': created_at, player_ids, winner_id, winner_ids
+src/screens/AgendaManageScreen.tsx(114,11): error TS2740: Type '{ id: string; title: string; date: Date; location: string; startTime: string; description: string; type: string; responsible: string; }' is missing the following properties from type 'Event': beschrijving, created_at, datum, end_time, and 4 more.
+src/screens/AgendaManageScreen.tsx(172,26): error TS2345: Argument of type '{ id: string; title: string; targetDate: Date; }' is not assignable to parameter of type 'CountdownItem'.
+  Property 'target_date' is missing in type '{ id: string; title: string; targetDate: Date; }' but required in type 'CountdownItem'.
+src/screens/AgendaManageScreen.tsx(180,26): error TS2345: Argument of type '{ id: string; title: string; targetDate: Date; }' is not assignable to parameter of type 'CountdownItem'.
+  Property 'target_date' is missing in type '{ id: string; title: string; targetDate: Date; }' but required in type 'CountdownItem'.
+src/screens/FriesScreen.tsx(119,28): error TS2345: Argument of type '{ name: string; price: number; category: "frieten" | "snacks" | "sauzen" | "huisbereid" | "burgers" | "spaghetti"; }' is not assignable to parameter of type 'Omit<FryItem, "id">'.
+  Type '{ name: string; price: number; category: "frieten" | "snacks" | "sauzen" | "huisbereid" | "burgers" | "spaghetti"; }' is missing the following properties from type 'Omit<FryItem, "id">': created_at, description
+src/screens/RolesManageScreen.tsx(150,19): error TS2345: Argument of type '(prevUsers: User[]) => (User | { nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: "admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank"; ... 8 more ...; created_at: string; })[]' is not assignable to parameter of type 'SetStateAction<User[]>'.
+  Type '(prevUsers: User[]) => (User | { nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: "admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank"; ... 8 more ...; created_at: string; })[]' is not assignable to type '(prevState: User[]) => User[]'.
+    Type '(User | { nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: "admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank"; ... 8 more ...; created_at: string; })[]' is not assignable to type 'User[]'.
+      Type 'User | { nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: "admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank"; ... 8 more ...; created_at: string; }' is not assignable to type 'User'.
+        Type '{ nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: Database["public"]["Enums"]["user_role"]; roles: string[]; avatar_url: string | null; ... 6 more ...; created_at: string; }' is not assignable to type 'User'.
+          Types of property 'nickname' are incompatible.
+            Type 'undefined' is not assignable to type 'string | null'.
+src/screens/RolesManageScreen.tsx(156,23): error TS2345: Argument of type '(prev: User | null) => { nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: Database["public"]["Enums"]["user_role"]; ... 8 more ...; created_at: string; } | null' is not assignable to parameter of type 'SetStateAction<User | null>'.
+  Type '(prev: User | null) => { nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: Database["public"]["Enums"]["user_role"]; ... 8 more ...; created_at: string; } | null' is not assignable to type '(prevState: User | null) => User | null'.
+    Type '{ nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: "admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank"; roles: string[]; ... 7 more ...; created_at: string; } | null' is not assignable to type 'User | null'.
+      Type '{ nickname: undefined; id: string; naam: string; name: string; email: string; actief: boolean; rol: Database["public"]["Enums"]["user_role"]; roles: string[]; avatar_url: string | null; ... 6 more ...; created_at: string; }' is not assignable to type 'User'.
+        Types of property 'nickname' are incompatible.
+          Type 'undefined' is not assignable to type 'string | null'.
+src/screens/SettingsScreen.tsx(20,9): error TS2322: Type 'string' is not assignable to type '"admin" | "team_drank" | "standaard" | "sfeerbeheer" | "godmode" | "team drank" | undefined'.
+src/screens/TeamDrankExcelBeheerScreen.tsx(96,33): error TS2551: Property 'category' does not exist on type 'Drink'. Did you mean 'categorie'?
+src/screens/TeamDrankStockScreen.tsx(53,9): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/screens/TeamDrankStockScreen.tsx(55,9): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/screens/TeamDrankStockScreen.tsx(56,9): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/screens/TeamDrankStockScreen.tsx(57,9): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/screens/TeamDrankStockScreen.tsx(84,9): error TS2322: Type 'number' is not assignable to type 'string'.
+src/screens/TeamDrankStockScreen.tsx(114,7): error TS2353: Object literal may only specify known properties, and 'icon' does not exist in type 'Drink'.
+src/screens/TeamDrankStockScreen.tsx(221,107): error TS2367: This comparison appears to be unintentional because the types 'string' and 'number' have no overlap.
+src/screens/TeamDrankStockScreen.tsx(222,77): error TS2367: This comparison appears to be unintentional because the types 'string' and 'number' have no overlap.

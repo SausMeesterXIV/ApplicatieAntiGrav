@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { Session } from '@supabase/supabase-js';
-import { User, Drink, Streak, StockItem, FryItem, Order, CountdownItem, BierpongGame, QuoteItem, Notification, Event, BillingPeriod } from './types';
+import { User, Drink, Streak, StockItem, FryItem, CartItem, Order, CountdownItem, BierpongGame, QuoteItem, Notification, Event, BillingPeriod } from './types';
 import * as db from './lib/supabaseService';
 import { showToast, ToastContainer } from './components/Toast';
 import { Analytics } from '@vercel/analytics/react';
@@ -108,7 +108,7 @@ export type AppContextType = {
     handleSaveEvent: (event: Event) => void;
     handleDeleteEvent: (id: string) => void;
     handleAddNotification: (notification: Omit<Notification, 'id'>) => void;
-    handleMarkNotificationAsRead: (id: number) => void;
+    handleMarkNotificationAsRead: (id: string) => void;
     handleAddFryItem: (item: Omit<FryItem, 'id'>) => Promise<void>;
     handleUpdateFryItem: (id: string, updates: Partial<FryItem>) => Promise<void>;
     handleDeleteFryItem: (id: string) => Promise<void>;
@@ -124,11 +124,16 @@ export type AppContextType = {
 const DEFAULT_USER: User = {
     id: '',
     naam: 'Laden...',
+    nickname: null,
+    avatar_url: null,
     name: 'Laden...',
     email: '',
     rol: 'standaard',
+    roles: [],
     actief: true,
     avatar: 'https://i.pravatar.cc/150?u=default',
+    created_at: new Date().toISOString(),
+    quick_drink_id: null
 };
 
 function App() {
@@ -426,7 +431,7 @@ function App() {
             id: tempId,
             userId: orderForUser.id,
             userName: orderForUser.naam || orderForUser.name || 'Onbekend',
-            items,
+            items: items as CartItem[],
             totalPrice: totalCost,
             date: new Date(),
             status: 'pending'
@@ -552,7 +557,7 @@ function App() {
                     action: notifAction,
                     icon: 'price_change',
                     color: 'bg-orange-100 dark:bg-orange-600/20 text-orange-600 dark:text-orange-500'
-                });
+                } as any);
 
                 handleArchiveFriesSession();
                 showToast('Betaling afgerond — prijsverschil gemeld aan leiding', 'warning');
@@ -600,8 +605,21 @@ function App() {
         // Optimistic
         const tempId = Date.now().toString();
         const newQuote: QuoteItem = {
-            id: tempId, text, authorId, authorName,
-            context, date: new Date(), likes: [], dislikes: [], addedBy: currentUser.id,
+            id: tempId, 
+            text, 
+            authorId, 
+            authorName,
+            context: context || null, 
+            date: new Date(), 
+            likes: [], 
+            dislikes: [], 
+            addedBy: currentUser.id,
+            tekst: text,
+            auteur: authorName,
+            datum: new Date().toISOString(),
+            upvotes: 0,
+            toegevoegd_door: currentUser.id,
+            created_at: new Date().toISOString()
         };
         setQuotes(prev => [newQuote, ...prev]);
 
@@ -662,7 +680,7 @@ function App() {
 
     const handleAddNotification = async (n: Omit<Notification, 'id'>) => {
         // Optimistic
-        const tempNotif = { ...n, id: Date.now() };
+        const tempNotif = { ...n, id: Date.now().toString() } as any;
         setNotifications(prev => [tempNotif, ...prev]);
 
         try {
@@ -673,18 +691,13 @@ function App() {
         }
     };
 
-    const handleMarkNotificationAsRead = async (id: number) => {
+    const handleMarkNotificationAsRead = async (id: string) => {
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
 
-        // The notification might have a _supabaseId for real Supabase rows
-        const notif = notifications.find(n => n.id === id);
-        const supabaseId = (notif as any)?._supabaseId;
-        if (supabaseId) {
-            try {
-                await db.markNotificatieGelezen(supabaseId);
-            } catch (error) {
-                console.error('Mark read error:', error);
-            }
+        try {
+            await db.markNotificatieGelezen(id);
+        } catch (error) {
+            console.error('Mark read error:', error);
         }
     };
 

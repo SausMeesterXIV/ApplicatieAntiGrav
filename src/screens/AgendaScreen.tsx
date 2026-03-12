@@ -59,7 +59,7 @@ export const AgendaScreen: React.FC = () => {
     });
   };
 
-  const handleNewEventClick = (id: number) => {
+  const handleNewEventClick = (id: string) => {
     handleMarkNotificationAsRead(id);
   };
 
