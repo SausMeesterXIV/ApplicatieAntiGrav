@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useFries } from '../contexts/FriesContext';
@@ -22,8 +22,7 @@ export const FriesOverviewScreen: React.FC = () => {
   const sessionStatus = activeFrituurSession?.status || FRITUUR_STATUS.CLOSED;
   const pickupTime = activeFrituurSession?.pickupTime;
   
-  const [activeTab, setActiveTab] = useState<'Alles' | 'Frieten' | 'Snacks' | 'Sauzen'>('Alles');
-  const [aggregatedItems, setAggregatedItems] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<string>('Alles');
   const [showReopenConfirmation, setShowReopenConfirmation] = useState(false);
   const [showTimeInput, setShowTimeInput] = useState(false);
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
@@ -37,8 +36,8 @@ export const FriesOverviewScreen: React.FC = () => {
   // Time input state
   const [tempPickupTime, setTempPickupTime] = useState('');
 
-  // Filter only ACTIVE orders (pending) for the calculation
-  const activeOrders = orders.filter(o => o.status === 'pending');
+  // Filter only ACTIVE orders
+  const activeOrders = useMemo(() => (orders || []).filter(o => o.status === 'pending'), [orders]);
 
   useEffect(() => {
     if (pickupTime) {
@@ -50,31 +49,52 @@ export const FriesOverviewScreen: React.FC = () => {
     }
   }, [pickupTime]);
 
-  // Aggregate items from all ACTIVE orders
-  useEffect(() => {
+  // ROBUUSTE HOOFDLETTER FUNCTIE (Voorkomt crashes bij lege data)
+  const capitalize = (s?: string) => {
+      if (!s) return 'Overig';
+      return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+
+  // Verzamel alle items en groepeer ze
+  const aggregatedItems = useMemo(() => {
     const itemMap = new Map<string, { id: string, name: string, count: number, price: number, category: string }>();
 
     activeOrders.forEach(order => {
-      order.items.forEach(item => {
+      // Gebruik (order.items || []) om crashes te voorkomen als items leeg is
+      (order.items || []).forEach(item => {
         const key = item.id; 
         if (itemMap.has(key)) {
           const existing = itemMap.get(key)!;
-          existing.count += item.quantity;
-          existing.price += (item.price * item.quantity); 
+          existing.count += item.quantity || 1;
+          existing.price += ((item.price || 0) * (item.quantity || 1)); 
         } else {
           itemMap.set(key, {
             id: item.id,
-            name: item.name,
-            count: item.quantity,
-            price: item.price * item.quantity,
+            name: item.name || 'Onbekend',
+            count: item.quantity || 1,
+            price: (item.price || 0) * (item.quantity || 1),
             category: capitalize(item.category),
           });
         }
       });
     });
 
-    setAggregatedItems(Array.from(itemMap.values()));
-  }, [orders]); 
+    // Sorteer alfabetisch
+    return Array.from(itemMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [activeOrders]);
+
+  // Dynamische tabbladen op basis van wat er effectief besteld is
+  const dynamicTabs = useMemo(() => {
+      const cats = new Set(aggregatedItems.map(i => i.category));
+      return ['Alles', ...Array.from(cats).sort()];
+  }, [aggregatedItems]);
+
+  // Reset tabblad als een categorie leeg raakt
+  useEffect(() => {
+      if (activeTab !== 'Alles' && !dynamicTabs.includes(activeTab)) {
+          setActiveTab('Alles');
+      }
+  }, [dynamicTabs, activeTab]);
 
   useEffect(() => {
     if (sessionStatus !== FRITUUR_STATUS.COMPLETED) {
@@ -84,8 +104,6 @@ export const FriesOverviewScreen: React.FC = () => {
       setShowTimeInput(false);
     }
   }, [sessionStatus]);
-
-  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
   const filteredItems = activeTab === 'Alles'
     ? aggregatedItems
@@ -137,7 +155,7 @@ export const FriesOverviewScreen: React.FC = () => {
   };
 
   const handleFinishPayment = async () => {
-    const amount = typeof actualAmount === 'string' ? parseFloat(actualAmount) : actualAmount;
+    const amount = typeof actualAmount === 'string' ? parseFloat(actualAmount.replace(',', '.')) : actualAmount;
     if (isNaN(amount)) {
       showToast('Voer een geldig bedrag in', 'error');
       return;
@@ -148,7 +166,7 @@ export const FriesOverviewScreen: React.FC = () => {
     setActualAmount('');
     setReceiptFile(null);
     setReceiptPreview(null);
-    navigate('/frituur'); // Navigeer terug naar menu na afsluiten
+    navigate('/frituur');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -180,7 +198,7 @@ export const FriesOverviewScreen: React.FC = () => {
           </button>
           <div>
             <h1 className="text-lg font-bold leading-tight">Bestelling Overzicht</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Totaal voor {activeOrders.length} bestellingen</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Totaal voor {activeOrders.length} personen</p>
           </div>
         </div>
       </header>
@@ -218,10 +236,10 @@ export const FriesOverviewScreen: React.FC = () => {
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {['Alles', 'Frieten', 'Snacks', 'Sauzen'].map((tab) => (
+          {dynamicTabs.map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as any)}
+              onClick={() => setActiveTab(tab)}
               className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap border transition-all ${activeTab === tab
                 ? 'bg-white dark:bg-[#1e293b] border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
                 : 'bg-gray-100 dark:bg-[#1e293b]/50 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
@@ -264,8 +282,8 @@ export const FriesOverviewScreen: React.FC = () => {
         </div>
       </main>
 
-      <footer className="fixed bottom-nav-offset left-0 right-0 p-4 bg-gray-50 dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 z-20 transition-colors shadow-2xl">
-        <div className="space-y-3">
+      <footer className="fixed bottom-0 left-0 right-0 p-4 bg-gray-50 dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 z-20 transition-colors shadow-2xl">
+        <div className="space-y-3 max-w-lg mx-auto">
 
           {sessionStatus === FRITUUR_STATUS.ORDERED && (
             <div className="space-y-3">
@@ -287,7 +305,7 @@ export const FriesOverviewScreen: React.FC = () => {
                 Betaal & Rond af
               </button>
 
-              <p className="text-xs text-center text-gray-500">
+              <p className="text-xs text-center text-gray-500 pb-2">
                 Wanneer je betaald hebt, voer je het bedrag in en neem je optioneel een foto van het kasticket.
               </p>
             </div>
@@ -328,7 +346,7 @@ export const FriesOverviewScreen: React.FC = () => {
               </div>
               <button
                 onClick={handleMarkOrdered}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 mb-2"
               >
                 <span className="material-icons-round">check_circle</span>
                 <span>Besteld</span>
@@ -337,7 +355,7 @@ export const FriesOverviewScreen: React.FC = () => {
           )}
 
           {sessionStatus === FRITUUR_STATUS.COMPLETED && (
-            <div className="flex flex-col gap-3 animate-in slide-in-from-bottom-5">
+            <div className="flex flex-col gap-3 animate-in slide-in-from-bottom-5 pb-2">
               <button
                 onClick={startOrderingProcess}
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
@@ -366,30 +384,31 @@ export const FriesOverviewScreen: React.FC = () => {
           )}
 
           {(sessionStatus === FRITUUR_STATUS.OPEN || sessionStatus === FRITUUR_STATUS.CLOSED) && (
-            <button
-              onClick={handleFooterAction}
-              className={`w-full text-white font-bold py-4 px-6 rounded-xl shadow-lg flex items-center justify-center gap-3 group active:scale-[0.99] transition-all bg-blue-600 hover:bg-blue-500 shadow-blue-500/20`}
-            >
-              <div className="flex items-center gap-3 flex-1 justify-start">
-                <div className="bg-white/20 p-1 rounded-md">
-                  <span className="material-icons-round text-lg">
-                    {sessionStatus === FRITUUR_STATUS.OPEN ? 'check_circle' : 'play_arrow'}
+            <div className="pb-2">
+              <button
+                onClick={handleFooterAction}
+                className={`w-full text-white font-bold py-4 px-6 rounded-xl shadow-lg flex items-center justify-center gap-3 group active:scale-[0.99] transition-all bg-blue-600 hover:bg-blue-500 shadow-blue-500/20`}
+              >
+                <div className="flex items-center gap-3 flex-1 justify-start">
+                  <div className="bg-white/20 p-1 rounded-md">
+                    <span className="material-icons-round text-lg">
+                      {sessionStatus === FRITUUR_STATUS.OPEN ? 'check_circle' : 'play_arrow'}
+                    </span>
+                  </div>
+                  <span>
+                    {sessionStatus === FRITUUR_STATUS.OPEN ? 'Bestelling Afronden' : 'Sessie Starten'}
                   </span>
                 </div>
-                <span>
-                  {sessionStatus === FRITUUR_STATUS.OPEN ? 'Bestelling Afronden' : 'Sessie Starten'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg">€ {totalAmount.toFixed(2).replace('.', ',')}</span>
-                <span className="material-icons-round group-hover:translate-x-1 transition-transform">arrow_forward</span>
-              </div>
-            </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">€ {totalAmount.toFixed(2).replace('.', ',')}</span>
+                  <span className="material-icons-round group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </div>
+              </button>
+            </div>
           )}
         </div>
       </footer>
 
-      {/* Payment BottomSheet */}
       <BottomSheet
         isOpen={showPaymentSheet}
         onClose={() => setShowPaymentSheet(false)}
