@@ -11,6 +11,7 @@ import { useRealtimeSubscriptions } from './lib/useRealtime';
 
 import { BottomNav } from './components/BottomNav';
 import { SplashScreen } from './components/SplashScreen';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { CredentialsScreen } from './screens/CredentialsScreen';
 import { CreditsScreen } from './screens/CreditsScreen';
 import { HomeScreen } from './screens/HomeScreen';
@@ -195,28 +196,60 @@ function App() {
             }
         });
 
-        // Offline Sync Logic
+        // Robuuste Offline Sync Logic
         const handleOnline = async () => {
             const pendingStr = localStorage.getItem('ksa_pending_streaks');
             if (!pendingStr) return;
+
             try {
-                const pendingStreaks = JSON.parse(pendingStr) as any[];
-                if (pendingStreaks.length > 0) {
-                    showToast(`Netwerk hersteld. ${pendingStreaks.length} offline strepen synchroniseren...`, 'info');
-                    for (const streak of pendingStreaks) {
-                        try {
-                            const realId = await db.addConsumptie(streak.userId, streak.drinkId, streak.quantity, undefined, streak.userName);
-                            // Replace in UI state if still there (usually user refreshed though)
-                            setStreaks(prev => prev.map(s => s.id === streak.tempId ? { ...s, id: realId } : s));
-                        } catch (e) {
-                            console.error('Failed to sync streak', streak, e);
-                        }
+                let pendingStreaks = JSON.parse(pendingStr) as any[];
+                if (pendingStreaks.length === 0) return;
+
+                showToast(`Netwerk hersteld. ${pendingStreaks.length} offline strepen synchroniseren...`, 'info');
+                
+                let successCount = 0;
+                let i = 0;
+
+                // We gebruiken een while-loop zodat we de array veilig kunnen muteren (krimpen) tijdens de loop
+                while (i < pendingStreaks.length) {
+                    const streak = pendingStreaks[i];
+                    try {
+                        const realId = await db.addConsumptie(
+                            streak.userId, 
+                            streak.drinkId, 
+                            streak.quantity, 
+                            undefined, 
+                            streak.userName
+                        );
+                        
+                        // Update React UI
+                        setStreaks(prev => prev.map(s => s.id === streak.tempId ? { ...s, id: realId } : s));
+                        
+                        // SUCCES! Verwijder DIT specifieke item uit de lokale wachtrij
+                        pendingStreaks.splice(i, 1);
+                        
+                        // Sla de ingekorte wachtrij ONMIDDELLIJK op in localStorage
+                        // Als de app nu crasht, is deze streep definitief van de wachtrij geschrapt.
+                        localStorage.setItem('ksa_pending_streaks', JSON.stringify(pendingStreaks));
+                        
+                        successCount++;
+                        // i NIET verhogen, want het volgende item is nu opgeschoven naar index i
+                    } catch (e) {
+                        console.error('Failed to sync streak, keeping in queue', streak, e);
+                        // Fout bij dit item (bijv. server weigert). Laat in array zitten en ga naar de volgende
+                        i++;
                     }
-                    localStorage.removeItem('ksa_pending_streaks');
-                    showToast('Vastgelopen strepen succesvol gesynct!', 'success');
                 }
+
+                if (pendingStreaks.length === 0) {
+                    localStorage.removeItem('ksa_pending_streaks'); // Volledig opgeruimd
+                    if (successCount > 0) showToast('Alle vastgelopen strepen succesvol gesynct!', 'success');
+                } else {
+                    showToast(`Kon ${pendingStreaks.length} strepen niet bereiken. We proberen later opnieuw.`, 'warning');
+                }
+
             } catch (e) {
-                console.error('Sync failed', e);
+                console.error('Sync queue failed completely', e);
             }
         };
 
@@ -351,38 +384,29 @@ function App() {
     const handleAddCost = async (amount: number, drink?: Drink, quantity: number = 1) => {
         if (!drink || !session?.user?.id) return;
 
-        // Optimistic update
-        const tempId = Date.now().toString();
+        // Genereer een onfeilbare unieke ID (idempotent key)
+        const tempId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+            ? crypto.randomUUID() 
+            : `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
         const newStreak: Streak = {
-            id: tempId,
-            userId: currentUser.id,
-            drinkId: drink.id,
-            drinkName: drink.name,
-            price: drink.price * quantity,
-            amount: quantity,
-            timestamp: new Date(),
+            id: tempId, userId: currentUser.id, drinkId: drink.id, drinkName: drink.name,
+            price: drink.price * quantity, amount: quantity, timestamp: new Date(),
         };
+        
         setStreaks(prev => [newStreak, ...prev]);
         setBalance(prev => prev + (amount * quantity));
 
         try {
             const realId = await db.addConsumptie(currentUser.id, String(drink.id), quantity, activePeriod?.id, currentUser.naam);
-            // Replace temp ID with the real one
             setStreaks(prev => prev.map(s => s.id === tempId ? { ...s, id: realId } : s));
             showToast(`${quantity}x ${drink.name} gestreept! (+€${(amount * quantity).toFixed(2)})`, 'success');
         } catch (error) {
             // Offline Mode Logic (Save to localStorage)
             if (!navigator.onLine) {
                 const pendingStreaks = JSON.parse(localStorage.getItem('ksa_pending_streaks') || '[]');
-                pendingStreaks.push({
-                    userId: currentUser.id,
-                    drinkId: String(drink.id),
-                    quantity,
-                    tempId,
-                    name: drink.name
-                });
+                pendingStreaks.push({ userId: currentUser.id, drinkId: String(drink.id), quantity, tempId, name: drink.name, userName: currentUser.naam });
                 localStorage.setItem('ksa_pending_streaks', JSON.stringify(pendingStreaks));
-
                 showToast(`Offline opgeslagen: ${quantity}x ${drink.name}. Wordt gesynct bij verbinding.`, 'warning');
             } else {
                 // Rollback if actual error
@@ -426,7 +450,9 @@ function App() {
         const isOwnOrder = orderForUser.id === currentUser.id;
 
         // Optimistic update
-        const tempId = Math.random().toString(36).substr(2, 9);
+        const tempId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+            ? crypto.randomUUID() 
+            : `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const newOrder: Order = {
             id: tempId,
             userId: orderForUser.id,
@@ -603,7 +629,9 @@ function App() {
         const authorName = author ? (author.naam || author.name || 'Onbekend') : authorId;
 
         // Optimistic
-        const tempId = Date.now().toString();
+        const tempId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+            ? crypto.randomUUID() 
+            : `temp-q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const newQuote: QuoteItem = {
             id: tempId, 
             text, 
@@ -680,7 +708,10 @@ function App() {
 
     const handleAddNotification = async (n: Omit<Notification, 'id'>) => {
         // Optimistic
-        const tempNotif = { ...n, id: Date.now().toString() } as any;
+        const tempId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+            ? crypto.randomUUID() 
+            : `temp-n-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const tempNotif = { ...n, id: tempId } as any;
         setNotifications(prev => [tempNotif, ...prev]);
 
         try {
@@ -816,7 +847,9 @@ function App() {
     const MainLayout = () => {
         return (
             <div className="text-base min-h-screen pb-nav-safe">
-                <Outlet context={contextValue} />
+                <ErrorBoundary>
+                    <Outlet context={contextValue} />
+                </ErrorBoundary>
                 <BottomNav notifications={notifications} />
             </div>
         );
