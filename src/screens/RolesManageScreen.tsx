@@ -239,7 +239,7 @@ export const RolesManageScreen: React.FC = () => {
           </button>
           <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-green-100 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-            <span className="text-[10px] font-bold text-green-700 dark:text-green-500 tracking-wider">ADMIN</span>
+            <span className="text-[10px] font-bold text-green-700 dark:text-green-500 tracking-wider">HOOFDLEIDING</span>
           </div>
         </div>
         <div>

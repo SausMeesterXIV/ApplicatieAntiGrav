@@ -356,7 +356,7 @@ export const HomeScreen: React.FC = () => {
 
         {/* --- ADMIN SECTIONS BELOW (Geoptimaliseerd met NavCard) --- */}
 
-        {(hasRole(currentUser, 'financiën') || hasRole(currentUser, 'admin')) && (
+        {(hasRole(currentUser, 'financiën') || hasRole(currentUser, 'hoofdleiding')) && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="material-icons-round text-primary text-sm">account_balance</span>
@@ -374,7 +374,7 @@ export const HomeScreen: React.FC = () => {
           </section>
         )}
 
-        {hasRole(currentUser, 'admin') && (
+        {hasRole(currentUser, 'hoofdleiding') && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="material-icons-round text-primary text-sm">admin_panel_settings</span>

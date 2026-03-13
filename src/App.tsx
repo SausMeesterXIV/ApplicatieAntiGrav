@@ -473,7 +473,7 @@ function App() {
             if (Math.abs(actualAmount - expectedAmount) > 0.01) {
                 const targetUsers = users.filter(u => {
                     const roles = (u.roles || []).map(r => String(r).toLowerCase());
-                    return roles.includes('hoofdleiding') || roles.includes('drank') || roles.includes('team drank') || u.rol === 'admin' || u.rol === 'team_drank';
+                    return roles.includes('hoofdleiding') || roles.includes('drank') || roles.includes('team drank') || u.rol === 'hoofdleiding' || u.rol === 'godmode' || u.rol === 'team_drank';
                 });
 
                 const formattedActual = `€${actualAmount.toFixed(2).replace('.', ',')}`;

@@ -88,7 +88,7 @@ export const BillingPeriodsManageScreen: React.FC = () => {
                         <span className="material-icons-round">arrow_back</span>
                     </button>
                     <h1 className="text-xl font-bold flex-1">Periodebeheer</h1>
-                    {(currentUser.rol === 'admin' || currentUser.rol === 'team_drank') && (
+                    {(currentUser.rol === 'hoofdleiding' || currentUser.rol === 'admin' || currentUser.rol === 'team_drank') && (
                         <button
                             onClick={() => setShowAddModal(true)}
                             className="bg-blue-600 text-white p-2 rounded-xl shadow-lg shadow-blue-500/20"

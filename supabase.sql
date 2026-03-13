@@ -5,7 +5,7 @@
 -- ==============================================================================
 
 -- Maak enum types aan voor de applicatie
-CREATE TYPE public.user_role AS ENUM ('admin', 'team_drank', 'standaard', 'sfeerbeheer', 'godmode');
+CREATE TYPE public.user_role AS ENUM ('hoofdleiding', 'team_drank', 'standaard', 'sfeerbeheer', 'godmode', 'team drank');
 CREATE TYPE public.factuur_status AS ENUM ('betaald', 'onbetaald');
 CREATE TYPE public.frituur_status AS ENUM ('open', 'besteld', 'geleverd');
 

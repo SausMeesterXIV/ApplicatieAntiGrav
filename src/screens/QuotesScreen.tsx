@@ -211,7 +211,7 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
                   <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-4">
                     <div className="flex items-center gap-3">
                       <img
-                        src={author?.avatar || 'https://i.pravatar.cc/150'}
+                        src={author?.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'}
                         alt="Author"
                         className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
                       />

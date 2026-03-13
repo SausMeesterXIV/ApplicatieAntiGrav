@@ -37,7 +37,7 @@ function mapProfileToUser(p: DbProfileRow): User {
     ...p,
     name: p.naam,
     roles: p.roles || [],
-    avatar: p.avatar_url || `https://i.pravatar.cc/150?u=${p.id}`,
+    avatar: p.avatar_url || `https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y`,
     quickDrinkId: p.quick_drink_id || undefined,
     balance: 0, // Calculated separately
   };

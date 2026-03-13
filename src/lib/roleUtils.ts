@@ -10,12 +10,14 @@ export const hasRole = (user: User | null | undefined, roleName: 'admin' | 'dran
   const roles = user.roles || [];
   const normalizedRoles = Array.isArray(roles) ? roles.map((r: any) => String(r).toLowerCase()) : [];
   
-  // Hoofdleiding and Admins always have access to everything
-  const isHead = normalizedRoles.includes('hoofdleiding') || 
-                  user.rol === 'admin' || 
-                  user.rol === 'godmode';
+  // Godmode and Hoofdleiding always have access to everything
+  const isGod = user.rol === 'godmode' || normalizedRoles.includes('godmode');
+  const isHead = isGod || normalizedRoles.includes('hoofdleiding') || 
+                  user.rol === 'hoofdleiding' || 
+                  user.rol === 'admin';
 
-  if (isHead) return true;
+  if (isGod) return true;
+  if (isHead && (roleName === 'hoofdleiding' || roleName === 'admin' || roleName === 'drank' || roleName === 'sfeerbeheer' || roleName === 'winkeltje' || roleName === 'financiën')) return true;
 
   switch (roleName) {
     case 'hoofdleiding':
@@ -57,5 +59,5 @@ export const isHoofdleiding = (user: User | null | undefined): boolean => {
   if (!user) return false;
   const roles = user.roles || [];
   const normalizedRoles = Array.isArray(roles) ? roles.map((r: any) => String(r).toLowerCase()) : [];
-  return normalizedRoles.includes('hoofdleiding') || user.rol === 'admin' || user.rol === 'godmode';
+  return normalizedRoles.includes('hoofdleiding') || normalizedRoles.includes('godmode') || user.rol === 'hoofdleiding' || user.rol === 'admin' || user.rol === 'godmode';
 };

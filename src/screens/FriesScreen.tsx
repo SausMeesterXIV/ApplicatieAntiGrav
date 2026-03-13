@@ -22,7 +22,7 @@ export const FriesScreen: React.FC = () => {
   const { handlePlaceFryOrder: onPlaceOrder, handleRemoveFryOrder: onRemoveOrder, friesOrders: myOrders, activeFrituurSession, setFriesSessionStatus: onSessionChange, setFriesPickupTime: onSetPickupTime, fryItems: items, handleAddFryItem, handleUpdateFryItem, handleDeleteFryItem, loading: friesLoading } = useFries();
   
   const loading = authLoading || friesLoading;
-  const isHoofdleiding = hasRole(currentUser, 'admin');
+  const isHoofdleiding = hasRole(currentUser, 'hoofdleiding');
   
   const sessionStatus = activeFrituurSession?.status || FRITUUR_STATUS.CLOSED;
   const pickupTime = activeFrituurSession?.pickupTime;
