@@ -31,6 +31,7 @@ export const FriesOverviewScreen: React.FC = () => {
   const [actualAmount, setActualAmount] = useState<number | string>('');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Time input state
@@ -161,8 +162,15 @@ export const FriesOverviewScreen: React.FC = () => {
       showToast('Voer een geldig bedrag in', 'error');
       return;
     }
+    if (!receiptFile) {
+      showToast('Een foto van het kasticket is verplicht!', 'error');
+      return;
+    }
 
-    await onCompletePayment(amount, receiptFile || undefined);
+    setIsSubmitting(true);
+    await onCompletePayment(amount, receiptFile);
+    setIsSubmitting(false);
+    
     setShowPaymentSheet(false);
     setActualAmount('');
     setReceiptFile(null);
@@ -204,7 +212,7 @@ export const FriesOverviewScreen: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 px-4 pb-48 overflow-y-auto space-y-6">
+      <main className="flex-1 px-4 pb-64 overflow-y-auto space-y-6">
         <div className={`rounded-2xl p-5 shadow-lg mt-4 text-white transition-colors 
             ${sessionStatus === FRITUUR_STATUS.ORDERED
             ? 'bg-gradient-to-r from-green-600 to-green-500 shadow-green-500/20'
@@ -262,18 +270,18 @@ export const FriesOverviewScreen: React.FC = () => {
               <p>Nog geen items in deze categorie.</p>
             </div>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-2">
               {filteredItems.map((item) => (
                 <div key={item.id} className="bg-white dark:bg-[#1e293b] p-4 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center justify-between group shadow-sm transition-colors">
                   <div className="flex items-center gap-4">
                     <div className="h-10 w-10 rounded-lg bg-gray-50 dark:bg-[#0f172a] border border-blue-100 dark:border-blue-500/30 flex items-center justify-center shrink-0">
-                      <span className="text-blue-600 dark:text-blue-400 font-bold">{item.count}</span>
+                      <span className="text-blue-600 dark:text-blue-400 font-bold text-lg">{item.count}</span>
                     </div>
                     <div>
                       <h4 className="font-bold text-gray-900 dark:text-white text-base">{item.name}</h4>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 shrink-0">
                     <span className="text-gray-500 dark:text-gray-400 font-medium text-sm">€ {item.price.toFixed(2).replace('.', ',')}</span>
                   </div>
                 </div>
@@ -283,13 +291,12 @@ export const FriesOverviewScreen: React.FC = () => {
         </div>
       </main>
 
-      {/* FOOTER MET GROTE BUFFER pb-28 (Zodat BottomNav hem nooit kan overlappen) */}
-      <footer className="fixed bottom-0 left-0 right-0 p-4 pb-28 bg-gray-50 dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 z-20 transition-colors shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
-        <div className="space-y-3 max-w-lg mx-auto">
+      <div className="fixed bottom-[85px] left-0 right-0 px-4 z-40 flex justify-center pointer-events-none">
+        <div className="w-full max-w-lg bg-white/95 backdrop-blur-md dark:bg-[#1e2330]/95 p-4 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-gray-200/80 dark:border-gray-700/80 pointer-events-auto transition-all duration-300">
 
           {sessionStatus === FRITUUR_STATUS.ORDERED && (
-            <div className="space-y-3">
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3 flex items-center justify-between animate-in slide-in-from-bottom-2">
+            <div className="space-y-3 animate-in slide-in-from-bottom-2">
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
                   <span className="material-icons-round">alarm_on</span>
                   <span className="font-bold text-sm">Besteld voor {pickupTime}</span>
@@ -306,17 +313,13 @@ export const FriesOverviewScreen: React.FC = () => {
                 <span className="material-icons-round">receipt_long</span>
                 Betaal & Rond af
               </button>
-
-              <p className="text-xs text-center text-gray-500">
-                Voer het bedrag in en neem eventueel een foto van het kasticket.
-              </p>
             </div>
           )}
 
           {showTimeInput && (
-            <div className="bg-white dark:bg-[#1e293b] rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-lg animate-in slide-in-from-bottom-5">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="material-icons-round text-green-600">schedule</span>
+            <div className="space-y-3 animate-in slide-in-from-bottom-2">
+              <div className="flex items-center gap-3 mb-1 px-1">
+                <span className="material-icons-round text-green-600 dark:text-green-400">schedule</span>
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white">Hoe laat om de frieten?</h3>
               </div>
               <div className="flex gap-2">
@@ -325,50 +328,49 @@ export const FriesOverviewScreen: React.FC = () => {
                     type="time"
                     value={tempPickupTime}
                     onChange={(e) => setTempPickupTime(e.target.value)}
-                    className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-lg font-bold rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 text-center"
+                    className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xl font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-3 text-center"
                   />
                 </div>
                 <button
                   onClick={confirmTime}
-                  className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 rounded-lg shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                 >
                   <span className="material-icons-round">check</span>
-                  <span>Bevestig</span>
                 </button>
               </div>
-              <button onClick={() => setShowTimeInput(false)} className="w-full mt-2 text-xs text-gray-400 hover:text-gray-600 py-1">Annuleren</button>
+              <button onClick={() => setShowTimeInput(false)} className="w-full mt-1 text-xs font-medium text-gray-400 hover:text-gray-600 py-2 transition-colors">Annuleren</button>
             </div>
           )}
 
           {sessionStatus === FRITUUR_STATUS.ORDERING && !showTimeInput && (
-            <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl p-3 border border-orange-200 dark:border-orange-800 shadow-sm animate-in slide-in-from-bottom-5">
-              <div className="flex items-center gap-3 mb-3 text-orange-800 dark:text-orange-200">
+            <div className="space-y-3 animate-in slide-in-from-bottom-2">
+              <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl p-3 border border-orange-200 dark:border-orange-800 flex items-center gap-3 text-orange-800 dark:text-orange-200">
                 <span className="material-icons-round animate-pulse">call</span>
-                <span className="text-xs font-bold uppercase tracking-wide">Je bestelt nu...</span>
+                <span className="text-sm font-bold uppercase tracking-wide">Je bestelt nu bij de frituur...</span>
               </div>
               <button
                 onClick={handleMarkOrdered}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 <span className="material-icons-round">check_circle</span>
-                <span>Is Besteld!</span>
+                <span>Bevestig: Bestelling is doorgegeven!</span>
               </button>
             </div>
           )}
 
           {sessionStatus === FRITUUR_STATUS.COMPLETED && (
-            <div className="flex flex-col gap-3 animate-in slide-in-from-bottom-5">
+            <div className="space-y-3 animate-in slide-in-from-bottom-2">
               <button
                 onClick={startOrderingProcess}
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
               >
                 <span className="material-icons-round">call</span>
-                Nu Bestellen
+                Nu Telefonisch Bestellen
               </button>
 
               <button
                 onClick={handleFooterAction}
-                className="w-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm"
+                className="w-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
               >
                 {showReopenConfirmation ? (
                   <>
@@ -386,43 +388,47 @@ export const FriesOverviewScreen: React.FC = () => {
           )}
 
           {(sessionStatus === FRITUUR_STATUS.OPEN || sessionStatus === FRITUUR_STATUS.CLOSED) && (
-            <button
-              onClick={handleFooterAction}
-              className={`w-full text-white font-bold py-4 px-6 rounded-xl shadow-lg flex items-center justify-center gap-3 group active:scale-[0.99] transition-all bg-blue-600 hover:bg-blue-500 shadow-blue-500/20`}
-            >
-              <div className="flex items-center gap-3 flex-1 justify-start">
-                <div className="bg-white/20 p-1 rounded-md">
-                  <span className="material-icons-round text-lg">
-                    {sessionStatus === FRITUUR_STATUS.OPEN ? 'check_circle' : 'play_arrow'}
+            <div className="animate-in slide-in-from-bottom-2">
+              <button
+                onClick={handleFooterAction}
+                className={`w-full text-white font-bold py-4 px-6 rounded-xl shadow-lg flex items-center justify-center gap-3 group active:scale-[0.99] transition-all bg-blue-600 hover:bg-blue-500 shadow-blue-500/20`}
+              >
+                <div className="flex items-center gap-3 flex-1 justify-start">
+                  <div className="bg-white/20 p-1 rounded-md flex items-center justify-center">
+                    <span className="material-icons-round text-lg">
+                      {sessionStatus === FRITUUR_STATUS.OPEN ? 'check_circle' : 'play_arrow'}
+                    </span>
+                  </div>
+                  <span>
+                    {sessionStatus === FRITUUR_STATUS.OPEN ? 'Opnemen Stoppen' : 'Sessie Starten'}
                   </span>
                 </div>
-                <span>
-                  {sessionStatus === FRITUUR_STATUS.OPEN ? 'Opnemen Stoppen' : 'Sessie Starten'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg">€ {totalAmount.toFixed(2).replace('.', ',')}</span>
-                <span className="material-icons-round group-hover:translate-x-1 transition-transform">arrow_forward</span>
-              </div>
-            </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">€ {totalAmount.toFixed(2).replace('.', ',')}</span>
+                  <span className="material-icons-round group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </div>
+              </button>
+            </div>
           )}
-        </div>
-      </footer>
 
-      {/* Payment BottomSheet - Met extra padding onderaan voor de veiligheid */}
+        </div>
+      </div>
+
       <BottomSheet
         isOpen={showPaymentSheet}
         onClose={() => setShowPaymentSheet(false)}
         title="Betaal & Rond af"
       >
-        <div className="space-y-6 pb-12">
+        <div className="space-y-6 pb-[100px]">
           <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
             <p className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1">Verwacht bedrag (App)</p>
             <p className="text-2xl font-black text-blue-700 dark:text-blue-300">€ {totalAmount.toFixed(2).replace('.', ',')}</p>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Werkelijk betaald bedrag</label>
+            <label className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+              Werkelijk betaald bedrag <span className="text-red-500">*</span>
+            </label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">€</span>
               <input
@@ -437,7 +443,9 @@ export const FriesOverviewScreen: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Foto van rekening (Optioneel)</label>
+            <label className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+              Foto van rekening <span className="text-red-500">*</span>
+            </label>
             <div 
               onClick={() => fileInputRef.current?.click()}
               className={`w-full aspect-video rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-all ${receiptPreview ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-700 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
@@ -447,7 +455,7 @@ export const FriesOverviewScreen: React.FC = () => {
               ) : (
                 <>
                   <span className="material-icons-round text-4xl text-gray-400 mb-2">add_a_photo</span>
-                  <p className="text-xs font-bold text-gray-400">Tik om foto te nemen</p>
+                  <p className="text-xs font-bold text-gray-400">Tik om foto te nemen (Verplicht)</p>
                 </>
               )}
             </div>
@@ -461,13 +469,25 @@ export const FriesOverviewScreen: React.FC = () => {
             />
           </div>
 
+          {/* SLIMME KNOP: Toont precies wat er nog mist */}
           <button
             onClick={handleFinishPayment}
-            disabled={!actualAmount}
-            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+            disabled={!actualAmount || !receiptFile || isSubmitting}
+            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
           >
-            <span className="material-icons-round">check_circle</span>
-            Bevestig & Sluit Sessie
+            {isSubmitting ? (
+              <span className="material-icons-round animate-spin">refresh</span>
+            ) : (
+              <span className="material-icons-round">{(!actualAmount || !receiptFile) ? 'lock' : 'check_circle'}</span>
+            )}
+            
+            {isSubmitting 
+              ? 'Bezig met afronden...'
+              : !actualAmount 
+                ? 'Vul bedrag in' 
+                : !receiptFile 
+                  ? 'Foto is verplicht' 
+                  : 'Bevestig & Sluit Sessie'}
           </button>
         </div>
       </BottomSheet>
