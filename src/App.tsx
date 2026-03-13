@@ -51,6 +51,7 @@ import { FriesProvider } from './contexts/FriesContext';
 import { ShopDashboardScreen } from './screens/ShopDashboardScreen';
 import { ShopCategoryScreen } from './screens/ShopCategoryScreen';
 import { ShopInventoryScreen } from './screens/ShopInventoryScreen';
+import { FinanceDashboardScreen } from './screens/FinanceDashboardScreen';
 
 export type AppContextType = {
     currentUser: User;
@@ -438,7 +439,6 @@ function App() {
         }
     };
 
-    // DEZE FUNCTIE IS NU 100% ROBUUST GEMAAKT
     const handleCompleteFriesPayment = async (actualAmount: number, receiptFile?: File) => {
         if (!frituurSessieId) {
             showToast('Geen actieve sessie gevonden om af te sluiten', 'error');
@@ -448,7 +448,7 @@ function App() {
         try {
             let receiptUrl = '';
             
-            // 1. Probeer eventuele foto op te slaan (Mag falen zonder crash)
+            // 1. Upload kasticket
             if (receiptFile) {
                 try {
                     receiptUrl = await db.uploadReceipt(frituurSessieId, receiptFile);
@@ -457,19 +457,17 @@ function App() {
                 }
             }
 
-            // 2. Update de sessie in de DB (Valt veilig terug als DB kolommen ontbreken)
+            // 2. Update actual_amount en receipt_url (WE LATEN DE STATUS HIER GERUST OM CRASH TE VOORKOMEN)
             try {
                 await db.updateFrituurSessie(frituurSessieId, { 
                     actual_amount: actualAmount, 
-                    receipt_url: receiptUrl, 
-                    status: 'paid' 
+                    receipt_url: receiptUrl
                 });
             } catch (updateErr) {
-                console.warn("Kolommen ontbreken mogelijk in DB, fallback naar simpele status update", updateErr);
-                await db.updateFrituurSessie(frituurSessieId, { status: 'paid' });
+                console.warn("Kolommen ontbreken mogelijk, update geskipt", updateErr);
             }
 
-            // 3. Bereken of er een prijsverschil is
+            // 3. Bereken prijsverschil
             const expectedAmount = friesOrders.filter(o => o.status === 'pending').reduce((acc, o) => acc + o.totalPrice, 0);
 
             if (Math.abs(actualAmount - expectedAmount) > 0.01) {
@@ -492,17 +490,16 @@ function App() {
 
                 handleAddNotification({ type: 'order', sender: 'Systeem', role: '', title: notifTitle, content: notifContent, time: 'Zonet', isRead: false, action: '', icon: 'price_change', color: 'bg-orange-100 dark:bg-orange-600/20 text-orange-600 dark:text-orange-500' } as any);
 
-                await handleArchiveFriesSession();
+                await handleArchiveFriesSession(); // Sluit veilig af
                 showToast('Betaling afgerond — prijsverschil gemeld', 'warning');
             } else {
-                await handleArchiveFriesSession();
+                await handleArchiveFriesSession(); // Sluit veilig af
                 showToast('Betaling succesvol afgerond!', 'success');
             }
         } catch (error: any) {
             console.error('Grote fout bij afronden betaling:', error);
-            showToast('Fout bij afronden: ' + (error.message || 'Onbekende fout'), 'error');
-            // Zelfs als ALLES crasht, sluit de sessie alsnog lokaal af zodat je niet vastzit
-            await handleArchiveFriesSession();
+            showToast('Fout: we sluiten de sessie nu af.', 'error');
+            await handleArchiveFriesSession(); // Zelfs bij fouten sluiten we de bestelling af!
         }
     };
 
@@ -672,6 +669,7 @@ function App() {
                                         <Route path="frituur/overzicht" element={<FriesOverviewScreen />} />
                                         <Route path="fries-comparison" element={<FriesComparisonScreen />} />
                                         <Route path="frituur/geschiedenis" element={<FriesHistoryScreen />} />
+                                        <Route path="financien" element={<FinanceDashboardScreen />} />
                                         <Route path="billing-dashboard" element={<TeamDrankDashboardScreen />} />
 
                                         <Route path="strepen" element={<StrepenScreen />} />

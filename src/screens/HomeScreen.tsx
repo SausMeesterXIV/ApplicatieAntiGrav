@@ -356,6 +356,24 @@ export const HomeScreen: React.FC = () => {
 
         {/* --- ADMIN SECTIONS BELOW (Geoptimaliseerd met NavCard) --- */}
 
+        {(hasRole(currentUser, 'financiën') || hasRole(currentUser, 'admin')) && (
+          <section>
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <span className="material-icons-round text-primary text-sm">account_balance</span>
+              <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Financiën</h2>
+            </div>
+            <div className="grid gap-3">
+              <NavCard 
+                title="Financieel Dashboard" 
+                description="Onkostennota's & overzichten" 
+                icon="account_balance_wallet" 
+                iconColorClass="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" 
+                onClick={() => navigate('/financien')} 
+              />
+            </div>
+          </section>
+        )}
+
         {hasRole(currentUser, 'admin') && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
