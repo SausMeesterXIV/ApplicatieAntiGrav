@@ -7,51 +7,122 @@ import {
 import { AppContextType } from '../App';
 import { FryItem, User } from '../types';
 import { showToast } from '../components/Toast';
-import { BottomSheet } from '../components/BottomSheet';
+import { BottomSheet } from '../components/Modal';
 import { NavCard } from '../components/NavCard';
 import { useFries } from '../contexts/FriesContext';
+import { FriesItemCard } from '../components/Fries/FriesItemCard';
 import * as db from '../lib/supabaseService';
+import { hasRole } from '../lib/roleUtils';
 
 export function FriesScreen() {
   const navigate = useNavigate();
-  const { openSession } = useFries();
   const { 
     currentUser, users, fryItems, friesOrders, friesSessionStatus, 
-    friesPickupTime, setFriesPickupTime, handlePlaceFryOrder, 
-    handleRemoveFryOrder, frituurSessieId 
-  } = useOutletContext<AppContextType>();
+    friesPickupTime, handlePlaceFryOrder, 
+    handleRemoveFryOrder, handleUpdateFryItem, handleDeleteFryItem, 
+    frituurSessieId, setFriesSessionStatus, setFriesPickupTime
+  } = useFries();
+
+  // VEILIGHEID: Controleer of de huidige gebruiker Hoofdleiding (admin) is
+  const isHoofdleiding = hasRole(currentUser, 'admin');
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('Alle');
+  const [selectedCategory, setSelectedCategory] = useState<string>('frieten');
   const [cart, setCart] = useState<{item: FryItem, quantity: number}[]>([]);
   const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
   
+  // Fries Management State
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editPrice, setEditPrice] = useState('');
+  const [favoriteItems, setFavoriteItems] = useState<string[]>(() => {
+    const saved = localStorage.getItem('ksa_favorite_fry_items');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Admin feature: Order for someone else
   const [isOrderingForOther, setIsOrderingForOther] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userSearchQuery, setUserSearchQuery] = useState('');
 
+  // VEILIGHEID: Editor Mode state
+  const [isAdmin, setIsAdmin] = useState(false);
+  const orderingFor = isOrderingForOther ? selectedUser : null;
+
+  useEffect(() => {
+    localStorage.setItem('ksa_favorite_fry_items', JSON.stringify(favoriteItems));
+  }, [favoriteItems]);
+
+  const getCategoryEmoji = (category: string) => {
+    switch (category.toLowerCase()) {
+      case 'frieten': return '🍟';
+      case 'burgers': return '🍔';
+      case 'snacks': return '🍢';
+      case 'sauzen': return '🪣';
+      case 'huisbereid': return '🧑‍🍳';
+      case 'spaghetti': return '🍝';
+      case 'dranken': return '🥤';
+      default: return '';
+    }
+  };
+
   const categories = useMemo(() => {
-    const cats = ['Alle', ...Array.from(new Set(fryItems.map(i => i.category)))];
-    return cats;
-  }, [fryItems]);
+    return ['favorieten', 'frieten', 'snacks', 'sauzen', 'huisbereid', 'burgers', 'spaghetti'];
+  }, []);
 
   const filteredItems = useMemo(() => {
-    return fryItems.filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === 'Alle' || item.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+    if (searchQuery) {
+      return fryItems.filter(item => 
+        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      ).sort((a, b) => a.name.localeCompare(b.name));
+    }
+    
+    const baseItems = selectedCategory === 'favorieten'
+      ? fryItems.filter(i => favoriteItems.includes(i.id))
+      : fryItems.filter(i => i.category === selectedCategory);
+
+    return baseItems.sort((a, b) => {
+      const aFav = favoriteItems.includes(a.id);
+      const bFav = favoriteItems.includes(b.id);
+      if (aFav && !bFav) return -1;
+      if (!aFav && bFav) return 1;
+      return (a.price - b.price) || a.name.localeCompare(b.name);
     });
-  }, [fryItems, searchQuery, selectedCategory]);
+  }, [fryItems, searchQuery, selectedCategory, favoriteItems]);
 
   const filteredUsers = useMemo(() => {
     if (!userSearchQuery) return [];
-    return users.filter(u => 
+    return users.filter((u: User) => 
       u.naam.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
       u.email.toLowerCase().includes(userSearchQuery.toLowerCase())
     ).slice(0, 5);
   }, [users, userSearchQuery]);
+
+  const toggleFavoriteItem = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFavoriteItems(prev => 
+      prev.includes(id) ? prev.filter(fid => fid !== id) : [...prev, id]
+    );
+  };
+
+  const startEditing = (item: FryItem) => {
+    setEditingItemId(item.id);
+    setEditPrice(item.price.toString());
+  };
+
+  const savePrice = async (id: string) => {
+    const price = parseFloat(editPrice.replace(',', '.'));
+    if (isNaN(price)) {
+      showToast('Ongeldige prijs', 'error');
+      return;
+    }
+    await handleUpdateFryItem(id, { price });
+    setEditingItemId(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingItemId(null);
+  };
 
   const updateQuantity = (item: FryItem, delta: number) => {
     setCart(prev => {
@@ -93,7 +164,7 @@ export function FriesScreen() {
     setSelectedUser(null);
   };
 
-  const isAdmin = currentUser.rol === 'admin' || (currentUser.roles || []).includes('Hoofdleiding');
+  const isEditorMode = isAdmin;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-24">
@@ -104,23 +175,31 @@ export function FriesScreen() {
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Frituur 🍟</h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm">Bestel je wekelijkse portie vet!</p>
           </div>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => navigate('/frituur/geschiedenis')}
-              className="p-2 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-300"
-            >
-              <History size={20} />
-            </button>
-            {isAdmin && (
-              <button 
-                onClick={() => setTimePickerOpen(true)}
-                className="p-2 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-300"
-              >
-                <Clock size={20} />
-              </button>
+          <div className="flex items-center gap-2">
+            {!orderingFor && isHoofdleiding && (
+                <button 
+                    onClick={() => setIsAdmin(!isAdmin)} 
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-bold text-xs transition-colors ${isAdmin ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800/50' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'}`}
+                >
+                    <span className="material-icons-round text-[16px]">{isAdmin ? 'close' : 'edit'}</span>
+                    <span>{isAdmin ? 'Klaar' : 'Aanpassen'}</span>
+                </button>
             )}
+            
+            <button onClick={() => navigate('/frituur/overzicht')} className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 font-bold text-xs">
+              <History size={16} />
+              <span>Overzicht</span>
+            </button>
           </div>
         </div>
+
+        {/* DUIDELIJKE WAARSCHUWINGSBALK TIJDENS EDIT MODE */}
+        {isAdmin && !orderingFor && (
+            <div className="bg-red-500 text-white text-center text-xs font-bold py-1.5 flex items-center justify-center gap-2 shadow-inner">
+                <span className="material-icons-round text-[14px]">warning</span>
+                BEWERKMODUS ACTIEF: Je bewerkt nu het live menu!
+            </div>
+        )}
 
         {/* Status Banner */}
         {friesSessionStatus === 'closed' ? (
@@ -135,7 +214,7 @@ export function FriesScreen() {
               </div>
               {isAdmin && (
                 <button 
-                  onClick={openSession}
+                  onClick={() => setFriesSessionStatus('open')}
                   className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-xl shadow-lg active:scale-95 transition-transform"
                 >
                   Openen
@@ -181,69 +260,66 @@ export function FriesScreen() {
       <div className="px-6 py-4">
         {/* Categories */}
         <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors ${
-                selectedCategory === cat 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-700'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+          {categories.map(cat => {
+            const isFavTab = cat === 'favorieten';
+            const isActive = selectedCategory === cat;
+            
+            let tabClasses = 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-700';
+            if (isActive) {
+                if (isFavTab) tabClasses = 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800/50';
+                else tabClasses = 'bg-blue-600 text-white shadow-md';
+            }
+
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all active:scale-95 flex items-center gap-2 border ${tabClasses}`}
+              >
+                {isFavTab ? (
+                  <span className="material-icons-round text-[18px]">favorite</span>
+                ) : (
+                  <span>{getCategoryEmoji(cat)}</span>
+                )}
+                <span className="capitalize">{cat}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Items Grid */}
         <div className="grid grid-cols-1 gap-4">
+          {selectedCategory === 'favorieten' && filteredItems.length === 0 && !searchQuery && (
+            <div className="text-center py-16 px-4 bg-white dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700/50">
+              <span className="material-icons-round text-5xl text-slate-200 dark:text-slate-700 mb-3">favorite_border</span>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Nog geen favorieten</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-[250px] mx-auto">
+                Tik op het hartje naast een item in het menu om deze hier te bewaren. 
+              </p>
+            </div>
+          )}
+          
           {filteredItems.map(item => {
             const inCart = cart.find(i => i.item.id === item.id);
             return (
-              <div key={item.id} className="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4">
-                <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-3xl">
-                  {item.category === 'sauzen' ? '🥫' : 
-                   item.category === 'dranken' ? '🥤' :
-                   item.category === 'frieten' ? '🍟' : '🍖'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-slate-900 dark:text-white leading-tight mb-1">{item.name}</h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-blue-600 dark:text-blue-400 font-bold">€{item.price.toFixed(2)}</span>
-                    <span className="text-slate-400 text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700">{item.category}</span>
-                  </div>
-                </div>
-                
-                {friesSessionStatus === 'open' && (
-                  <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded-2xl p-1">
-                    {inCart ? (
-                      <>
-                        <button 
-                          onClick={() => updateQuantity(item, -1)}
-                          className="w-10 h-10 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-red-500"
-                        >
-                          <Minus size={18} />
-                        </button>
-                        <span className="w-8 text-center font-bold text-slate-900 dark:text-white">{inCart.quantity}</span>
-                        <button 
-                          onClick={() => updateQuantity(item, 1)}
-                          className="w-10 h-10 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-500"
-                        >
-                          <Plus size={18} />
-                        </button>
-                      </>
-                    ) : (
-                      <button 
-                        onClick={() => updateQuantity(item, 1)}
-                        className="w-10 h-10 bg-white dark:bg-slate-600 rounded-xl shadow-sm flex items-center justify-center text-blue-600 dark:text-blue-400 active:scale-95 transition-transform"
-                      >
-                        <Plus size={20} />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+              <FriesItemCard 
+                key={item.id}
+                item={item}
+                qty={inCart ? inCart.quantity : 0}
+                isEditing={editingItemId === item.id}
+                editPrice={editPrice}
+                setEditPrice={setEditPrice}
+                savePrice={savePrice}
+                cancelEdit={cancelEdit}
+                isAdmin={isAdmin}
+                orderingFor={isOrderingForOther ? selectedUser : null}
+                isOrderingOpen={friesSessionStatus === 'open'}
+                favoriteItems={favoriteItems}
+                toggleFavoriteItem={toggleFavoriteItem}
+                startEditing={startEditing}
+                handleDeleteFryItem={handleDeleteFryItem}
+                updateQuantity={updateQuantity}
+              />
             );
           })}
         </div>
@@ -284,11 +360,11 @@ export function FriesScreen() {
               <div className="w-10 h-10 bg-blue-500/20 rounded-2xl flex items-center justify-center text-xl">🍟</div>
               <div>
                 <p className="font-bold text-sm">Jouw bestelling staat erin</p>
-                <p className="text-xs text-slate-400">Totaal: €{myOrder.totalPrice.toFixed(2)}</p>
+                <p className="text-xs text-slate-400">Totaal: €{myOrder?.totalPrice.toFixed(2)}</p>
               </div>
             </div>
             <button 
-              onClick={() => handleRemoveFryOrder(myOrder.id)}
+              onClick={() => handleRemoveFryOrder(myOrder!.id)}
               className="p-2 text-red-400 hover:bg-red-400/10 rounded-xl"
             >
               <Trash2 size={20} />
@@ -303,7 +379,7 @@ export function FriesScreen() {
         onClose={() => setOrderSummaryOpen(false)}
         title="Bestelling Bevestigen"
       >
-        <div className="Space-y-6">
+        <div className="space-y-6">
           {/* Order Details */}
           <div className="bg-slate-50 dark:bg-slate-900/50 rounded-3xl p-6 border border-slate-100 dark:border-slate-800">
             <h4 className="font-bold text-sm text-slate-400 uppercase tracking-widest mb-4">Mijn Mandje</h4>
@@ -357,14 +433,14 @@ export function FriesScreen() {
                   {selectedUser ? (
                     <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-3 rounded-2xl border border-blue-200 dark:border-blue-800">
                       <div className="flex items-center gap-3">
-                        <img src={selectedUser.avatar} className="w-8 h-8 rounded-full" alt="" />
+                        <img src={selectedUser.avatar_url || ''} className="w-8 h-8 rounded-full" alt="" />
                         <span className="font-bold text-sm text-slate-900 dark:text-white">{selectedUser.naam}</span>
                       </div>
                       <button onClick={() => setSelectedUser(null)} className="text-slate-400"><X size={16} /></button>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {filteredUsers.map(u => (
+                      {filteredUsers.map((u: User) => (
                         <button 
                           key={u.id}
                           onClick={() => {

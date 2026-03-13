@@ -1,19 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useFries } from '../contexts/FriesContext';
 import { useAgenda } from '../contexts/AgendaContext';
-import { Order, Notification, User } from '../types';
-
-import { BottomSheet } from '../components/BottomSheet';
+import { BottomSheet } from '../components/Modal';
+import { showToast } from '../components/Toast';
+import { FRITUUR_STATUS } from '../lib/constants';
 
 export const FriesOverviewScreen: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { handleAddNotification: onAddNotification } = useAgenda();
-  const { friesOrders: orders, activeFrituurSession, setFriesSessionStatus: onSessionChange, setFriesPickupTime: onSetPickupTime, handleArchiveFriesSession: onArchiveSession, handleCompleteFriesPayment: onCompletePayment } = useFries();
-  const sessionStatus = activeFrituurSession?.status || 'closed';
+  const { 
+      friesOrders: orders, 
+      activeFrituurSession, 
+      setFriesSessionStatus: onSessionChange, 
+      setFriesPickupTime: onSetPickupTime, 
+      handleCompleteFriesPayment: onCompletePayment 
+  } = useFries();
+  
+  const sessionStatus = activeFrituurSession?.status || FRITUUR_STATUS.CLOSED;
   const pickupTime = activeFrituurSession?.pickupTime;
+  
   const [activeTab, setActiveTab] = useState<'Alles' | 'Frieten' | 'Snacks' | 'Sauzen'>('Alles');
   const [aggregatedItems, setAggregatedItems] = useState<any[]>([]);
   const [showReopenConfirmation, setShowReopenConfirmation] = useState(false);
@@ -24,9 +32,9 @@ export const FriesOverviewScreen: React.FC = () => {
   const [actualAmount, setActualAmount] = useState<number | string>('');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Time input state (default to now + 30m if not set)
+  // Time input state
   const [tempPickupTime, setTempPickupTime] = useState('');
 
   // Filter only ACTIVE orders (pending) for the calculation
@@ -48,11 +56,11 @@ export const FriesOverviewScreen: React.FC = () => {
 
     activeOrders.forEach(order => {
       order.items.forEach(item => {
-        const key = item.id; // Group by Item ID
+        const key = item.id; 
         if (itemMap.has(key)) {
           const existing = itemMap.get(key)!;
           existing.count += item.quantity;
-          existing.price += (item.price * item.quantity); // Total accumulated price
+          existing.price += (item.price * item.quantity); 
         } else {
           itemMap.set(key, {
             id: item.id,
@@ -66,15 +74,13 @@ export const FriesOverviewScreen: React.FC = () => {
     });
 
     setAggregatedItems(Array.from(itemMap.values()));
-  }, [orders]); // Re-run when orders change
+  }, [orders]); 
 
-  // Reset confirmation state if session status changes
   useEffect(() => {
-    if (sessionStatus !== 'completed') {
+    if (sessionStatus !== FRITUUR_STATUS.COMPLETED) {
       setShowReopenConfirmation(false);
     }
-    // Hide time input if we move out of ordering state without setting it
-    if (sessionStatus !== 'ordering') {
+    if (sessionStatus !== FRITUUR_STATUS.ORDERING) {
       setShowTimeInput(false);
     }
   }, [sessionStatus]);
@@ -88,39 +94,32 @@ export const FriesOverviewScreen: React.FC = () => {
   const totalAmount = aggregatedItems.reduce((acc, item) => acc + item.price, 0);
 
   const handleFooterAction = () => {
-    if (sessionStatus === 'open') {
-      // Closing the session -> Review Mode
-      onSessionChange('completed');
-    } else if (sessionStatus === 'completed') {
-      // Here we can either Reopen OR go to "Aan het bestellen"
-      // This function handles the Reopen button click
+    if (sessionStatus === FRITUUR_STATUS.OPEN) {
+      onSessionChange(FRITUUR_STATUS.COMPLETED);
+    } else if (sessionStatus === FRITUUR_STATUS.COMPLETED) {
       if (showReopenConfirmation) {
-        onSessionChange('open');
+        onSessionChange(FRITUUR_STATUS.OPEN);
         setShowReopenConfirmation(false);
       } else {
         setShowReopenConfirmation(true);
       }
-    } else if (sessionStatus === 'closed') {
-      // Starting the session (if closed)
-      onSessionChange('open');
+    } else if (sessionStatus === FRITUUR_STATUS.CLOSED) {
+      onSessionChange(FRITUUR_STATUS.OPEN);
     }
   };
 
   const startOrderingProcess = () => {
-    // Lock the session, no reopening allowed after this
-    onSessionChange('ordering');
+    onSessionChange(FRITUUR_STATUS.ORDERING);
   };
 
   const handleMarkOrdered = () => {
-    // Show Time Input
     setShowTimeInput(true);
   };
 
   const confirmTime = () => {
     onSetPickupTime(tempPickupTime);
-    onSessionChange('ordered');
+    onSessionChange(FRITUUR_STATUS.ORDERED);
 
-    // Send notification to all
     onAddNotification({
       type: 'order',
       sender: 'Friet Verantwoordelijke',
@@ -140,7 +139,7 @@ export const FriesOverviewScreen: React.FC = () => {
   const handleFinishPayment = async () => {
     const amount = typeof actualAmount === 'string' ? parseFloat(actualAmount) : actualAmount;
     if (isNaN(amount)) {
-      import('../components/Toast').then(m => m.showToast('Voer een geldig bedrag in', 'error'));
+      showToast('Voer een geldig bedrag in', 'error');
       return;
     }
 
@@ -149,6 +148,7 @@ export const FriesOverviewScreen: React.FC = () => {
     setActualAmount('');
     setReceiptFile(null);
     setReceiptPreview(null);
+    navigate('/frituur'); // Navigeer terug naar menu na afsluiten
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,19 +163,17 @@ export const FriesOverviewScreen: React.FC = () => {
     }
   };
 
-  // Status Text Helper
   const getStatusLabel = () => {
-    if (sessionStatus === 'open') return 'Verzamelen';
-    if (sessionStatus === 'completed') return 'Afgerond (Review)';
-    if (sessionStatus === 'ordering') return 'Aan het bestellen...';
-    if (sessionStatus === 'ordered') return 'Besteld';
+    if (sessionStatus === FRITUUR_STATUS.OPEN) return 'Verzamelen';
+    if (sessionStatus === FRITUUR_STATUS.COMPLETED) return 'Afgerond (Review)';
+    if (sessionStatus === FRITUUR_STATUS.ORDERING) return 'Aan het bestellen...';
+    if (sessionStatus === FRITUUR_STATUS.ORDERED) return 'Besteld';
     return 'Niet gestart';
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200">
-      {/* Header */}
-      <header className="px-4 py-4 flex items-center justify-between sticky top-0 bg-gray-50 dark:bg-[#0f172a] z-10 transition-colors">
+      <header className="px-4 py-4 flex items-center justify-between sticky top-0 bg-gray-50/90 dark:bg-[#0f172a]/90 backdrop-blur-md z-10 transition-colors">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition-colors">
             <span className="material-icons-round text-gray-900 dark:text-white text-2xl">arrow_back_ios_new</span>
@@ -185,19 +183,15 @@ export const FriesOverviewScreen: React.FC = () => {
             <p className="text-xs text-gray-500 dark:text-gray-400">Totaal voor {activeOrders.length} bestellingen</p>
           </div>
         </div>
-        <button className="p-2 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition-colors">
-          <span className="material-icons-round text-gray-900 dark:text-white text-xl">share</span>
-        </button>
       </header>
 
       <main className="flex-1 px-4 pb-48 overflow-y-auto space-y-6">
-        {/* Hero Card */}
         <div className={`rounded-2xl p-5 shadow-lg mt-2 text-white transition-colors 
-            ${sessionStatus === 'ordered'
+            ${sessionStatus === FRITUUR_STATUS.ORDERED
             ? 'bg-gradient-to-r from-green-600 to-green-500 shadow-green-500/20'
-            : sessionStatus === 'ordering'
+            : sessionStatus === FRITUUR_STATUS.ORDERING
               ? 'bg-gradient-to-r from-orange-500 to-orange-400 shadow-orange-500/20'
-              : sessionStatus === 'completed'
+              : sessionStatus === FRITUUR_STATUS.COMPLETED
                 ? 'bg-gradient-to-r from-blue-600 to-blue-500 shadow-blue-500/20'
                 : 'bg-gradient-to-r from-gray-600 to-gray-500 shadow-gray-500/20'
           }`}>
@@ -209,11 +203,11 @@ export const FriesOverviewScreen: React.FC = () => {
             <div className="text-right">
               <p className="text-xs text-white/80 mb-1">Status: <span className="font-bold text-white">{getStatusLabel()}</span></p>
               <div className="flex justify-end mt-1">
-                {sessionStatus === 'completed' ? (
+                {sessionStatus === FRITUUR_STATUS.COMPLETED ? (
                   <span className="material-icons-round text-white/50 text-4xl">lock</span>
-                ) : sessionStatus === 'ordered' ? (
+                ) : sessionStatus === FRITUUR_STATUS.ORDERED ? (
                   <span className="material-icons-round text-white/50 text-4xl">check_circle</span>
-                ) : sessionStatus === 'ordering' ? (
+                ) : sessionStatus === FRITUUR_STATUS.ORDERING ? (
                   <span className="material-icons-round text-white/50 text-4xl">call</span>
                 ) : (
                   <span className="material-icons-round text-white/50 text-4xl">shopping_cart</span>
@@ -223,7 +217,6 @@ export const FriesOverviewScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
           {['Alles', 'Frieten', 'Snacks', 'Sauzen'].map((tab) => (
             <button
@@ -239,7 +232,6 @@ export const FriesOverviewScreen: React.FC = () => {
           ))}
         </div>
 
-        {/* List */}
         <div className="space-y-4">
           <div className="flex justify-between items-end px-1">
             <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{activeTab === 'Alles' ? 'ITEMS' : activeTab.toUpperCase()}</h3>
@@ -255,18 +247,13 @@ export const FriesOverviewScreen: React.FC = () => {
               {filteredItems.map((item) => (
                 <div key={item.id} className="bg-white dark:bg-[#1e293b] p-4 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center justify-between group shadow-sm transition-colors">
                   <div className="flex items-center gap-4">
-                    {/* Quantity Badge */}
                     <div className="h-10 w-10 rounded-lg bg-gray-50 dark:bg-[#0f172a] border border-blue-100 dark:border-blue-500/30 flex items-center justify-center shrink-0">
                       <span className="text-blue-600 dark:text-blue-400 font-bold">{item.count}</span>
                     </div>
-
-                    {/* Info */}
                     <div>
                       <h4 className="font-bold text-gray-900 dark:text-white text-base">{item.name}</h4>
                     </div>
                   </div>
-
-                  {/* Right Side */}
                   <div className="flex items-center gap-4">
                     <span className="text-gray-500 dark:text-gray-400 font-medium text-sm">€ {item.price.toFixed(2).replace('.', ',')}</span>
                   </div>
@@ -277,12 +264,10 @@ export const FriesOverviewScreen: React.FC = () => {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="fixed bottom-nav-offset left-0 right-0 p-4 bg-gray-50 dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 z-20 transition-colors shadow-2xl">
         <div className="space-y-3">
 
-          {/* STEP 4: ORDERED (Final State) */}
-          {sessionStatus === 'ordered' && (
+          {sessionStatus === FRITUUR_STATUS.ORDERED && (
             <div className="space-y-3">
               <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3 flex items-center justify-between animate-in slide-in-from-bottom-2">
                 <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
@@ -303,12 +288,11 @@ export const FriesOverviewScreen: React.FC = () => {
               </button>
 
               <p className="text-xs text-center text-gray-500">
-                Wanneer je betaald hebt, voer je het bedrag in en neem je een foto van het kasticket.
+                Wanneer je betaald hebt, voer je het bedrag in en neem je optioneel een foto van het kasticket.
               </p>
             </div>
           )}
 
-          {/* STEP 3: TIME INPUT (Overlay) */}
           {showTimeInput && (
             <div className="bg-white dark:bg-[#1e293b] rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-lg animate-in slide-in-from-bottom-5">
               <div className="flex items-center gap-3 mb-3">
@@ -332,17 +316,11 @@ export const FriesOverviewScreen: React.FC = () => {
                   <span>Bevestig</span>
                 </button>
               </div>
-              <button
-                onClick={() => setShowTimeInput(false)}
-                className="w-full mt-2 text-xs text-gray-400 hover:text-gray-600 py-1"
-              >
-                Annuleren
-              </button>
+              <button onClick={() => setShowTimeInput(false)} className="w-full mt-2 text-xs text-gray-400 hover:text-gray-600 py-1">Annuleren</button>
             </div>
           )}
 
-          {/* STEP 2: ORDERING IN PROGRESS */}
-          {sessionStatus === 'ordering' && !showTimeInput && (
+          {sessionStatus === FRITUUR_STATUS.ORDERING && !showTimeInput && (
             <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl p-3 border border-orange-200 dark:border-orange-800 shadow-sm animate-in slide-in-from-bottom-5">
               <div className="flex items-center gap-3 mb-3 text-orange-800 dark:text-orange-200">
                 <span className="material-icons-round animate-pulse">call</span>
@@ -358,8 +336,7 @@ export const FriesOverviewScreen: React.FC = () => {
             </div>
           )}
 
-          {/* STEP 1: COMPLETED (Review) */}
-          {sessionStatus === 'completed' && (
+          {sessionStatus === FRITUUR_STATUS.COMPLETED && (
             <div className="flex flex-col gap-3 animate-in slide-in-from-bottom-5">
               <button
                 onClick={startOrderingProcess}
@@ -388,8 +365,7 @@ export const FriesOverviewScreen: React.FC = () => {
             </div>
           )}
 
-          {/* DEFAULT: CLOSED or OPEN */}
-          {(sessionStatus === 'open' || sessionStatus === 'closed') && (
+          {(sessionStatus === FRITUUR_STATUS.OPEN || sessionStatus === FRITUUR_STATUS.CLOSED) && (
             <button
               onClick={handleFooterAction}
               className={`w-full text-white font-bold py-4 px-6 rounded-xl shadow-lg flex items-center justify-center gap-3 group active:scale-[0.99] transition-all bg-blue-600 hover:bg-blue-500 shadow-blue-500/20`}
@@ -397,11 +373,11 @@ export const FriesOverviewScreen: React.FC = () => {
               <div className="flex items-center gap-3 flex-1 justify-start">
                 <div className="bg-white/20 p-1 rounded-md">
                   <span className="material-icons-round text-lg">
-                    {sessionStatus === 'open' ? 'check_circle' : 'play_arrow'}
+                    {sessionStatus === FRITUUR_STATUS.OPEN ? 'check_circle' : 'play_arrow'}
                   </span>
                 </div>
                 <span>
-                  {sessionStatus === 'open' ? 'Bestelling Afronden' : 'Sessie Starten'}
+                  {sessionStatus === FRITUUR_STATUS.OPEN ? 'Bestelling Afronden' : 'Sessie Starten'}
                 </span>
               </div>
               <div className="flex items-center gap-2">

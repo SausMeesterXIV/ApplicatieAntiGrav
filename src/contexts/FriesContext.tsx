@@ -3,40 +3,22 @@ import { useOutletContext } from 'react-router-dom';
 import { AppContextType } from '../App';
 import * as db from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
-import { Order } from '../types';
-
-interface FrituurSession {
-  id: string;
-  status: 'open' | 'closed' | 'completed' | 'ordering' | 'ordered';
-  pickupTime: string | null;
-}
-
-interface FriesContextType {
-  openSession: () => Promise<void>;
-  closeSession: () => Promise<void>;
-  friesOrders: Order[];
-  activeFrituurSession: FrituurSession | null;
-  friesSessionStatus: 'open' | 'closed' | 'completed' | 'ordering' | 'ordered';
-  friesPickupTime: string | null;
-  setFriesSessionStatus: React.Dispatch<React.SetStateAction<'open' | 'closed' | 'completed' | 'ordering' | 'ordered'>>;
-  setFriesPickupTime: React.Dispatch<React.SetStateAction<string | null>>;
-  handleArchiveFriesSession: () => Promise<void>;
-  handleCompleteFriesPayment: (actualAmount: number, receiptFile?: File) => Promise<void>;
-}
-
-const FriesContext = createContext<FriesContextType | undefined>(undefined);
 
 export const FriesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const context = useOutletContext<AppContextType>();
+  // Provider is nu enkel een passthrough, we gebruiken de AppContext voor globale state
+  return <>{children}</>;
+};
 
-  // This will happen if FriesProvider is used correctly as a layout route child of MainLayout
+export const useFries = () => {
+  const context = useOutletContext<AppContextType>();
+  
   if (!context) {
-    console.warn('FriesProvider: No AppContext found via useOutletContext');
-    return <>{children}</>;
+    throw new Error('useFries moet binnen een AppContext / Frituur layout gebruikt worden.');
   }
 
   const { 
     currentUser, 
+    users,
     frituurSessieId, 
     setFrituurSessieId,
     friesSessionStatus,
@@ -46,64 +28,69 @@ export const FriesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     friesOrders,
     setFriesOrders,
     handleArchiveFriesSession,
-    handleCompleteFriesPayment
+    handleCompleteFriesPayment,
+    handlePlaceFryOrder,
+    handleRemoveFryOrder,
+    fryItems,
+    handleAddFryItem,
+    handleUpdateFryItem,
+    handleDeleteFryItem,
+    loading
   } = context;
 
-  const openSession = async () => {
-    try {
-      const newSessieId = await db.createFrituurSessie(currentUser.id);
-      setFrituurSessieId(newSessieId);
-      setFriesSessionStatus('open');
-      setFriesPickupTime(null);
-      setFriesOrders([]);
-      showToast('Nieuwe frituursessie geopend!', 'success');
-    } catch (error) {
-      console.error('Failed to open session:', error);
-      showToast('Fout bij openen sessie', 'error');
-    }
+  // INTERCEPTOR: Update lokaal én direct in de database
+  const setFriesSessionStatusDB = async (status: 'open' | 'closed' | 'completed' | 'ordering' | 'ordered') => {
+      setFriesSessionStatus(status);
+      
+      try {
+          if (status === 'open' && !frituurSessieId) {
+              const newId = await db.createFrituurSessie(currentUser?.id || 'system');
+              setFrituurSessieId(newId);
+          } else if (frituurSessieId) {
+              await db.updateFrituurSessie(frituurSessieId, { status });
+          }
+      } catch (e) {
+          console.error("Failed to update session status", e);
+          showToast("Fout bij opslaan status in database", "error");
+      }
   };
 
-  const closeSession = async () => {
-    if (!frituurSessieId) return;
-    try {
-      await db.archiveFrituurSessie(frituurSessieId);
-      setFrituurSessieId(null);
-      setFriesSessionStatus('closed');
-      setFriesPickupTime(null);
-      showToast('Sessie afgesloten', 'info');
-    } catch (error) {
-      showToast('Fout bij afsluiten', 'error');
-    }
+  // INTERCEPTOR: Update afhaaltijd lokaal én direct in de database
+  const setFriesPickupTimeDB = async (time: string | null) => {
+      setFriesPickupTime(time);
+      if (frituurSessieId) {
+          try {
+              await db.updateFrituurSessie(frituurSessieId, { pickup_time: time });
+          } catch (e) {
+              console.error("Failed to set pickup time", e);
+          }
+      }
   };
 
-  const activeFrituurSession: FrituurSession | null = frituurSessieId ? {
+  const activeFrituurSession = frituurSessieId ? {
     id: frituurSessieId,
     status: friesSessionStatus,
     pickupTime: friesPickupTime
   } : null;
 
-  const value: FriesContextType = {
-    openSession,
-    closeSession,
+  return {
+    currentUser,
+    users,
+    frituurSessieId,
     friesOrders,
     activeFrituurSession,
     friesSessionStatus,
     friesPickupTime,
-    setFriesSessionStatus,
-    setFriesPickupTime,
+    setFriesSessionStatus: setFriesSessionStatusDB,
+    setFriesPickupTime: setFriesPickupTimeDB,
     handleArchiveFriesSession,
-    handleCompleteFriesPayment
+    handleCompleteFriesPayment,
+    handlePlaceFryOrder,
+    handleRemoveFryOrder,
+    fryItems,
+    handleAddFryItem,
+    handleUpdateFryItem,
+    handleDeleteFryItem,
+    loading
   };
-
-  return (
-    <FriesContext.Provider value={value}>
-      {children}
-    </FriesContext.Provider>
-  );
-};
-
-export const useFries = () => {
-  const context = useContext(FriesContext);
-  if (!context) throw new Error('useFries must be used within a FriesProvider');
-  return context;
 };
