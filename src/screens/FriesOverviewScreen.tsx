@@ -36,8 +36,8 @@ export const FriesOverviewScreen: React.FC = () => {
   // Time input state
   const [tempPickupTime, setTempPickupTime] = useState('');
 
-  // Filter only ACTIVE orders
-  const activeOrders = useMemo(() => (orders || []).filter(o => o.status === 'pending'), [orders]);
+  // Filter only ACTIVE orders safely
+  const activeOrders = useMemo(() => (orders || []).filter(o => o?.status === 'pending'), [orders]);
 
   useEffect(() => {
     if (pickupTime) {
@@ -49,47 +49,48 @@ export const FriesOverviewScreen: React.FC = () => {
     }
   }, [pickupTime]);
 
-  // ROBUUSTE HOOFDLETTER FUNCTIE (Voorkomt crashes bij lege data)
-  const capitalize = (s?: string) => {
-      if (!s) return 'Overig';
+  const capitalize = (s: any) => {
+      if (!s || typeof s !== 'string') return 'Overig';
       return s.charAt(0).toUpperCase() + s.slice(1);
   };
 
-  // Verzamel alle items en groepeer ze
   const aggregatedItems = useMemo(() => {
     const itemMap = new Map<string, { id: string, name: string, count: number, price: number, category: string }>();
 
     activeOrders.forEach(order => {
-      // Gebruik (order.items || []) om crashes te voorkomen als items leeg is
-      (order.items || []).forEach(item => {
-        const key = item.id; 
+      if (!order || !order.items) return; 
+      
+      order.items.forEach(item => {
+        if (!item) return; 
+        
+        const key = item.id || Math.random().toString(); 
+        const qty = item.quantity || 1;
+        const price = item.price || 0;
+        
         if (itemMap.has(key)) {
           const existing = itemMap.get(key)!;
-          existing.count += item.quantity || 1;
-          existing.price += ((item.price || 0) * (item.quantity || 1)); 
+          existing.count += qty;
+          existing.price += (price * qty); 
         } else {
           itemMap.set(key, {
-            id: item.id,
+            id: key,
             name: item.name || 'Onbekend',
-            count: item.quantity || 1,
-            price: (item.price || 0) * (item.quantity || 1),
+            count: qty,
+            price: price * qty,
             category: capitalize(item.category),
           });
         }
       });
     });
 
-    // Sorteer alfabetisch
     return Array.from(itemMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [activeOrders]);
 
-  // Dynamische tabbladen op basis van wat er effectief besteld is
   const dynamicTabs = useMemo(() => {
       const cats = new Set(aggregatedItems.map(i => i.category));
       return ['Alles', ...Array.from(cats).sort()];
   }, [aggregatedItems]);
 
-  // Reset tabblad als een categorie leeg raakt
   useEffect(() => {
       if (activeTab !== 'Alles' && !dynamicTabs.includes(activeTab)) {
           setActiveTab('Alles');
@@ -191,7 +192,7 @@ export const FriesOverviewScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200">
-      <header className="px-4 py-4 flex items-center justify-between sticky top-0 bg-gray-50/90 dark:bg-[#0f172a]/90 backdrop-blur-md z-10 transition-colors">
+      <header className="px-4 py-4 flex items-center justify-between sticky top-0 bg-gray-50/90 dark:bg-[#0f172a]/90 backdrop-blur-md z-10 transition-colors border-b border-gray-200 dark:border-gray-800 shadow-sm">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition-colors">
             <span className="material-icons-round text-gray-900 dark:text-white text-2xl">arrow_back_ios_new</span>
@@ -204,7 +205,7 @@ export const FriesOverviewScreen: React.FC = () => {
       </header>
 
       <main className="flex-1 px-4 pb-48 overflow-y-auto space-y-6">
-        <div className={`rounded-2xl p-5 shadow-lg mt-2 text-white transition-colors 
+        <div className={`rounded-2xl p-5 shadow-lg mt-4 text-white transition-colors 
             ${sessionStatus === FRITUUR_STATUS.ORDERED
             ? 'bg-gradient-to-r from-green-600 to-green-500 shadow-green-500/20'
             : sessionStatus === FRITUUR_STATUS.ORDERING
@@ -282,7 +283,8 @@ export const FriesOverviewScreen: React.FC = () => {
         </div>
       </main>
 
-      <footer className="fixed bottom-0 left-0 right-0 p-4 bg-gray-50 dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 z-20 transition-colors shadow-2xl">
+      {/* FOOTER MET GROTE BUFFER pb-28 (Zodat BottomNav hem nooit kan overlappen) */}
+      <footer className="fixed bottom-0 left-0 right-0 p-4 pb-28 bg-gray-50 dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 z-20 transition-colors shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
         <div className="space-y-3 max-w-lg mx-auto">
 
           {sessionStatus === FRITUUR_STATUS.ORDERED && (
@@ -305,8 +307,8 @@ export const FriesOverviewScreen: React.FC = () => {
                 Betaal & Rond af
               </button>
 
-              <p className="text-xs text-center text-gray-500 pb-2">
-                Wanneer je betaald hebt, voer je het bedrag in en neem je optioneel een foto van het kasticket.
+              <p className="text-xs text-center text-gray-500">
+                Voer het bedrag in en neem eventueel een foto van het kasticket.
               </p>
             </div>
           )}
@@ -342,26 +344,26 @@ export const FriesOverviewScreen: React.FC = () => {
             <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl p-3 border border-orange-200 dark:border-orange-800 shadow-sm animate-in slide-in-from-bottom-5">
               <div className="flex items-center gap-3 mb-3 text-orange-800 dark:text-orange-200">
                 <span className="material-icons-round animate-pulse">call</span>
-                <span className="text-xs font-bold uppercase tracking-wide">Bestelling doorgeven...</span>
+                <span className="text-xs font-bold uppercase tracking-wide">Je bestelt nu...</span>
               </div>
               <button
                 onClick={handleMarkOrdered}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 mb-2"
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 <span className="material-icons-round">check_circle</span>
-                <span>Besteld</span>
+                <span>Is Besteld!</span>
               </button>
             </div>
           )}
 
           {sessionStatus === FRITUUR_STATUS.COMPLETED && (
-            <div className="flex flex-col gap-3 animate-in slide-in-from-bottom-5 pb-2">
+            <div className="flex flex-col gap-3 animate-in slide-in-from-bottom-5">
               <button
                 onClick={startOrderingProcess}
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
               >
                 <span className="material-icons-round">call</span>
-                Aan het bestellen
+                Nu Bestellen
               </button>
 
               <button
@@ -376,7 +378,7 @@ export const FriesOverviewScreen: React.FC = () => {
                 ) : (
                   <>
                     <span className="material-icons-round">lock_open</span>
-                    <span>Bestelling Heropenen</span>
+                    <span>Bestellingen Heropenen</span>
                   </>
                 )}
               </button>
@@ -384,37 +386,36 @@ export const FriesOverviewScreen: React.FC = () => {
           )}
 
           {(sessionStatus === FRITUUR_STATUS.OPEN || sessionStatus === FRITUUR_STATUS.CLOSED) && (
-            <div className="pb-2">
-              <button
-                onClick={handleFooterAction}
-                className={`w-full text-white font-bold py-4 px-6 rounded-xl shadow-lg flex items-center justify-center gap-3 group active:scale-[0.99] transition-all bg-blue-600 hover:bg-blue-500 shadow-blue-500/20`}
-              >
-                <div className="flex items-center gap-3 flex-1 justify-start">
-                  <div className="bg-white/20 p-1 rounded-md">
-                    <span className="material-icons-round text-lg">
-                      {sessionStatus === FRITUUR_STATUS.OPEN ? 'check_circle' : 'play_arrow'}
-                    </span>
-                  </div>
-                  <span>
-                    {sessionStatus === FRITUUR_STATUS.OPEN ? 'Bestelling Afronden' : 'Sessie Starten'}
+            <button
+              onClick={handleFooterAction}
+              className={`w-full text-white font-bold py-4 px-6 rounded-xl shadow-lg flex items-center justify-center gap-3 group active:scale-[0.99] transition-all bg-blue-600 hover:bg-blue-500 shadow-blue-500/20`}
+            >
+              <div className="flex items-center gap-3 flex-1 justify-start">
+                <div className="bg-white/20 p-1 rounded-md">
+                  <span className="material-icons-round text-lg">
+                    {sessionStatus === FRITUUR_STATUS.OPEN ? 'check_circle' : 'play_arrow'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">€ {totalAmount.toFixed(2).replace('.', ',')}</span>
-                  <span className="material-icons-round group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                </div>
-              </button>
-            </div>
+                <span>
+                  {sessionStatus === FRITUUR_STATUS.OPEN ? 'Opnemen Stoppen' : 'Sessie Starten'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">€ {totalAmount.toFixed(2).replace('.', ',')}</span>
+                <span className="material-icons-round group-hover:translate-x-1 transition-transform">arrow_forward</span>
+              </div>
+            </button>
           )}
         </div>
       </footer>
 
+      {/* Payment BottomSheet - Met extra padding onderaan voor de veiligheid */}
       <BottomSheet
         isOpen={showPaymentSheet}
         onClose={() => setShowPaymentSheet(false)}
         title="Betaal & Rond af"
       >
-        <div className="space-y-6">
+        <div className="space-y-6 pb-12">
           <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
             <p className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1">Verwacht bedrag (App)</p>
             <p className="text-2xl font-black text-blue-700 dark:text-blue-300">€ {totalAmount.toFixed(2).replace('.', ',')}</p>
@@ -436,7 +437,7 @@ export const FriesOverviewScreen: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Foto van rekening</label>
+            <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Foto van rekening (Optioneel)</label>
             <div 
               onClick={() => fileInputRef.current?.click()}
               className={`w-full aspect-video rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-all ${receiptPreview ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-700 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
@@ -446,7 +447,7 @@ export const FriesOverviewScreen: React.FC = () => {
               ) : (
                 <>
                   <span className="material-icons-round text-4xl text-gray-400 mb-2">add_a_photo</span>
-                  <p className="text-xs font-bold text-gray-400">Tik om foto te nemen/kiezen</p>
+                  <p className="text-xs font-bold text-gray-400">Tik om foto te nemen</p>
                 </>
               )}
             </div>
