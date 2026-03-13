@@ -1,366 +1,455 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { useFries } from '../contexts/FriesContext';
-import { useAgenda } from '../contexts/AgendaContext';
-import { FryItem, CartItem, User } from '../types';
-import { ChevronBack } from '../components/ChevronBack';
-import { BottomSheet } from '../components/Modal';
-import { hapticSuccess } from '../lib/haptics';
-import { SkeletonCard } from '../components/Skeleton';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import { 
+  Plus, Minus, ShoppingCart, Clock, Check, ChevronRight, 
+  Trash2, Search, Info, History, ArrowRight, X, User as UserIcon
+} from 'lucide-react';
+import { AppContextType } from '../App';
+import { FryItem, User } from '../types';
 import { showToast } from '../components/Toast';
-import { FriesItemCard } from '../components/Fries/FriesItemCard';
-import { FRITUUR_STATUS, FRITUUR_UI_CATEGORIES, FRITUUR_DB_CATEGORIES } from '../lib/constants';
+import { BottomSheet } from '../components/BottomSheet';
+import { NavCard } from '../components/NavCard';
+import { useFries } from '../contexts/FriesContext';
+import * as db from '../lib/supabaseService';
 
-export const FriesScreen: React.FC = () => {
+export function FriesScreen() {
   const navigate = useNavigate();
-  const { currentUser, users, loading: authLoading } = useAuth();
-  const { handleAddNotification: onAddNotification } = useAgenda();
-  const { handlePlaceFryOrder: onPlaceOrder, handleRemoveFryOrder: onRemoveOrder, friesOrders: myOrders, activeFrituurSession, setFriesSessionStatus: onSessionChange, setFriesPickupTime: onSetPickupTime, fryItems: items, handleAddFryItem, handleUpdateFryItem, handleDeleteFryItem, loading: friesLoading } = useFries();
-  
-  const loading = authLoading || friesLoading;
-  
-  const sessionStatus = activeFrituurSession?.status || FRITUUR_STATUS.CLOSED;
-  const pickupTime = activeFrituurSession?.pickupTime;
-  
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [favoriteCart, setFavoriteCart] = useState<CartItem[]>(() => { try { const saved = localStorage.getItem('ksa_favorite_fry_order'); if (saved) return JSON.parse(saved); } catch { } return []; });
-  const [favoriteItems, setFavoriteItems] = useState<string[]>(() => { try { const saved = localStorage.getItem('ksa_favorite_fry_items'); if (saved) return JSON.parse(saved); } catch { } return []; });
-  
-  const [activeCategory, setActiveCategory] = useState<typeof FRITUUR_UI_CATEGORIES[number]>('frieten');
+  const { openSession } = useFries();
+  const { 
+    currentUser, users, fryItems, friesOrders, friesSessionStatus, 
+    friesPickupTime, setFriesPickupTime, handlePlaceFryOrder, 
+    handleRemoveFryOrder, frituurSessieId 
+  } = useOutletContext<AppContextType>();
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [orderPlaced, setOrderPlaced] = useState(false);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-
-  const [isSearchingUser, setIsSearchingUser] = useState(false);
-  const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [orderingFor, setOrderingFor] = useState<User | null>(null);
-
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editPrice, setEditPrice] = useState<string>('');
-
-  const [showReopenConfirm, setShowReopenConfirm] = useState(false);
-  const [showOrderSummary, setShowOrderSummary] = useState(false);
-  const [showTimeInput, setShowTimeInput] = useState(false);
-  const [tempPickupTime, setTempPickupTime] = useState(() => { const now = new Date(); now.setMinutes(now.getMinutes() + 30); return now.toTimeString().slice(0, 5); });
-
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newItemName, setNewItemName] = useState('');
-  const [newItemPrice, setNewItemPrice] = useState('');
-  const [newItemCategory, setNewItemCategory] = useState<FryItem['category']>('snacks');
-
-  const isOrderingOpen = sessionStatus === FRITUUR_STATUS.OPEN;
-
-  const allActiveOrders = myOrders.filter(o => o.status === 'pending');
-  const orderSummaryItems = (() => {
-    const map = new Map<string, { name: string; count: number; price: number; category: string }>();
-    allActiveOrders.forEach(order => {
-      order.items.forEach(item => {
-        const existing = map.get(item.id);
-        if (existing) { existing.count += item.quantity; existing.price += item.price * item.quantity; }
-        else { map.set(item.id, { name: item.name, count: item.quantity, price: item.price * item.quantity, category: item.category }); }
-      });
-    });
-    return Array.from(map.values());
-  })();
-
-  const isToday = (date: Date) => { const today = new Date(); return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear(); };
+  const [selectedCategory, setSelectedCategory] = useState<string>('Alle');
+  const [cart, setCart] = useState<{item: FryItem, quantity: number}[]>([]);
+  const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
   
-  const showTodayAsHistory = sessionStatus === FRITUUR_STATUS.ORDERED;
-  const myOwnOrders = myOrders.filter(o => o.userId === currentUser?.id);
-  const todayOrders = myOwnOrders.filter(o => isToday(o.date) && o.status === 'pending' && !showTodayAsHistory);
-  const historyOrders = myOwnOrders.filter(o => o.status === 'completed' || (isToday(o.date) && o.status === 'pending' && showTodayAsHistory) || (!isToday(o.date) && o.status === 'pending') );
+  // Admin feature: Order for someone else
+  const [isOrderingForOther, setIsOrderingForOther] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+
+  const categories = useMemo(() => {
+    const cats = ['Alle', ...Array.from(new Set(fryItems.map(i => i.category)))];
+    return cats;
+  }, [fryItems]);
+
+  const filteredItems = useMemo(() => {
+    return fryItems.filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === 'Alle' || item.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [fryItems, searchQuery, selectedCategory]);
+
+  const filteredUsers = useMemo(() => {
+    if (!userSearchQuery) return [];
+    return users.filter(u => 
+      u.naam.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(userSearchQuery.toLowerCase())
+    ).slice(0, 5);
+  }, [users, userSearchQuery]);
 
   const updateQuantity = (item: FryItem, delta: number) => {
-    if (isAdmin || !isOrderingOpen) return;
     setCart(prev => {
-      const existing = prev.find(i => i.id === item.id);
+      const existing = prev.find(i => i.item.id === item.id);
       if (existing) {
-        const newQty = existing.quantity + delta;
-        if (newQty <= 0) return prev.filter(i => i.id !== item.id);
-        return prev.map(i => i.id === item.id ? { ...i, quantity: newQty } : i);
-      } else if (delta > 0) return [...prev, { ...item, quantity: 1 }];
+        const newQuantity = existing.quantity + delta;
+        if (newQuantity <= 0) {
+          return prev.filter(i => i.item.id !== item.id);
+        }
+        return prev.map(i => i.item.id === item.id ? { ...i, quantity: newQuantity } : i);
+      }
+      if (delta > 0) {
+        return [...prev, { item, quantity: 1 }];
+      }
       return prev;
     });
   };
 
-  const handleStartSession = () => { if (sessionStatus === FRITUUR_STATUS.CLOSED) onSessionChange(FRITUUR_STATUS.OPEN); };
-  const handleSaveFavorite = () => { if (cart.length > 0) { localStorage.setItem('ksa_favorite_fry_order', JSON.stringify(cart)); setFavoriteCart(cart); showToast('Maaltijd opgeslagen! ⭐️', 'success'); } };
-  const handleLoadFavorite = () => { if (favoriteCart.length > 0) setCart(favoriteCart); };
-  const toggleFavoriteItem = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setFavoriteItems(prev => { const isFav = prev.includes(id); const newFavs = isFav ? prev.filter(i => i !== id) : [...prev, id]; localStorage.setItem('ksa_favorite_fry_items', JSON.stringify(newFavs)); return newFavs; });
-  };
-  const getItemQty = (id: string) => cart.find(i => i.id === id)?.quantity || 0;
-  const total = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const totalCost = cart.reduce((sum, entry) => sum + (entry.item.price * entry.quantity), 0);
+  const cartItemCount = cart.reduce((sum, entry) => sum + entry.quantity, 0);
+
+  const myOrder = useMemo(() => {
+    return friesOrders.find(o => o.userId === currentUser.id && o.status === 'pending');
+  }, [friesOrders, currentUser.id]);
 
   const handlePlaceOrder = () => {
-    if (!isOrderingOpen) return;
-    setOrderPlaced(true);
-    hapticSuccess();
-    setTimeout(() => {
-      onPlaceOrder(cart, total, orderingFor || undefined);
-      setCart([]);
-      setOrderPlaced(false);
-      if (orderingFor) { showToast(`Bestelling voor ${orderingFor.naam}`, 'success'); setOrderingFor(null); }
-    }, 500);
-  };
+    if (cart.length === 0) return;
+    const targetUser = isOrderingForOther ? selectedUser : currentUser;
+    if (!targetUser) return;
 
-  const handleDeleteClick = (orderId: string) => { if (deleteConfirmId === orderId) { onRemoveOrder(orderId); setDeleteConfirmId(null); } else { setDeleteConfirmId(orderId); } };
-  const startEditing = (item: FryItem) => { setEditingId(item.id); setEditPrice(item.price.toFixed(2)); };
-  const savePrice = async (id: string) => { const newPrice = parseFloat(editPrice.replace(',', '.')); if (!isNaN(newPrice)) { await handleUpdateFryItem(id, { price: newPrice }); } setEditingId(null); };
-  const cancelEdit = () => { setEditingId(null); setEditPrice(''); };
-
-  const handleAddItem = async () => {
-    const price = parseFloat(newItemPrice.replace(',', '.'));
-    if (!newItemName.trim() || isNaN(price)) return;
-    hapticSuccess();
-    await handleAddFryItem({ name: newItemName.trim(), price, category: newItemCategory, description: null, created_at: new Date().toISOString() } as any);
-    setNewItemName(''); setNewItemPrice(''); setNewItemCategory('snacks'); setShowAddForm(false);
-  };
-
-  const filteredUsers = users.filter(u => (u.naam || '').toLowerCase().includes(userSearchQuery.toLowerCase()) && u.id !== currentUser?.id);
-  const selectUserForOrder = (user: User) => { setOrderingFor(user); setIsSearchingUser(false); setUserSearchQuery(''); };
-
-  if (isSearchingUser) {
-    return (
-      <div className="flex flex-col min-h-screen bg-white dark:bg-[#0f172a] transition-colors z-50">
-        <header className="px-4 py-4 flex items-center gap-4 border-b border-gray-200 dark:border-gray-800">
-          <button onClick={() => setIsSearchingUser(false)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:hover:bg-gray-800"><span className="material-icons-round text-2xl text-gray-900 dark:text-white">close</span></button>
-          <input autoFocus type="text" placeholder="Zoek op echte naam..." value={userSearchQuery} onChange={(e) => setUserSearchQuery(e.target.value)} className="flex-1 bg-transparent text-lg text-gray-900 dark:text-white focus:outline-none" />
-        </header>
-        <main className="flex-1 overflow-y-auto p-4 space-y-2">
-          {filteredUsers.map(user => (
-            <div key={user.id} onClick={() => selectUserForOrder(user)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-[#1e2330] cursor-pointer">
-              <img src={user.avatar} alt={user.naam} className="w-10 h-10 rounded-full object-cover" />
-              <div><p className="font-bold text-gray-900 dark:text-white">{user.naam}</p><p className="text-xs text-gray-500">{user.role}</p></div>
-            </div>
-          ))}
-        </main>
-      </div>
+    handlePlaceFryOrder(
+      cart.map(c => ({ id: c.item.id, name: c.item.name, quantity: c.quantity, price: c.item.price })),
+      totalCost,
+      targetUser as any
     );
-  }
+    setCart([]);
+    setOrderSummaryOpen(false);
+    setIsOrderingForOther(false);
+    setSelectedUser(null);
+  };
+
+  const isAdmin = currentUser.rol === 'admin' || (currentUser.roles || []).includes('Hoofdleiding');
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
-      <header className={`sticky top-0 z-50 backdrop-blur-md border-b pt-4 pb-3 px-4 transition-colors ${orderingFor ? 'bg-orange-50/95 dark:bg-orange-900/95 border-orange-200 dark:border-orange-800' : 'bg-white/95 dark:bg-[#0f172a]/95 border-gray-200 dark:border-gray-800'}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {orderingFor ? <button onClick={() => setOrderingFor(null)} className="p-2 -ml-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10"><span className="material-icons-round text-gray-900 dark:text-white">close</span></button> : <ChevronBack onClick={() => navigate(-1)} />}
-            <div>
-              <h1 className="text-xl font-bold leading-tight text-gray-900 dark:text-white">Frituur Selectie</h1>
-              {orderingFor && <div className="flex items-center gap-1 text-orange-600 dark:text-orange-300"><span className="material-icons-round text-xs">person</span><span className="text-xs font-bold uppercase">Voor: {orderingFor.naam}</span></div>}
-            </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-24">
+      {/* Header */}
+      <div className="bg-white dark:bg-slate-800 pt-12 pb-6 px-6 shadow-sm sticky top-0 z-10">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Frituur 🍟</h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Bestel je wekelijkse portie vet!</p>
           </div>
-          <div className="flex items-center gap-2">
-            {!orderingFor && <div onClick={() => setIsAdmin(!isAdmin)} className={`p-2 rounded-full cursor-pointer transition-colors ${isAdmin ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}><span className="material-icons-round text-sm">{isAdmin ? 'admin_panel_settings' : 'settings'}</span></div>}
-            <button onClick={() => navigate('/frituur/overzicht')} className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 font-bold text-xs">Overzicht</button>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => navigate('/frituur/geschiedenis')}
+              className="p-2 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-300"
+            >
+              <History size={20} />
+            </button>
+            {isAdmin && (
+              <button 
+                onClick={() => setTimePickerOpen(true)}
+                className="p-2 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-300"
+              >
+                <Clock size={20} />
+              </button>
+            )}
           </div>
         </div>
-      </header>
 
-      {!orderingFor && (
-        <div className="px-4 py-2 bg-gray-50 dark:bg-[#0f172a] border-b border-gray-100 dark:border-gray-800 transition-colors">
-          {sessionStatus === FRITUUR_STATUS.CLOSED && (
-            <button onClick={() => onSessionChange(FRITUUR_STATUS.OPEN)} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm shadow-lg shadow-green-500/20 transition-all"><span className="material-icons-round text-lg">play_arrow</span>Bestelling Openen</button>
-          )}
-          {sessionStatus === FRITUUR_STATUS.OPEN && (
-            <button onClick={() => onSessionChange(FRITUUR_STATUS.COMPLETED)} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm shadow-lg shadow-red-500/20 transition-all"><span className="material-icons-round text-lg">block</span>Opnemen Stoppen</button>
-          )}
-          {sessionStatus === FRITUUR_STATUS.COMPLETED && (
-            <div className="space-y-2">
-              <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 rounded-xl p-3 flex items-center gap-2 text-yellow-700"><span className="material-icons-round">lock</span><span className="text-sm font-bold">Gesloten</span></div>
-              <div className="flex gap-2">
-                <button onClick={() => { if (showReopenConfirm) { onSessionChange(FRITUUR_STATUS.OPEN); setShowReopenConfirm(false); } else setShowReopenConfirm(true); }} className={`flex-1 py-2.5 rounded-xl font-bold text-sm ${showReopenConfirm ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}`}>{showReopenConfirm ? 'Zeker?' : 'Heropenen'}</button>
-                <button onClick={() => onSessionChange(FRITUUR_STATUS.ORDERING)} className="flex-1 bg-orange-600 text-white py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/20">Bestellen</button>
+        {/* Status Banner */}
+        {friesSessionStatus === 'closed' ? (
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center text-red-600">
+                <X size={20} />
               </div>
-            </div>
-          )}
-          {sessionStatus === FRITUUR_STATUS.ORDERING && (
-            <div className="space-y-2">
-              <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-xl p-3 flex items-center gap-2 text-orange-700"><span className="material-icons-round animate-pulse">call</span><span className="text-sm font-bold">Wordt doorgegeven...</span></div>
-              <div className="flex gap-2">
-                <button onClick={() => setShowOrderSummary(true)} className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl font-bold text-sm">Overzicht</button>
-                <button onClick={() => setShowTimeInput(true)} className="flex-1 bg-green-600 text-white py-2.5 rounded-xl font-bold text-sm">Besteld</button>
+              <div className="flex-1">
+                <p className="text-red-900 dark:text-red-400 font-semibold text-sm">Bestellingen gesloten</p>
+                <p className="text-red-700/70 dark:text-red-400/60 text-xs">Er is momenteel geen actieve sessie.</p>
               </div>
+              {isAdmin && (
+                <button 
+                  onClick={openSession}
+                  className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-xl shadow-lg active:scale-95 transition-transform"
+                >
+                  Openen
+                </button>
+              )}
             </div>
-          )}
+          </div>
+        ) : (
+          <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/30 rounded-2xl mb-4">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-green-600">
+                <ShoppingCart size={20} />
+              </div>
+              <div className="flex-1">
+                <p className="text-green-900 dark:text-green-400 font-semibold text-sm">Bestellingen zijn OPEN</p>
+                <p className="text-green-700/70 dark:text-green-400/60 text-xs">
+                  {friesPickupTime ? `Afhalen rond ${friesPickupTime}` : 'Wachten op afhaaltijd...'}
+                </p>
+              </div>
+              <button 
+                onClick={() => navigate('/frituur/overzicht')}
+                className="flex items-center gap-1 text-green-600 font-bold text-xs"
+              >
+                Lijst <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <input 
+            type="text"
+            placeholder="Zoek een snack..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-100 dark:bg-slate-700 border-none rounded-2xl py-3 pl-12 pr-4 text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 transition-all"
+          />
+        </div>
+      </div>
+
+      <div className="px-6 py-4">
+        {/* Categories */}
+        <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors ${
+                selectedCategory === cat 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-700'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Items Grid */}
+        <div className="grid grid-cols-1 gap-4">
+          {filteredItems.map(item => {
+            const inCart = cart.find(i => i.item.id === item.id);
+            return (
+              <div key={item.id} className="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4">
+                <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-3xl">
+                  {item.category === 'sauzen' ? '🥫' : 
+                   item.category === 'dranken' ? '🥤' :
+                   item.category === 'frieten' ? '🍟' : '🍖'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-slate-900 dark:text-white leading-tight mb-1">{item.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-blue-600 dark:text-blue-400 font-bold">€{item.price.toFixed(2)}</span>
+                    <span className="text-slate-400 text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700">{item.category}</span>
+                  </div>
+                </div>
+                
+                {friesSessionStatus === 'open' && (
+                  <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded-2xl p-1">
+                    {inCart ? (
+                      <>
+                        <button 
+                          onClick={() => updateQuantity(item, -1)}
+                          className="w-10 h-10 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-red-500"
+                        >
+                          <Minus size={18} />
+                        </button>
+                        <span className="w-8 text-center font-bold text-slate-900 dark:text-white">{inCart.quantity}</span>
+                        <button 
+                          onClick={() => updateQuantity(item, 1)}
+                          className="w-10 h-10 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-500"
+                        >
+                          <Plus size={18} />
+                        </button>
+                      </>
+                    ) : (
+                      <button 
+                        onClick={() => updateQuantity(item, 1)}
+                        className="w-10 h-10 bg-white dark:bg-slate-600 rounded-xl shadow-sm flex items-center justify-center text-blue-600 dark:text-blue-400 active:scale-95 transition-transform"
+                      >
+                        <Plus size={20} />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {filteredItems.length === 0 && (
+          <div className="text-center py-12">
+            <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="text-slate-400" size={32} />
+            </div>
+            <p className="text-slate-500 dark:text-slate-400">Niets gevonden voor "{searchQuery}"</p>
+          </div>
+        )}
+      </div>
+
+      {/* Cart Summary (Floating) */}
+      {cart.length > 0 && (
+        <div className="fixed bottom-24 left-6 right-6 z-20">
+          <button 
+            onClick={() => setOrderSummaryOpen(true)}
+            className="w-full bg-blue-600 text-white p-4 rounded-3xl shadow-2xl flex items-center justify-between active:scale-[0.98] transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
+                {cartItemCount}
+              </div>
+              <span className="font-bold">Bekijk bestelling</span>
+            </div>
+            <span className="text-xl font-black">€{totalCost.toFixed(2)}</span>
+          </button>
         </div>
       )}
 
-      <div className="px-4 pt-3 pb-1 bg-gray-50 dark:bg-[#0f172a] sticky top-[72px] z-40 transition-colors">
-        <div className="relative">
-          <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
-          <input type="text" placeholder="Zoek in menu..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-[#1e2330] border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-blue-500/30 dark:text-white" />
+      {/* Your current active order */}
+      {myOrder && (
+        <div className="fixed bottom-24 left-6 right-6 z-10">
+          <div className="w-full bg-slate-900 text-white p-4 rounded-3xl shadow-xl border border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-500/20 rounded-2xl flex items-center justify-center text-xl">🍟</div>
+              <div>
+                <p className="font-bold text-sm">Jouw bestelling staat erin</p>
+                <p className="text-xs text-slate-400">Totaal: €{myOrder.totalPrice.toFixed(2)}</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => handleRemoveFryOrder(myOrder.id)}
+              className="p-2 text-red-400 hover:bg-red-400/10 rounded-xl"
+            >
+              <Trash2 size={20} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {!searchQuery && (
-        <div className="px-4 py-2 bg-gray-50 dark:bg-[#0f172a] sticky top-[125px] z-40 overflow-x-auto scrollbar-hide transition-colors">
-          <div className="flex gap-2">
-            {FRITUUR_UI_CATEGORIES.map((cat) => (
-              <button key={cat} onClick={() => setActiveCategory(cat as any)} className={`px-4 py-1.5 rounded-full flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap border capitalize ${activeCategory === cat ? 'bg-blue-600/10 text-blue-600 border-blue-600/20' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'}`}>
-                {cat === 'favorieten' && <span className="material-icons-round text-xs">star</span>} {cat}
+      {/* MODAL: Order Summary */}
+      <BottomSheet 
+        isOpen={orderSummaryOpen} 
+        onClose={() => setOrderSummaryOpen(false)}
+        title="Bestelling Bevestigen"
+      >
+        <div className="Space-y-6">
+          {/* Order Details */}
+          <div className="bg-slate-50 dark:bg-slate-900/50 rounded-3xl p-6 border border-slate-100 dark:border-slate-800">
+            <h4 className="font-bold text-sm text-slate-400 uppercase tracking-widest mb-4">Mijn Mandje</h4>
+            <div className="space-y-4">
+              {cart.map(entry => (
+                <div key={entry.item.id} className="flex justify-between items-center text-slate-700 dark:text-slate-200">
+                  <div className="flex items-center gap-3">
+                    <span className="font-black text-blue-600">x{entry.quantity}</span>
+                    <span className="font-bold">{entry.item.name}</span>
+                  </div>
+                  <span className="font-medium">€{(entry.item.price * entry.quantity).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+            <div className="h-px bg-slate-200 dark:bg-slate-800 my-4" />
+            <div className="flex justify-between items-center text-xl font-black text-slate-900 dark:text-white">
+              <span>Totaal</span>
+              <span>€{totalCost.toFixed(2)}</span>
+            </div>
+          </div>
+
+          {/* Admin Toggle: Order for other */}
+          {isAdmin && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-3xl p-5 border border-blue-100 dark:border-blue-900/30">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300 font-bold">
+                  <UserIcon size={18} />
+                  <span>Bestellen voor iemand anders?</span>
+                </div>
+                <button 
+                  onClick={() => {
+                    setIsOrderingForOther(!isOrderingForOther);
+                    if (!isOrderingForOther) setSelectedUser(null);
+                  }}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${isOrderingForOther ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isOrderingForOther ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+
+              {isOrderingForOther && (
+                <div className="mt-4 space-y-3">
+                  <input 
+                    type="text"
+                    placeholder="Zoek een lid..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-800 border-none rounded-2xl py-3 px-4 text-sm"
+                  />
+                  
+                  {selectedUser ? (
+                    <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-3 rounded-2xl border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center gap-3">
+                        <img src={selectedUser.avatar} className="w-8 h-8 rounded-full" alt="" />
+                        <span className="font-bold text-sm text-slate-900 dark:text-white">{selectedUser.naam}</span>
+                      </div>
+                      <button onClick={() => setSelectedUser(null)} className="text-slate-400"><X size={16} /></button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {filteredUsers.map(u => (
+                        <button 
+                          key={u.id}
+                          onClick={() => {
+                            setSelectedUser(u);
+                            setUserSearchQuery('');
+                          }}
+                          className="w-full flex items-center gap-3 p-2 bg-white/50 dark:bg-slate-800/50 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition-colors"
+                        >
+                          <img src={u.avatar} className="w-6 h-6 rounded-full border border-slate-200" alt="" />
+                          <span className="text-sm font-medium dark:text-slate-300">{u.naam}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-4">
+            <button 
+              onClick={() => setOrderSummaryOpen(false)}
+              className="flex-1 py-4 px-6 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-3xl"
+            >
+              Terug
+            </button>
+            <button 
+              onClick={handlePlaceOrder}
+              disabled={isOrderingForOther && !selectedUser}
+              className={`flex-[2] py-4 px-6 bg-blue-600 text-white font-bold rounded-3xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 ${isOrderingForOther && !selectedUser ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+            >
+              <Check size={20} />
+              Bestelling Plaatsen
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
+
+      {/* MODAL: Pickup Time Picker */}
+      <BottomSheet 
+        isOpen={timePickerOpen} 
+        onClose={() => setTimePickerOpen(false)}
+        title="Afhaaltijd Instellen"
+      >
+        <div className="space-y-6">
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Wanneer gaan we de bestelling naar verwachting afhalen?</p>
+          
+          <div className="grid grid-cols-3 gap-3">
+            {['19:00', '19:15', '19:30', '19:45', '20:00', '20:15', '20:30', '20:45', '21:00'].map(time => (
+              <button
+                key={time}
+                onClick={() => {
+                  setFriesPickupTime(time);
+                  setTimePickerOpen(false);
+                  db.updateFrituurSessie(frituurSessieId!, { pickup_time: time });
+                  showToast(`Afhaaltijd gezet op ${time}`, 'success');
+                }}
+                className={`py-3 rounded-2xl font-bold transition-all ${
+                  friesPickupTime === time 
+                  ? 'bg-blue-600 text-white shadow-lg scale-105' 
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                {time}
               </button>
             ))}
           </div>
-        </div>
-      )}
 
-      <main className="flex-1 overflow-y-auto px-4 pb-36 pt-2">
-        {sessionStatus === FRITUUR_STATUS.ORDERED && pickupTime && (
-          <div className="mb-6 rounded-xl p-5 bg-gradient-to-r from-green-600 to-green-500 text-white animate-in slide-in-from-top-4">
-            <h3 className="font-bold text-xl mb-1">🍟 Besteld!</h3>
-            <p className="text-green-50 text-sm mb-3">Ophalen om: <span className="font-black text-white">{pickupTime}</span></p>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-4 flex items-center text-slate-400">
+              <Clock size={18} />
+            </div>
+            <input 
+              type="time" 
+              className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-2xl py-4 pl-12 font-bold"
+              onChange={(e) => {
+                setFriesPickupTime(e.target.value);
+                db.updateFrituurSessie(frituurSessieId!, { pickup_time: e.target.value });
+                setTimePickerOpen(false);
+              }}
+            />
           </div>
-        )}
-
-        {isOrderingOpen && !orderingFor && (
-          <button onClick={() => setIsSearchingUser(true)} className="w-full mb-6 bg-white dark:bg-[#1e2330] border border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-3 flex items-center justify-center gap-2 text-gray-500 transition-colors">
-            <span className="material-icons-round text-sm">person_add</span><span className="text-sm font-medium">Bestel voor vriend(in)</span>
-          </button>
-        )}
-
-        {isAdmin && !orderingFor && (
-            <button 
-                onClick={() => setShowAddForm(!showAddForm)}
-                className="w-full mb-6 bg-white dark:bg-[#1e2330] border border-dashed border-blue-300 dark:border-blue-900 rounded-xl p-3 flex items-center justify-center gap-2 text-blue-500 transition-colors"
-            >
-                <span className="material-icons-round text-sm">{showAddForm ? 'close' : 'add'}</span>
-                <span className="text-sm font-medium">{showAddForm ? 'Sluiten' : 'Nieuw Item Toevoegen'}</span>
-            </button>
-        )}
-
-        {showAddForm && isAdmin && (
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-blue-100 dark:border-blue-900 mb-6 space-y-3 animate-in fade-in transition-colors">
-                <input type="text" placeholder="Naam" value={newItemName} onChange={e => setNewItemName(e.target.value)} className="w-full p-2 text-sm bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 rounded dark:text-white" />
-                <input type="number" step="0.01" placeholder="Prijs" value={newItemPrice} onChange={e => setNewItemPrice(e.target.value)} className="w-full p-2 text-sm bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 rounded dark:text-white" />
-                <select value={newItemCategory} onChange={e => setNewItemCategory(e.target.value as any)} className="w-full p-2 text-sm bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 rounded dark:text-white">
-                    <option value="frieten">Frieten</option>
-                    <option value="snacks">Snacks</option>
-                    <option value="sauzen">Sauzen</option>
-                    <option value="huisbereid">Huisbereid</option>
-                    <option value="burgers">Burgers</option>
-                    <option value="spaghetti">Spaghetti</option>
-                </select>
-                <button onClick={handleAddItem} className="w-full bg-blue-600 text-white font-bold py-2 rounded">Toevoegen</button>
-            </div>
-        )}
-
-        <div className="space-y-4 mb-8">
-          {loading ? (
-            <div className="grid grid-cols-1 gap-4">{Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}</div>
-          ) : (
-            <>
-              {(searchQuery
-                ? FRITUUR_DB_CATEGORIES
-                  .filter(cat => items.some(i => i.category === cat && i.name.toLowerCase().includes(searchQuery.toLowerCase())))
-                  .flatMap(cat => [
-                    ...items.filter(i => i.category === cat && i.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                      .sort((a, b) => a.price - b.price || a.name.localeCompare(b.name))
-                      .map(item => ({ item, id: item.id }))
-                  ])
-                : (activeCategory === 'favorieten'
-                  ? items.filter(i => favoriteItems.includes(i.id))
-                  : items.filter(i => i.category === activeCategory)
-                )
-                  .sort((a, b) => a.price - b.price || a.name.localeCompare(b.name))
-                  .map(item => ({ item, id: item.id }))
-              ).map((entry) => (
-                  <FriesItemCard 
-                    key={entry.id} 
-                    item={entry.item} 
-                    qty={getItemQty(entry.id)} 
-                    isEditing={editingId === entry.id} 
-                    editPrice={editPrice} 
-                    setEditPrice={setEditPrice} 
-                    savePrice={savePrice} 
-                    cancelEdit={cancelEdit} 
-                    isAdmin={isAdmin} 
-                    orderingFor={orderingFor} 
-                    isOrderingOpen={isOrderingOpen} 
-                    favoriteItems={favoriteItems} 
-                    toggleFavoriteItem={toggleFavoriteItem} 
-                    startEditing={startEditing} 
-                    handleDeleteFryItem={handleDeleteFryItem} 
-                    updateQuantity={updateQuantity} 
-                  />
-                ))}
-            </>
-          )}
         </div>
-
-        {todayOrders.length > 0 && !orderingFor && (
-          <section className="mb-8 animate-in slide-in-from-bottom-2 fade-in duration-300">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="material-icons-round text-blue-600 dark:text-blue-500">shopping_bag</span>
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Huidige Bestelling</h2>
-            </div>
-            
-            {todayOrders.map((order) => (
-                <div key={order.id} className="bg-white dark:bg-[#1e2330] p-4 rounded-xl border-l-4 border-l-blue-600 border-y border-r border-gray-200 dark:border-gray-800 dark:border-l-blue-500 shadow-md">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <span className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wide">
-                        Vandaag, {order.date.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      <div className="font-bold text-2xl text-gray-900 dark:text-white mt-1">
-                        € {order.totalPrice.toFixed(2).replace('.', ',')}
-                      </div>
-                    </div>
-                    <span className={`text-[10px] px-2 py-1 rounded-md font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400`}>
-                      Actief
-                    </span>
-                  </div>
-
-                  <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1 mb-4">
-                    {order.items.map((item, idx) => (
-                      <div key={idx} className="flex justify-between border-b border-dashed border-gray-100 dark:border-gray-800 pb-1 last:border-0">
-                        <span>{item.quantity}x {item.name}</span>
-                        <span className="text-gray-400">€ {(item.price * item.quantity).toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {isOrderingOpen && (
-                    <button
-                      onClick={() => handleDeleteClick(order.id)}
-                      className={`w-full py-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${deleteConfirmId === order.id
-                        ? 'bg-red-600 text-white shadow-lg shadow-red-500/30 hover:bg-red-700'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400'
-                        }`}
-                    >
-                      {deleteConfirmId === order.id ? (
-                        <><span className="material-icons-round">warning</span><span>Ben je zeker?</span></>
-                      ) : (
-                        <><span className="material-icons-round">delete_outline</span><span>Verwijderen</span></>
-                      )}
-                    </button>
-                  )}
-                </div>
-              ))}
-          </section>
-        )}
-      </main>
-
-      {cart.length > 0 && !isAdmin && isOrderingOpen && (
-        <footer className="fixed bottom-24 left-4 right-4 z-50 animate-in slide-in-from-bottom-4 transition-all">
-          <div className={`p-4 rounded-2xl shadow-2xl transition-colors border ${orderingFor ? 'bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800' : 'bg-white dark:bg-[#1e2330] border-gray-200 dark:border-gray-800'}`}>
-            <div className="flex justify-between items-end mb-3">
-              <div>
-                <span className={`text-xs font-bold uppercase ${orderingFor ? 'text-orange-600' : 'text-gray-400'}`}>
-                  Totaal {orderingFor ? `voor ${orderingFor.naam}` : ''}
-                </span>
-                <div className="text-2xl font-bold text-blue-600">€ {total.toFixed(2)}</div>
-              </div>
-            </div>
-            <button onClick={handlePlaceOrder} disabled={orderPlaced} className={`w-full font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${orderingFor ? 'bg-orange-600 text-white' : 'bg-blue-600 text-white'}`}>
-              {orderPlaced ? <span className="material-icons-round animate-spin">refresh</span> : <span>BESTELLING BEVESTIGEN</span>}
-            </button>
-          </div>
-        </footer>
-      )}
+      </BottomSheet>
     </div>
   );
-};
+}

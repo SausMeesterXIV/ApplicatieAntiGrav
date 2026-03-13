@@ -16,12 +16,10 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   public static getDerivedStateFromError(error: Error): State {
-    // Update state so the next render will show the fallback UI.
     return { hasError: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // You can log the error to an error reporting service here (like Sentry/LogRocket)
     console.error('Uncaught error in component:', error, errorInfo);
   }
 
@@ -34,7 +32,7 @@ export class ErrorBoundary extends Component<Props, State> {
           </div>
           <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-3">Oeps, er ging iets mis!</h2>
           <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-[300px] text-sm">
-            Een onderdeel van dit scherm kon niet goed worden geladen. Mogelijks door een haperende netwerkverbinding.
+            Een onderdeel van dit scherm kon niet goed worden geladen. Mogelijks door een haperende netwerkverbinding of corrupte data.
           </p>
           <div className="flex gap-3">
             <button
@@ -44,7 +42,10 @@ export class ErrorBoundary extends Component<Props, State> {
               Ga Terug
             </button>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.reload();
+              }}
               className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 flex items-center gap-2 active:scale-95 transition-all"
             >
               <span className="material-icons-round text-sm">refresh</span>

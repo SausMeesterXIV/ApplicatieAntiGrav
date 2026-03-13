@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { Session } from '@supabase/supabase-js';
-import { User, Drink, Streak, StockItem, FryItem, CartItem, Order, CountdownItem, BierpongGame, QuoteItem, Notification, Event, BillingPeriod } from './types';
+import { User, Drink, Streak, StockItem, FryItem, Order, CountdownItem, BierpongGame, QuoteItem, Notification, Event, BillingPeriod } from './types';
 import * as db from './lib/supabaseService';
 import { showToast, ToastContainer } from './components/Toast';
 import { Analytics } from '@vercel/analytics/react';
@@ -52,8 +52,6 @@ import { ShopDashboardScreen } from './screens/ShopDashboardScreen';
 import { ShopCategoryScreen } from './screens/ShopCategoryScreen';
 import { ShopInventoryScreen } from './screens/ShopInventoryScreen';
 
-
-// Export the context type so screens can use it
 export type AppContextType = {
     currentUser: User;
     setCurrentUser: React.Dispatch<React.SetStateAction<User>>;
@@ -114,6 +112,7 @@ export type AppContextType = {
     handleUpdateFryItem: (id: string, updates: Partial<FryItem>) => Promise<void>;
     handleDeleteFryItem: (id: string) => Promise<void>;
     frituurSessieId: string | null;
+    setFrituurSessieId: React.Dispatch<React.SetStateAction<string | null>>;
     gsheetId: string | null;
     setGsheetId: React.Dispatch<React.SetStateAction<string | null>>;
     gsheetSharingEmail: string | null;
@@ -144,7 +143,6 @@ function App() {
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // State - all initialized empty, loaded from Supabase
     const [currentUser, setCurrentUser] = useState<User>(DEFAULT_USER);
     const [users, setUsers] = useState<User[]>([]);
     const [drinks, setDrinks] = useState<Drink[]>([]);
@@ -166,18 +164,13 @@ function App() {
     const [activePeriod, setActivePeriod] = useState<BillingPeriod | null>(null);
     const [billingPeriods, setBillingPeriods] = useState<BillingPeriod[]>([]);
 
-    // ==================== REALTIME SUBSCRIPTIONS ====================
-
     useRealtimeSubscriptions({
         userId: session?.user?.id || null,
         setNotifications,
         setBierpongGames,
     });
 
-    // ==================== AUTH & INITIAL DATA LOAD ====================
-
     useEffect(() => {
-        // Apply dark mode globally on load
         const saved = localStorage.getItem('dark_mode');
         if (saved === 'true' || (saved === null && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
@@ -196,7 +189,6 @@ function App() {
             }
         });
 
-        // Robuuste Offline Sync Logic
         const handleOnline = async () => {
             const pendingStr = localStorage.getItem('ksa_pending_streaks');
             if (!pendingStr) return;
@@ -210,7 +202,6 @@ function App() {
                 let successCount = 0;
                 let i = 0;
 
-                // We gebruiken een while-loop zodat we de array veilig kunnen muteren (krimpen) tijdens de loop
                 while (i < pendingStreaks.length) {
                     const streak = pendingStreaks[i];
                     try {
@@ -222,27 +213,19 @@ function App() {
                             streak.userName
                         );
                         
-                        // Update React UI
                         setStreaks(prev => prev.map(s => s.id === streak.tempId ? { ...s, id: realId } : s));
-                        
-                        // SUCCES! Verwijder DIT specifieke item uit de lokale wachtrij
                         pendingStreaks.splice(i, 1);
-                        
-                        // Sla de ingekorte wachtrij ONMIDDELLIJK op in localStorage
-                        // Als de app nu crasht, is deze streep definitief van de wachtrij geschrapt.
                         localStorage.setItem('ksa_pending_streaks', JSON.stringify(pendingStreaks));
                         
                         successCount++;
-                        // i NIET verhogen, want het volgende item is nu opgeschoven naar index i
                     } catch (e) {
                         console.error('Failed to sync streak, keeping in queue', streak, e);
-                        // Fout bij dit item (bijv. server weigert). Laat in array zitten en ga naar de volgende
                         i++;
                     }
                 }
 
                 if (pendingStreaks.length === 0) {
-                    localStorage.removeItem('ksa_pending_streaks'); // Volledig opgeruimd
+                    localStorage.removeItem('ksa_pending_streaks');
                     if (successCount > 0) showToast('Alle vastgelopen strepen succesvol gesynct!', 'success');
                 } else {
                     showToast(`Kon ${pendingStreaks.length} strepen niet bereiken. We proberen later opnieuw.`, 'warning');
@@ -254,7 +237,6 @@ function App() {
         };
 
         window.addEventListener('online', handleOnline);
-
         return () => window.removeEventListener('online', handleOnline);
     }, []);
 
@@ -275,45 +257,15 @@ function App() {
     async function loadAllData(userId: string) {
         try {
             const [
-                profilesData,
-                drinksData,
-                consumptiesData,
-                balanceData,
-                eventsData,
-                quotesData,
-                notificatiesData,
-                bierpongData,
-                kampioenenData,
-                stockData,
-                frituurSessieData,
-                countdownsData,
-                activeBillingPeriod,
-                allBillingPeriods,
-                gsheetIdSetting,
-                gsheetSharingEmailSetting,
-                loadedRoles,
-                fryItemsData,
-                frituurOrdersData,
+                profilesData, drinksData, consumptiesData, balanceData, eventsData, quotesData, notificatiesData,
+                bierpongData, kampioenenData, stockData, frituurSessieData, countdownsData, activeBillingPeriod,
+                allBillingPeriods, gsheetIdSetting, gsheetSharingEmailSetting, loadedRoles, fryItemsData, frituurOrdersData,
             ] = await Promise.all([
-                db.fetchProfiles(),
-                db.fetchDranken(),
-                db.fetchConsumpties(),
-                db.fetchBalanceForUser(userId),
-                db.fetchEvents(),
-                db.fetchQuotes(),
-                db.fetchNotificaties(userId),
-                db.fetchBierpongGames(),
-                db.fetchBierpongKampioenen(),
-                db.fetchStockItems(),
-                db.fetchActiveFrituurSessie(),
-                db.fetchCountdowns(),
-                db.fetchActiveBillingPeriod(),
-                db.fetchBillingPeriods(),
-                db.fetchSetting('gsheet_id'),
-                db.fetchSetting('gsheet_sharing_email'),
-                db.fetchAvailableRoles(),
-                db.fetchFryItems(),
-                db.fetchFrituurBestellingen(),
+                db.fetchProfiles(), db.fetchDranken(), db.fetchConsumpties(), db.fetchBalanceForUser(userId),
+                db.fetchEvents(), db.fetchQuotes(), db.fetchNotificaties(userId), db.fetchBierpongGames(),
+                db.fetchBierpongKampioenen(), db.fetchStockItems(), db.fetchActiveFrituurSessie(), db.fetchCountdowns(),
+                db.fetchActiveBillingPeriod(), db.fetchBillingPeriods(), db.fetchSetting('gsheet_id'),
+                db.fetchSetting('gsheet_sharing_email'), db.fetchAvailableRoles(), db.fetchFryItems(), db.fetchFrituurBestellingen(),
             ]);
 
             const me = profilesData.find(p => p.id === userId);
@@ -325,31 +277,19 @@ function App() {
                 return;
             }
 
-            setUsers(profilesData);
-            setDrinks(drinksData);
-            setStreaks(consumptiesData);
-            setBalance(balanceData);
-            setEvents(eventsData);
-            setQuotes(quotesData);
-            setNotifications(notificatiesData);
-            setBierpongGames(bierpongData);
-            setDuoBierpongWinners(kampioenenData);
-            setStockItems(stockData);
-            setCountdowns(countdownsData);
-            setActivePeriod(activeBillingPeriod);
-            setBillingPeriods(allBillingPeriods);
+            setUsers(profilesData); setDrinks(drinksData); setStreaks(consumptiesData); setBalance(balanceData);
+            setEvents(eventsData); setQuotes(quotesData); setNotifications(notificatiesData); setBierpongGames(bierpongData);
+            setDuoBierpongWinners(kampioenenData); setStockItems(stockData); setCountdowns(countdownsData);
+            setActivePeriod(activeBillingPeriod); setBillingPeriods(allBillingPeriods);
 
             if (frituurSessieData) {
                 setFrituurSessieId(frituurSessieData.id);
                 setFriesSessionStatus(frituurSessieData.status as any);
                 setFriesPickupTime(frituurSessieData.pickupTime);
             }
-            setFriesOrders(frituurOrdersData || []);
-            setFryItems(fryItemsData || []);
-            setGsheetId(gsheetIdSetting);
-            setGsheetSharingEmail(gsheetSharingEmailSetting);
+            setFriesOrders(frituurOrdersData || []); setFryItems(fryItemsData || []);
+            setGsheetId(gsheetIdSetting); setGsheetSharingEmail(gsheetSharingEmailSetting);
 
-            // Default roles if none in db
             if (!loadedRoles || loadedRoles.length === 0) {
                 const defaultRoles = [
                     { id: '1', label: 'Hoofdleiding', icon: 'admin_panel_settings', color: 'bg-red-100 text-red-700 border-red-200' },
@@ -379,12 +319,9 @@ function App() {
         }
     }
 
-    // ==================== HANDLERS (Supabase-backed) ====================
-
     const handleAddCost = async (amount: number, drink?: Drink, quantity: number = 1) => {
         if (!drink || !session?.user?.id) return;
 
-        // Genereer een onfeilbare unieke ID (idempotent key)
         const tempId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
             ? crypto.randomUUID() 
             : `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -393,7 +330,6 @@ function App() {
             id: tempId, userId: currentUser.id, drinkId: drink.id, drinkName: drink.name,
             price: drink.price * quantity, amount: quantity, timestamp: new Date(),
         };
-        
         setStreaks(prev => [newStreak, ...prev]);
         setBalance(prev => prev + (amount * quantity));
 
@@ -402,14 +338,12 @@ function App() {
             setStreaks(prev => prev.map(s => s.id === tempId ? { ...s, id: realId } : s));
             showToast(`${quantity}x ${drink.name} gestreept! (+€${(amount * quantity).toFixed(2)})`, 'success');
         } catch (error) {
-            // Offline Mode Logic (Save to localStorage)
             if (!navigator.onLine) {
                 const pendingStreaks = JSON.parse(localStorage.getItem('ksa_pending_streaks') || '[]');
                 pendingStreaks.push({ userId: currentUser.id, drinkId: String(drink.id), quantity, tempId, name: drink.name, userName: currentUser.naam });
                 localStorage.setItem('ksa_pending_streaks', JSON.stringify(pendingStreaks));
                 showToast(`Offline opgeslagen: ${quantity}x ${drink.name}. Wordt gesynct bij verbinding.`, 'warning');
             } else {
-                // Rollback if actual error
                 setStreaks(prev => prev.filter(s => s.id !== tempId));
                 setBalance(prev => prev - (amount * quantity));
                 showToast('Fout bij het strepen. Probeer opnieuw.', 'error');
@@ -420,8 +354,6 @@ function App() {
     const handleDeleteStreak = async (id: string) => {
         const streak = streaks.find(s => s.id === id);
         if (!streak) return;
-
-        // Optimistic update
         setStreaks(prev => prev.filter(s => s.id !== id));
         setBalance(prev => prev - streak.price);
 
@@ -429,7 +361,6 @@ function App() {
             await db.deleteConsumptie(id);
             showToast('Streep verwijderd', 'info');
         } catch (error) {
-            // Rollback
             setStreaks(prev => [streak, ...prev]);
             setBalance(prev => prev + streak.price);
             showToast('Fout bij het verwijderen', 'error');
@@ -440,52 +371,29 @@ function App() {
         const drinkId = currentUser.quickDrinkId || (drinks.length > 0 ? String(drinks[0].id) : null);
         if (!drinkId) return;
         const drink = drinks.find(d => String(d.id) === String(drinkId));
-        if (drink) {
-            handleAddCost(drink.price, drink);
-        }
+        if (drink) handleAddCost(drink.price, drink);
     };
 
     const handlePlaceFryOrder = async (items: any[], totalCost: number, targetUser?: User) => {
         const orderForUser = targetUser || currentUser;
         const isOwnOrder = orderForUser.id === currentUser.id;
 
-        // Optimistic update
-        const tempId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
-            ? crypto.randomUUID() 
-            : `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const tempId = Math.random().toString(36).substr(2, 9);
         const newOrder: Order = {
-            id: tempId,
-            userId: orderForUser.id,
-            userName: orderForUser.naam || orderForUser.name || 'Onbekend',
-            items: items as CartItem[],
-            totalPrice: totalCost,
-            date: new Date(),
-            status: 'pending'
+            id: tempId, userId: orderForUser.id, userName: orderForUser.naam || orderForUser.name || 'Onbekend',
+            items, totalPrice: totalCost, date: new Date(), status: 'pending'
         };
         setFriesOrders(prev => [newOrder, ...prev]);
 
-        // Also update balance if it's the current user's order
-        if (isOwnOrder) {
-            setBalance(prev => prev + totalCost);
-        }
+        if (isOwnOrder) setBalance(prev => prev + totalCost);
 
         try {
-            const realId = await db.addFrituurBestelling(
-                orderForUser.id,
-                orderForUser.naam || orderForUser.name || 'Onbekend',
-                frituurSessieId,
-                items,
-                totalCost,
-                activePeriod?.id
-            );
+            const realId = await db.addFrituurBestelling(orderForUser.id, orderForUser.naam || orderForUser.name || 'Onbekend', frituurSessieId, items, totalCost, activePeriod?.id);
             setFriesOrders(prev => prev.map(o => o.id === tempId ? { ...o, id: realId } : o));
             showToast('Bestelling geplaatst! 🍟', 'success');
         } catch (error) {
             setFriesOrders(prev => prev.filter(o => o.id !== tempId));
-            // Rollback balance
-            if (isOwnOrder) {
-                setBalance(prev => prev - totalCost);
-            }
+            if (isOwnOrder) setBalance(prev => prev - totalCost);
             showToast('Fout bij het plaatsen van de bestelling', 'error');
         }
     };
@@ -493,7 +401,6 @@ function App() {
     const handleRemoveFryOrder = async (orderId: string) => {
         const orderToRemove = friesOrders.find(o => o.id === orderId);
         if (!orderToRemove) return;
-
         setFriesOrders(prev => prev.filter(o => o.id !== orderId));
 
         try {
@@ -507,7 +414,6 @@ function App() {
 
     const handleArchiveFriesSession = async () => {
         if (!frituurSessieId) return;
-
         setFriesOrders(prev => prev.map(o => ({ ...o, status: 'completed' as const })));
         setFriesSessionStatus('closed');
         setFriesPickupTime(null);
@@ -523,31 +429,18 @@ function App() {
 
     const handleCompleteFriesPayment = async (actualAmount: number, receiptFile?: File) => {
         if (!frituurSessieId) return;
-
         try {
             let receiptUrl = '';
-            if (receiptFile) {
-                receiptUrl = await db.uploadReceipt(frituurSessieId, receiptFile);
-            }
+            if (receiptFile) receiptUrl = await db.uploadReceipt(frituurSessieId, receiptFile);
 
-            await db.updateFrituurSessie(frituurSessieId, {
-                actual_amount: actualAmount,
-                receipt_url: receiptUrl,
-                status: 'paid'
-            });
+            await db.updateFrituurSessie(frituurSessieId, { actual_amount: actualAmount, receipt_url: receiptUrl, status: 'paid' });
 
-            // Calculate expected amount from pending orders
             const expectedAmount = friesOrders.filter(o => o.status === 'pending').reduce((acc, o) => acc + o.totalPrice, 0);
 
             if (Math.abs(actualAmount - expectedAmount) > 0.01) {
-                // Price mismatch detected — notify Hoofdleiding and Team Drank
                 const targetUsers = users.filter(u => {
                     const roles = (u.roles || []).map(r => r.toLowerCase());
-                    return roles.includes('hoofdleiding') ||
-                           roles.includes('drank') ||
-                           roles.includes('team drank') ||
-                           u.rol === 'admin' ||
-                           u.rol === 'team_drank';
+                    return roles.includes('hoofdleiding') || roles.includes('drank') || roles.includes('team drank') || u.rol === 'admin' || u.rol === 'team_drank';
                 });
 
                 const formattedActual = `€${actualAmount.toFixed(2).replace('.', ',')}`;
@@ -557,33 +450,11 @@ function App() {
 
                 const notifTitle = '🍟 Prijswijziging Frituur?';
                 const notifContent = `Het betaalde bedrag (${formattedActual}) wijkt af van het verwachte bedrag in de app (${formattedExpected}). Verschil: ${formattedDiff}. Dit kan wijzen op een prijswijziging bij de frituur.`;
-                // Action format: "LABEL|URL" — parsed by NotificationCard
                 const notifAction = `Ga naar rekening & bestelling|/fries-comparison?sessionId=${frituurSessieId}`;
 
-                targetUsers.forEach(user => {
-                    db.addNotificatie(
-                        currentUser.id,
-                        user.id,
-                        notifTitle,
-                        notifContent,
-                        currentUser.naam,
-                        notifAction
-                    );
-                });
+                targetUsers.forEach(user => { db.addNotificatie(currentUser.id, user.id, notifTitle, notifContent, currentUser.naam, notifAction); });
 
-                // Also add a local notification so the current user gets immediate feedback
-                handleAddNotification({
-                    type: 'order',
-                    sender: 'Systeem',
-                    role: '',
-                    title: notifTitle,
-                    content: notifContent,
-                    time: 'Zonet',
-                    isRead: false,
-                    action: notifAction,
-                    icon: 'price_change',
-                    color: 'bg-orange-100 dark:bg-orange-600/20 text-orange-600 dark:text-orange-500'
-                } as any);
+                handleAddNotification({ type: 'order', sender: 'Systeem', role: '', title: notifTitle, content: notifContent, time: 'Zonet', isRead: false, action: notifAction, icon: 'price_change', color: 'bg-orange-100 dark:bg-orange-600/20 text-orange-600 dark:text-orange-500' } as any);
 
                 handleArchiveFriesSession();
                 showToast('Betaling afgerond — prijsverschil gemeld aan leiding', 'warning');
@@ -598,7 +469,6 @@ function App() {
     };
 
     const handleVoteQuote = async (id: string, type: 'like' | 'dislike') => {
-        // Optimistic update
         setQuotes(prev => prev.map(q => {
             if (q.id === id) {
                 let newLikes = [...q.likes]; let newDislikes = [...q.dislikes];
@@ -618,7 +488,6 @@ function App() {
             await db.voteQuote(id, currentUser.id, type, currentUser.naam);
         } catch (error) {
             showToast('Fout bij het stemmen', 'error');
-            // Reload quotes to get correct state
             const freshQuotes = await db.fetchQuotes();
             setQuotes(freshQuotes);
         }
@@ -627,28 +496,8 @@ function App() {
     const handleAddQuote = async (text: string, context: string, authorId: string) => {
         const author = users.find(u => u.id === authorId);
         const authorName = author ? (author.naam || author.name || 'Onbekend') : authorId;
-
-        // Optimistic
-        const tempId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
-            ? crypto.randomUUID() 
-            : `temp-q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const newQuote: QuoteItem = {
-            id: tempId, 
-            text, 
-            authorId, 
-            authorName,
-            context: context || null, 
-            date: new Date(), 
-            likes: [], 
-            dislikes: [], 
-            addedBy: currentUser.id,
-            tekst: text,
-            auteur: authorName,
-            datum: new Date().toISOString(),
-            upvotes: 0,
-            toegevoegd_door: currentUser.id,
-            created_at: new Date().toISOString()
-        };
+        const tempId = Date.now().toString();
+        const newQuote: QuoteItem = { id: tempId, text, authorId, authorName, context, date: new Date(), likes: [], dislikes: [], addedBy: currentUser.id, tekst: text, auteur: authorName, datum: new Date().toISOString(), upvotes: 0, toegevoegd_door: currentUser.id, created_at: new Date().toISOString() };
         setQuotes(prev => [newQuote, ...prev]);
 
         try {
@@ -664,7 +513,6 @@ function App() {
     const handleDeleteQuote = async (id: string) => {
         const quote = quotes.find(q => q.id === id);
         setQuotes(prev => prev.filter(q => q.id !== id));
-
         try {
             await db.deleteQuote(id);
             showToast('Quote verwijderd', 'info');
@@ -675,19 +523,13 @@ function App() {
     };
 
     const handleSaveEvent = async (event: Event) => {
-        // Optimistic update
-        setEvents(prev => {
-            const exists = prev.find(e => e.id === event.id);
-            return exists ? prev.map(e => e.id === event.id ? event : e) : [...prev, event];
-        });
-
+        setEvents(prev => { const exists = prev.find(e => e.id === event.id); return exists ? prev.map(e => e.id === event.id ? event : e) : [...prev, event]; });
         try {
             const savedEvent = await db.saveEvent(event);
             setEvents(prev => prev.map(e => (e.id === event.id || e.id === savedEvent.id) ? savedEvent : e));
             showToast('Evenement opgeslagen!', 'success');
         } catch (error) {
             showToast('Fout bij het opslaan van het evenement', 'error');
-            // Reload to get correct state
             const freshEvents = await db.fetchEvents();
             setEvents(freshEvents);
         }
@@ -696,7 +538,6 @@ function App() {
     const handleDeleteEvent = async (id: string) => {
         const event = events.find(e => e.id === id);
         setEvents(prev => prev.filter(e => e.id !== id));
-
         try {
             await db.deleteEvent(id);
             showToast('Evenement verwijderd', 'info');
@@ -707,149 +548,56 @@ function App() {
     };
 
     const handleAddNotification = async (n: Omit<Notification, 'id'>) => {
-        // Optimistic
         const tempId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
             ? crypto.randomUUID() 
             : `temp-n-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const tempNotif = { ...n, id: tempId } as any;
         setNotifications(prev => [tempNotif, ...prev]);
-
-        try {
-            await db.addNotificatie(currentUser.id, 'all', n.title, n.content, currentUser.naam);
-        } catch (error) {
-            console.error('Notification send error:', error);
-            // Keep the notification in UI anyway (it's not critical)
-        }
+        try { await db.addNotificatie(currentUser.id, 'all', n.title, n.content, currentUser.naam); } catch (error) { console.error('Notification send error:', error); }
     };
 
     const handleMarkNotificationAsRead = async (id: string) => {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-
-        try {
-            await db.markNotificatieGelezen(id);
-        } catch (error) {
-            console.error('Mark read error:', error);
-        }
+        setNotifications(prev => prev.map(n => String(n.id) === id ? { ...n, isRead: true } : n));
+        try { await db.markNotificatieGelezen(id); } catch (error) { console.error('Mark read error:', error); }
     };
 
     const handleSaveCountdowns = async (newCountdowns: CountdownItem[]) => {
         setCountdowns(newCountdowns);
-        try {
-            await db.saveCountdowns(newCountdowns);
-        } catch (error) {
-            showToast('Fout bij opslaan klokken', 'error');
-            const fresh = await db.fetchCountdowns();
-            setCountdowns(fresh);
-        }
+        try { await db.saveCountdowns(newCountdowns); } catch (error) { showToast('Fout bij opslaan klokken', 'error'); const fresh = await db.fetchCountdowns(); setCountdowns(fresh); }
     };
 
     const handleAddBierpongGame = async (playerIds: string[], winnerIds: string[]) => {
-        try {
-            const newGame = await db.addBierpongGame(playerIds, winnerIds);
-            setBierpongGames(prev => [...prev, newGame]);
-        } catch (error) {
-            console.error('Failed to add bierpong game:', error);
-            showToast('Fout bij opslaan bierpong match', 'error');
-            // Refresh to ensure sync
-            const fresh = await db.fetchBierpongGames();
-            setBierpongGames(fresh);
-        }
+        try { const newGame = await db.addBierpongGame(playerIds, winnerIds); setBierpongGames(prev => [...prev, newGame]); } catch (error) { console.error('Failed to add bierpong game:', error); showToast('Fout bij opslaan bierpong match', 'error'); const fresh = await db.fetchBierpongGames(); setBierpongGames(fresh); }
     };
 
-    if (loading) {
-        return <SplashScreen />;
-    }
+    if (loading) { return <SplashScreen />; }
 
     const contextValue: AppContextType = {
-        currentUser, setCurrentUser, users, setUsers, drinks, setDrinks,
-        streaks, setStreaks, stockItems, setStockItems, balance, setBalance,
-        availableRoles, setAvailableRoles,
-        handleSaveRoles: async (roles) => {
-            try {
-                setAvailableRoles(roles);
-                await db.saveAvailableRoles(roles);
-                showToast('Rollen succesvol opgeslagen', 'success');
-            } catch (error) {
-                console.error('Failed to save roles:', error);
-                showToast('Fout bij opslaan rollen', 'error');
-            }
-        },
-        friesOrders, setFriesOrders, friesSessionStatus, setFriesSessionStatus,
-        friesPickupTime, setFriesPickupTime, countdowns, setCountdowns,
-        bierpongGames, setBierpongGames, duoBierpongWinners, setDuoBierpongWinners,
-        quotes, setQuotes, events, setEvents,
-        fryItems, setFryItems,
-        notifications, setNotifications,
-        handleAddCost, handleDeleteStreak, handleQuickStreep, handlePlaceFryOrder,
-        handleRemoveFryOrder,
-        handleArchiveFriesSession,
-        handleCompleteFriesPayment,
-        handleVoteQuote, handleAddQuote,
-        handleDeleteQuote, handleSaveEvent, handleDeleteEvent, handleAddNotification,
-        handleMarkNotificationAsRead, handleSaveCountdowns, handleAddBierpongGame,
-        frituurSessieId,
-        activePeriod, setActivePeriod,
-        billingPeriods, setBillingPeriods,
-        gsheetId, setGsheetId,
-        gsheetSharingEmail, setGsheetSharingEmail,
-        loading, // Added loading to context
-        handleAddFryItem: async (item) => {
-            try {
-                const id = await db.addFryItem(item);
-                setFryItems(prev => [...prev, { ...item, id }]);
-                showToast('Item toegevoegd', 'success');
-            } catch (error) {
-                console.error('Failed to add fry item:', error);
-                showToast('Fout bij toevoegen item', 'error');
-            }
-        },
-        handleUpdateFryItem: async (id, updates) => {
-            try {
-                await db.updateFryItem(id, updates);
-                setFryItems(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
-                showToast('Item bijgewerkt', 'success');
-            } catch (error) {
-                console.error('Failed to update fry item:', error);
-                showToast('Fout bij bijwerken item', 'error');
-            }
-        },
-        handleDeleteFryItem: async (id) => {
-            try {
-                await db.deleteFryItem(id);
-                setFryItems(prev => prev.filter(i => i.id !== id));
-                showToast('Item verwijderd', 'success');
-            } catch (error) {
-                console.error('Failed to delete fry item:', error);
-                showToast('Fout bij verwijderen item', 'error');
-            }
-        },
-        syncToGoogleSheets: async (command: string, payload: any) => {
-            const { data, error } = await supabase.functions.invoke('google-sheets-sync', {
-                body: { command, payload }
-            });
-            if (error) throw error;
-            return data;
-        }
+        currentUser, setCurrentUser, users, setUsers, drinks, setDrinks, streaks, setStreaks, stockItems, setStockItems, balance, setBalance, availableRoles, setAvailableRoles,
+        handleSaveRoles: async (roles) => { try { setAvailableRoles(roles); await db.saveAvailableRoles(roles); showToast('Rollen succesvol opgeslagen', 'success'); } catch (error) { console.error('Failed to save roles:', error); showToast('Fout bij opslaan rollen', 'error'); } },
+        friesOrders, setFriesOrders, friesSessionStatus, setFriesSessionStatus, friesPickupTime, setFriesPickupTime, countdowns, setCountdowns, bierpongGames, setBierpongGames, duoBierpongWinners, setDuoBierpongWinners, quotes, setQuotes, events, setEvents, fryItems, setFryItems, notifications, setNotifications,
+        handleAddCost, handleDeleteStreak, handleQuickStreep, handlePlaceFryOrder, handleRemoveFryOrder, handleArchiveFriesSession, handleCompleteFriesPayment, handleVoteQuote, handleAddQuote, handleDeleteQuote, handleSaveEvent, handleDeleteEvent, handleAddNotification, handleMarkNotificationAsRead, handleSaveCountdowns, handleAddBierpongGame,
+        frituurSessieId, setFrituurSessieId, activePeriod, setActivePeriod, billingPeriods, setBillingPeriods, gsheetId, setGsheetId, gsheetSharingEmail, setGsheetSharingEmail, loading,
+        handleAddFryItem: async (item) => { try { const id = await db.addFryItem(item); setFryItems(prev => [...prev, { ...item, id }]); showToast('Item toegevoegd', 'success'); } catch (error) { console.error('Failed to add fry item:', error); showToast('Fout bij toevoegen item', 'error'); } },
+        handleUpdateFryItem: async (id, updates) => { try { await db.updateFryItem(id, updates); setFryItems(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i)); showToast('Item bijgewerkt', 'success'); } catch (error) { console.error('Failed to update fry item:', error); showToast('Fout bij bijwerken item', 'error'); } },
+        handleDeleteFryItem: async (id) => { try { await db.deleteFryItem(id); setFryItems(prev => prev.filter(i => i.id !== id)); showToast('Item verwijderd', 'success'); } catch (error) { console.error('Failed to delete fry item:', error); showToast('Fout bij verwijderen item', 'error'); } },
+        syncToGoogleSheets: async (command: string, payload: any) => { const { data, error } = await supabase.functions.invoke('google-sheets-sync', { body: { command, payload } }); if (error) throw error; return data; }
     };
 
-    // Scroll to top on route change
     const ScrollToTop = () => {
         const { pathname } = useLocation();
-        useEffect(() => {
-            window.scrollTo(0, 0);
-            const root = document.getElementById('root');
-            if (root) root.scrollTo(0, 0);
-        }, [pathname]);
+        useEffect(() => { window.scrollTo(0, 0); const root = document.getElementById('root'); if (root) root.scrollTo(0, 0); }, [pathname]);
         return null;
     };
 
-    // Layout with BottomNav
     const MainLayout = () => {
         return (
-            <div className="text-base min-h-screen pb-nav-safe">
-                <ErrorBoundary>
-                    <Outlet context={contextValue} />
-                </ErrorBoundary>
+            <div className="text-base min-h-screen pb-nav-safe flex flex-col">
+                <div className="flex-1 relative">
+                    <ErrorBoundary>
+                        <Outlet context={contextValue} />
+                    </ErrorBoundary>
+                </div>
                 <BottomNav notifications={notifications} />
             </div>
         );
@@ -860,7 +608,6 @@ function App() {
             <AuthProvider>
                 <DrinkProvider>
                     <AgendaProvider>
-                        <FriesProvider>
                             <Analytics />
                             <SpeedInsights />
                             <ToastContainer />
@@ -882,11 +629,14 @@ function App() {
                                         <Route path="notificaties/nieuw" element={<NewMessageScreen />} />
                                         <Route path="nudges" element={<NudgeSelectorScreen />} />
 
-                                        <Route path="frituur" element={<FriesScreen />} />
-                                        <Route path="/fries-overview" element={<FriesOverviewScreen />} />
-                                        <Route path="/fries-comparison" element={<FriesComparisonScreen />} />
-                                        <Route path="frituur/geschiedenis" element={<FriesHistoryScreen />} />
-                                        <Route path="/billing-dashboard" element={<TeamDrankDashboardScreen />} />
+                                        <Route element={<FriesProvider><Outlet context={contextValue} /></FriesProvider>}>
+                                            <Route path="frituur" element={<FriesScreen />} />
+                                            <Route path="frituur/overzicht" element={<FriesOverviewScreen />} />
+                                            <Route path="fries-comparison" element={<FriesComparisonScreen />} />
+                                            <Route path="frituur/geschiedenis" element={<FriesHistoryScreen />} />
+                                        </Route>
+
+                                        <Route path="billing-dashboard" element={<TeamDrankDashboardScreen />} />
 
                                         <Route path="strepen" element={<StrepenScreen />} />
                                         <Route path="strepen/geschiedenis" element={<StrepenHistoryScreen adminMode={false} />} />
@@ -905,24 +655,24 @@ function App() {
                                         <Route path="strepen/overzicht" element={<ConsumptionOverviewScreen users={users} drinks={drinks} streaks={streaks} />} />
 
                                         <Route path="mijn-factuur" element={<MyInvoiceScreen balance={balance} currentUser={currentUser} streaks={streaks} friesOrders={friesOrders} />} />
+                                        
                                         <Route path="bierpong" element={<BierpongScreen />} />
                                         <Route path="bierpong/beheer" element={<BierpongManageScreen />} />
+                                        
                                         <Route path="quotes" element={<QuotesScreen />} />
                                         <Route path="quotes/beheer" element={<QuotesScreen enableManagement={true} />} />
 
-                                        <Route path="/winkeltje/dashboard" element={<ShopDashboardScreen />} />
-                                        <Route path="/winkeltje/category/:categoryId" element={<ShopCategoryScreen />} />
-                                        <Route path="/winkeltje/voorraad/tellen" element={<ShopInventoryScreen />} />
+                                        <Route path="winkeltje/dashboard" element={<ShopDashboardScreen />} />
+                                        <Route path="winkeltje/category/:categoryId" element={<ShopCategoryScreen />} />
+                                        <Route path="winkeltje/voorraad/tellen" element={<ShopInventoryScreen />} />
 
                                         <Route path="settings" element={<SettingsScreen />} />
                                         <Route path="admin/rollen" element={<RolesManageScreen />} />
-
                                     </Route>
                                 ) : (
                                     <Route path="*" element={<Navigate to="/login" />} />
                                 )}
                             </Routes>
-                        </FriesProvider>
                     </AgendaProvider>
                 </DrinkProvider>
             </AuthProvider>

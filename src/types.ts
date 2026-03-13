@@ -51,7 +51,7 @@ export interface Drink extends DbDrankRow {
 }
 
 export interface FryItem extends DbFriesItemRow {
-    category: 'frieten' | 'snacks' | 'sauzen' | 'huisbereid' | 'burgers' | 'spaghetti';
+    category: 'frieten' | 'snacks' | 'sauzen' | 'huisbereid' | 'burgers' | 'spaghetti' | 'dranken';
     description: string | null;
 }
 
