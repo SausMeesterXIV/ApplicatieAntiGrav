@@ -413,6 +413,13 @@ export const HomeScreen: React.FC = () => {
                 iconColorClass="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" 
                 onClick={() => navigate('/strepen/dashboard')} 
               />
+              <NavCard 
+                title="Frituur Admin" 
+                description="Kasticketjes & Prijsverschillen" 
+                icon="fastfood" 
+                iconColorClass="bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400" 
+                onClick={() => navigate('/team-drank/frieten')} 
+              />
             </div>
           </section>
         )}

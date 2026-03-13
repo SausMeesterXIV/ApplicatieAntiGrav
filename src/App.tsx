@@ -52,6 +52,7 @@ import { ShopDashboardScreen } from './screens/ShopDashboardScreen';
 import { ShopCategoryScreen } from './screens/ShopCategoryScreen';
 import { ShopInventoryScreen } from './screens/ShopInventoryScreen';
 import { FinanceDashboardScreen } from './screens/FinanceDashboardScreen';
+import { TeamDrankFriesHistoryScreen } from './screens/TeamDrankFriesHistoryScreen';
 
 export type AppContextType = {
     currentUser: User;
@@ -669,6 +670,7 @@ function App() {
                                         <Route path="frituur/overzicht" element={<FriesOverviewScreen />} />
                                         <Route path="fries-comparison" element={<FriesComparisonScreen />} />
                                         <Route path="frituur/geschiedenis" element={<FriesHistoryScreen />} />
+                                        <Route path="team-drank/frieten" element={<TeamDrankFriesHistoryScreen />} />
                                         <Route path="financien" element={<FinanceDashboardScreen />} />
                                         <Route path="billing-dashboard" element={<TeamDrankDashboardScreen />} />
 

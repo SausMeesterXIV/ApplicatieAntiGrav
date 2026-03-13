@@ -1063,3 +1063,34 @@ export async function uploadShopImage(productId: string, file: File): Promise<st
     const { data } = supabase.storage.from('shop-images').getPublicUrl(filePath);
     return data.publicUrl;
 }
+
+// ==================== FRITUUR ADMIN DASHBOARD ====================
+
+export async function fetchAllFrituurSessies(): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('frituur_sessies')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function fetchAllFrituurBestellingen(): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('frituur_bestellingen')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function updateFrituurBestelling(id: string, totaalPrijs: number, items: any[]): Promise<void> {
+  const { error } = await supabase
+    .from('frituur_bestellingen')
+    .update({ totaal_prijs: totaalPrijs, items: items as any })
+    .eq('id', id);
+
+  if (error) throw error;
+}
