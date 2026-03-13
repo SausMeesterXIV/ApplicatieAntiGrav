@@ -10,7 +10,6 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { useRealtimeSubscriptions } from './lib/useRealtime';
 
 import { BottomNav } from './components/BottomNav';
-import { SplashScreen } from './components/SplashScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CredentialsScreen } from './screens/CredentialsScreen';
 import { CreditsScreen } from './screens/CreditsScreen';
@@ -606,7 +605,13 @@ function App() {
         try { const newGame = await db.addBierpongGame(playerIds, winnerIds); setBierpongGames(prev => [...prev, newGame]); } catch (error) { console.error('Failed to add bierpong game:', error); showToast('Fout bij opslaan bierpong match', 'error'); const fresh = await db.fetchBierpongGames(); setBierpongGames(fresh); }
     };
 
-    if (loading) { return <SplashScreen />; }
+    if (loading) { 
+        return (
+            <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] items-center justify-center transition-colors">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+        ); 
+    }
 
     const contextValue: AppContextType = {
         currentUser, setCurrentUser, users, setUsers, drinks, setDrinks, streaks, setStreaks, stockItems, setStockItems, balance, setBalance, availableRoles, setAvailableRoles,
