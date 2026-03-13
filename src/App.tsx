@@ -390,7 +390,17 @@ function App() {
         try {
             const realId = await db.addFrituurBestelling(orderForUser.id, orderForUser.naam || orderForUser.name || 'Onbekend', frituurSessieId, items, totalCost, activePeriod?.id);
             setFriesOrders(prev => prev.map(o => o.id === tempId ? { ...o, id: realId } : o));
-            showToast('Bestelling geplaatst! 🍟', 'success');
+            
+            if (isOwnOrder) {
+                showToast('Bestelling geplaatst! 🍟', 'success');
+            } else {
+                showToast(`Bestelling voor ${orderForUser.naam} geplaatst! 🍟`, 'success');
+                
+                // NOTIFICATIE NAAR DE ANDERE PERSOON
+                const notifTitle = '🍟 Frietjes voor jou!';
+                const notifContent = `${currentUser.naam || 'Iemand'} heeft zojuist een bestelling voor je geplaatst (€${totalCost.toFixed(2).replace('.', ',')}).`;
+                db.addNotificatie(currentUser.id, orderForUser.id, notifTitle, notifContent, currentUser.naam || 'Systeem', '').catch(console.error);
+            }
         } catch (error) {
             setFriesOrders(prev => prev.filter(o => o.id !== tempId));
             if (isOwnOrder) setBalance(prev => prev - totalCost);
