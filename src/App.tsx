@@ -656,9 +656,8 @@ function App() {
 
     const MainLayout = () => {
         return (
-            <div className="text-base h-full w-full flex flex-col relative overflow-hidden">
-                {/* Scrollbare content area */}
-                <div className="flex-1 w-full overflow-y-auto no-scrollbar pb-nav-safe">
+                {/* Scrollbare content area: Hier gebruiken we pb-[110px] zodat je content niet achter de menubalk verdwijnt */}
+                <div className="flex-1 w-full overflow-y-auto no-scrollbar pb-[110px]">
                     <ErrorBoundary>
                         <Outlet context={contextValue} />
                     </ErrorBoundary>
