@@ -113,7 +113,7 @@ export const FriesScreen: React.FC = () => {
   if (isSearchingUser) {
     return (
       <div className="flex flex-col min-h-screen bg-white dark:bg-[#0f172a] transition-colors z-50">
-        <header className="px-4 py-4 flex items-center gap-4 border-b border-gray-200 dark:border-gray-800">
+        <header className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] flex items-center gap-4 border-b border-gray-200 dark:border-gray-800">
           <button onClick={() => setIsSearchingUser(false)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"><span className="material-icons-round text-2xl text-gray-900 dark:text-white">close</span></button>
           <input autoFocus type="text" placeholder="Zoek op echte naam..." value={userSearchQuery} onChange={(e) => setUserSearchQuery(e.target.value)} className="flex-1 bg-transparent text-lg text-gray-900 dark:text-white focus:outline-none" />
         </header>
@@ -134,7 +134,7 @@ export const FriesScreen: React.FC = () => {
       
       {/* 1. HEADER */}
       <header className={`sticky top-0 z-50 backdrop-blur-md border-b transition-colors ${orderingFor ? 'bg-orange-50/95 dark:bg-orange-900/95 border-orange-200 dark:border-orange-800' : 'bg-white/95 dark:bg-[#0f172a]/95 border-gray-200 dark:border-gray-800'}`}>
-        <div className="px-4 pt-4 pb-3 flex items-center justify-between">
+        <div className="px-4 pb-3 pt-[calc(1rem+env(safe-area-inset-top,0px))] flex items-center justify-between">
           <div className="flex items-center gap-2">
             {orderingFor ? <button onClick={() => setOrderingFor(null)} className="p-2 -ml-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10"><span className="material-icons-round text-gray-900 dark:text-white">close</span></button> : <ChevronBack onClick={() => navigate(-1)} />}
             <div>

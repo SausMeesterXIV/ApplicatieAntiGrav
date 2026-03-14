@@ -36,7 +36,7 @@ export const FriesHistoryScreen: React.FC = () => {
     return (
         <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
             {/* Header */}
-            <header className="px-4 py-4 flex items-center gap-4 sticky top-0 bg-gray-50/90 dark:bg-[#0f172a]/90 backdrop-blur-md z-10 border-b border-gray-100 dark:border-gray-800 transition-colors">
+            <header className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] flex items-center gap-4 sticky top-0 bg-gray-50/90 dark:bg-[#0f172a]/90 backdrop-blur-md z-10 border-b border-gray-100 dark:border-gray-800 transition-colors">
                 <ChevronBack onClick={() => navigate(-1)} />
                 <div>
                     <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">🍟 Frieten Geschiedenis</h1>

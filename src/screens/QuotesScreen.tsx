@@ -124,7 +124,7 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200">
       {/* Header */}
-      <header className="px-4 py-4 flex flex-col gap-4 sticky top-0 bg-gray-50 dark:bg-[#0f172a] z-40 transition-colors border-b border-gray-200 dark:border-gray-800">
+      <header className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] flex flex-col gap-4 sticky top-0 bg-gray-50 dark:bg-[#0f172a] z-40 transition-colors border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center gap-4">
           <ChevronBack onClick={() => navigate(-1)} />
           <div>

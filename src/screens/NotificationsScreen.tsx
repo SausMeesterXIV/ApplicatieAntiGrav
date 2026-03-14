@@ -24,7 +24,7 @@ export const NotificationsScreen: React.FC = () => {
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white transition-colors duration-200">
       {/* Header */}
-      <header className="px-4 py-6 flex items-center gap-2 sticky top-0 bg-gray-50 dark:bg-[#0f172a] z-10 transition-colors">
+      <header className="px-4 pb-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] flex items-center gap-2 sticky top-0 bg-gray-50 dark:bg-[#0f172a] z-10 transition-colors">
         <ChevronBack onClick={() => navigate(-1)} />
         <h1 className="text-3xl font-bold tracking-tight">Meldingen</h1>
       </header>

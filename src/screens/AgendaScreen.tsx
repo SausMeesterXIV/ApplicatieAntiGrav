@@ -80,7 +80,7 @@ export const AgendaScreen: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
       {/* Header */}
-      <header className="px-4 py-4 flex items-center justify-between shrink-0 bg-gray-50 dark:bg-[#0f172a] z-10 transition-colors relative">
+      <header className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] flex items-center justify-between shrink-0 bg-gray-50 dark:bg-[#0f172a] z-10 transition-colors relative">
         <div className="flex items-center gap-2">
           <ChevronBack onClick={() => navigate(-1)} />
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Agenda</h1>

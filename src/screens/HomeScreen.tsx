@@ -129,16 +129,16 @@ export const HomeScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen pb-nav-safe relative bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
+    <div className="flex flex-col h-full relative bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
       {/* Header */}
-      <header className="px-6 py-6 flex justify-between items-center bg-gray-50 dark:bg-[#0f172a] shadow-sm transition-colors">
+      <header className="px-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] pb-6 flex justify-between items-center bg-gray-50 dark:bg-[#0f172a] shadow-sm transition-colors sticky top-0 z-20">
         <div className="flex flex-col justify-center">
           <span className="text-sm font-bold text-primary dark:text-blue-500 uppercase tracking-wider mb-1">KSA Aalter</span>
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white leading-none">Welkom, {displayName}</h1>
         </div>
         <div
           onClick={() => navigate('/settings')}
-          className="h-16 w-16 rounded-full border-2 border-white dark:border-gray-700 shadow-md overflow-hidden cursor-pointer active:scale-95 transition-transform"
+          className="h-16 w-16 rounded-full border-2 border-white dark:border-gray-700 shadow-md overflow-hidden cursor-pointer active:scale-95 transition-transform shrink-0"
         >
           <img
             src={currentUser?.avatar}

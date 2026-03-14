@@ -90,7 +90,7 @@ export const StrepenScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
-      <header className="bg-white dark:bg-[#1e2330] pt-6 pb-6 px-4 shadow-sm relative z-10 rounded-b-[2rem] transition-colors">
+      <header className="bg-white dark:bg-[#1e2330] pt-[calc(1.5rem+env(safe-area-inset-top,0px))] pb-6 px-4 shadow-sm relative z-10 rounded-b-[2rem] transition-colors">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
             <ChevronBack onClick={() => navigate(-1)} />

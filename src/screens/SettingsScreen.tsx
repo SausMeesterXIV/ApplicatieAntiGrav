@@ -94,7 +94,7 @@ export const SettingsScreen: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] pb-nav-safe transition-colors duration-200">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-gray-50/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 px-4 py-4 flex items-center justify-between transition-colors">
+      <header className="sticky top-0 z-10 bg-gray-50/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] flex items-center justify-between transition-colors">
         <div className="flex items-center gap-2">
           <ChevronBack onClick={() => navigate(-1)} />
           <h1 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">Instellingen</h1>
