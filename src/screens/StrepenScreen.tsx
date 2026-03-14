@@ -178,15 +178,32 @@ export const StrepenScreen: React.FC = () => {
             </button>
 
             {drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM) && (
-              <div className="mt-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <button onClick={() => { const bak = drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM)!; onAddCost(currentUser?.id || '', bak.id, 1, currentUser?.naam); setTotalToday(prev => prev + 1); }} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-5 rounded-xl shadow-md shadow-amber-500/10 flex items-center justify-between active:scale-[0.98] transition-all group">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform"><span className="material-icons-round text-xl">sports_bar</span></div>
-                    <div className="text-left"><span className="text-[9px] font-bold text-amber-100 uppercase block leading-none mb-0.5">SNEL ACTIE</span><span className="text-base leading-none">1 {SPECIAL_DRINKS.BAK_FREEDOM}</span></div>
+              <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <button 
+                  onClick={() => { 
+                    const bak = drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM)!; 
+                    onAddCost(currentUser?.id || '', bak.id, 1, currentUser?.naam); 
+                    setTotalToday(prev => prev + 1); 
+                  }} 
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 px-4 rounded-2xl shadow-md shadow-amber-500/20 flex items-center justify-between active:scale-[0.98] transition-all group border border-amber-400/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm">
+                      <span className="material-icons-round text-2xl">sports_bar</span>
+                    </div>
+                    <div className="text-left flex flex-col justify-center">
+                      <span className="text-[10px] font-extrabold text-amber-100 uppercase tracking-wider block mb-0.5">Snel Actie</span>
+                      <span className="text-base font-bold leading-tight">{SPECIAL_DRINKS.BAK_FREEDOM}</span>
+                    </div>
                   </div>
+                  
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-black bg-black/10 px-2 py-0.5 rounded-lg">€ {drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM)?.price.toFixed(2).replace('.', ',')}</span>
-                    <span className="material-icons-round text-white/50 group-hover:translate-x-1 transition-transform">chevron_right</span>
+                    <span className="text-sm font-black bg-black/10 px-2.5 py-1.5 rounded-lg border border-black/5">
+                      € {drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM)?.price.toFixed(2).replace('.', ',')}
+                    </span>
+                    <div className="bg-white text-amber-600 w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg shadow-sm group-hover:bg-amber-50 transition-colors">
+                      +1
+                    </div>
                   </div>
                 </button>
               </div>
