@@ -658,13 +658,13 @@ function App() {
         return (
             <div className="text-base h-full w-full flex flex-col relative overflow-hidden">
                 {/* Scrollbare content area */}
-                <div className="flex-1 w-full overflow-y-auto no-scrollbar pb-nav-safe px-4">
+                <div className="flex-1 w-full overflow-y-auto no-scrollbar pb-nav-safe">
                     <ErrorBoundary>
                         <Outlet context={contextValue} />
                     </ErrorBoundary>
                 </div>
                 
-                {/* Vaste bottom nav, vastgepind op de bottom van de gelockte viewport */}
+                {/* Vaste bottom nav, exact vastgepind op de bottom van de root container */}
                 <div className="absolute bottom-0 left-0 w-full z-50">
                     <BottomNav notifications={notifications} />
                 </div>
