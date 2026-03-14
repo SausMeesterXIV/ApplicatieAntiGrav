@@ -633,13 +633,18 @@ function App() {
 
     const MainLayout = () => {
         return (
-            <div className="text-base min-h-screen pb-nav-safe flex flex-col">
-                <div className="flex-1 relative">
+            <div className="text-base h-full flex flex-col relative pt-safe overflow-hidden">
+                {/* Scrollbare content area */}
+                <div className="flex-1 w-full overflow-y-auto no-scrollbar pb-nav-safe px-4">
                     <ErrorBoundary>
                         <Outlet context={contextValue} />
                     </ErrorBoundary>
                 </div>
-                <BottomNav notifications={notifications} />
+                
+                {/* Vaste bottom nav, blijft altijd onderaan het scherm plakken */}
+                <div className="absolute bottom-0 left-0 w-full z-50">
+                    <BottomNav notifications={notifications} />
+                </div>
             </div>
         );
     };

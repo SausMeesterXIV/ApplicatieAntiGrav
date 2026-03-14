@@ -3,16 +3,25 @@
 @tailwind utilities;
 
 @layer base {
-
   html,
   body {
-    @apply h-full w-full bg-gray-50 text-slate-800;
-    /* Prevent bouncy scrolling on mobile web apps */
+    /* De achtergrond BUITEN de app (zichtbaar op desktop) */
+    @apply w-full bg-gray-200 dark:bg-black text-slate-800;
+    height: 100dvh;
     overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    justify-content: center;
   }
 
   #root {
-    @apply h-full w-full flex flex-col overflow-auto;
+    /* Dit is de daadwerkelijke App Container */
+    @apply w-full flex flex-col bg-gray-50 dark:bg-[#0f172a];
+    height: 100dvh;
+    max-width: 28rem; /* 448px, typische gsm-breedte */
+    position: relative;
+    overflow: hidden; /* Belangrijk: voorkomt dat child-elementen uit de container breken */
+    box-shadow: 0 0 40px rgba(0,0,0,0.1); /* Mooie diepte op desktop */
   }
 
   /* Hide scrollbar for Chrome, Safari and Opera */
@@ -28,6 +37,9 @@
     /* Firefox */
   }
 }
+
+.pt-safe { padding-top: env(safe-area-inset-top, 16px); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 16px); }
 
 /* === NEON GLOW EFFECTS === */
 @keyframes neon-pulse {
@@ -138,17 +150,17 @@
 
 /* BottomNav: add the safe area inset as extra bottom padding */
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 16px);
 }
 
 /* Fixed footers that sit above the BottomNav: account for safe area */
 .bottom-nav-offset {
-  bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); /* 80px nav + safe area */
+  bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* Content padding: ensures content doesn't hide behind BottomNav + safe area */
 .pb-nav-safe {
-  padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px)); /* 112px + safe area */
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* === SKELETON SHIMMER === */
