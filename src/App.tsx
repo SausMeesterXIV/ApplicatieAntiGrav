@@ -656,6 +656,7 @@ function App() {
 
     const MainLayout = () => {
         return (
+            <div className="text-base flex-1 h-full w-full flex flex-col relative overflow-hidden">
                 {/* Scrollbare content area: Hier gebruiken we pb-[110px] zodat je content niet achter de menubalk verdwijnt */}
                 <div className="flex-1 w-full overflow-y-auto no-scrollbar pb-[110px]">
                     <ErrorBoundary>
@@ -663,7 +664,7 @@ function App() {
                     </ErrorBoundary>
                 </div>
                 
-                {/* Vaste bottom nav, exact vastgepind op de bottom van de root container */}
+                {/* Vaste bottom nav, absoluut vastgepind op de onderste pixels van je scherm */}
                 <div className="absolute bottom-0 left-0 w-full z-50">
                     <BottomNav notifications={notifications} />
                 </div>
