@@ -40,7 +40,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ notifications = [] }) => {
             <div className="relative">
               <span className="material-icons-round text-2xl">{item.icon}</span>
               {item.badge && hasUnread && activeTab !== 'notificaties' && (
-                <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-surface-light dark:border-surface-dark"></span>
+                <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-surface-light dark:border-surface-dark"></span>
               )}
             </div>
             <span className="text-[10px] font-medium">{item.label}</span>

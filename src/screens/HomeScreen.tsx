@@ -218,71 +218,44 @@ export const HomeScreen: React.FC = () => {
         {/* PRIMARY USER ACTIONS */}
         <div className="grid grid-cols-2 gap-4">
 
-          {/* Geïntegreerde Strepen Kaart met Snel Actie */}
-          <div className="col-span-2 sm:col-span-1 bg-white dark:bg-[#1e2330] rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col transition-all">
-            
-            {/* Hoofdactie: Navigatie naar Strepen */}
-            <div 
-              onClick={() => navigate('/strepen')} 
-              className="p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center shrink-0">
-                  <span className="material-icons-round text-2xl">local_bar</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white text-lg leading-tight">Strepen</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Zet strepen en bekijk saldo</p>
-                </div>
+          {/* Strepen Module */}
+          <div
+            onClick={() => navigate('/strepen')}
+            className="col-span-2 sm:col-span-1 bg-white dark:bg-[#1e2330] p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-all cursor-pointer group flex flex-col gap-3"
+          >
+            {/* 1. Header */}
+            <div className="flex items-center gap-3 px-1">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-300 shrink-0">
+                <span className="material-icons-round">local_bar</span>
               </div>
-              {quickDrink ? (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (currentUser) {
-                      handleAddCost(currentUser.id, quickDrink.id, 1, currentUser.naam);
-                    }
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-full shadow-md active:scale-90 active:bg-blue-800 transition-all flex items-center gap-1.5 border border-blue-500/20"
-                  title={`Quick ${quickDrink.name}`}
-                >
-                  <span className="material-icons-round text-sm">bolt</span>
-                  <span className="text-xs font-bold">+1 {quickDrink.name}</span>
-                </button>
-              ) : (
-                <span className="material-icons-round text-gray-400">chevron_right</span>
-              )}
+              <h3 className="font-semibold text-lg text-gray-900 dark:text-white">Strepen</h3>
             </div>
-
-            {/* Subactie: Snel Bak Freedom (geïntegreerd aan de onderkant) */}
-            {drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM) && (
-              <div className="px-4 pb-4 pt-0">
-                <button 
-                  onClick={(e) => { 
-                    e.stopPropagation(); // Belangrijk: voorkomt dat je naar /strepen navigeert!
-                    const bak = drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM)!; 
-                    handleAddCost(currentUser?.id || '', bak.id, 1, currentUser?.naam);
-                  }} 
-                  className="w-full bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800/50 text-amber-700 dark:text-amber-400 py-3 px-4 rounded-xl flex items-center justify-between transition-colors group"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="material-icons-round text-amber-500 text-lg group-hover:scale-110 transition-transform">sports_bar</span>
-                    <div className="text-left flex flex-col">
-                      <span className="text-[9px] font-black uppercase tracking-wider text-amber-500/80 mb-0.5">Snel Actie</span>
-                      <span className="text-sm font-bold leading-none">{SPECIAL_DRINKS.BAK_FREEDOM}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold opacity-70">
-                      € {drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM)?.price.toFixed(2).replace('.', ',')}
-                    </span>
-                    <div className="bg-amber-500 text-white w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm shadow-sm group-hover:bg-amber-600 transition-colors">
-                      +1
-                    </div>
-                  </div>
-                </button>
-              </div>
+            
+            {/* 2. Geïntegreerde Quick Streep (Midden) */}
+            {quickDrink && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (currentUser) {
+                    handleAddCost(currentUser.id, quickDrink.id, 1, currentUser.naam);
+                  }
+                }}
+                className="w-full bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-100 dark:border-blue-800/50 text-blue-700 dark:text-blue-300 py-3 px-4 rounded-xl flex items-center justify-between transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-icons-round text-base">bolt</span>
+                  <span className="text-sm font-bold truncate">Snel {quickDrink.name}</span>
+                </div>
+                {/* Puur tekst, geen extra container meer */}
+                <span className="font-black text-lg">+1</span>
+              </button>
             )}
+
+            {/* 3. Bottom Link */}
+            <div className="mt-auto flex items-center justify-between text-sm p-3 bg-gray-50 dark:bg-gray-800 rounded-xl group-hover:bg-gray-100 dark:group-hover:bg-gray-700 transition-colors">
+              <span className="text-gray-700 dark:text-gray-300 font-medium">Strepen zetten</span>
+              <span className="material-icons-round text-sm text-gray-400">arrow_forward_ios</span>
+            </div>
           </div>
 
           {/* Frieten Module */}

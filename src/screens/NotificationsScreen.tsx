@@ -16,7 +16,10 @@ export const NotificationsScreen: React.FC = () => {
     ? notifications
     : filter === 'Nudges'
       ? notifications.filter(n => n.type === 'nudge')
-      : notifications.filter(n => n.type === 'official' || n.type === 'agenda' || n.type === 'order');
+      : notifications.filter(n => n.type !== 'nudge');
+
+  const hasUnreadNudges = notifications.some(n => n.type === 'nudge' && !n.isRead);
+  const hasUnreadOfficial = notifications.some(n => n.type !== 'nudge' && !n.isRead);
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white transition-colors duration-200">
@@ -29,18 +32,24 @@ export const NotificationsScreen: React.FC = () => {
       {/* Tabs */}
       <div className="px-6 pb-4">
         <div className="flex bg-white dark:bg-[#1e293b] p-1 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 transition-colors">
-          {['Alles', 'Nudges', 'Officieel'].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f as any)}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${filter === f
-                ? 'bg-gray-100 dark:bg-[#334155] text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
-            >
-              {f}
-            </button>
-          ))}
+          {['Alles', 'Nudges', 'Officieel'].map((f) => {
+            const isUnread = f === 'Nudges' ? hasUnreadNudges : f === 'Officieel' ? hasUnreadOfficial : (hasUnreadNudges || hasUnreadOfficial);
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f as any)}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 ${filter === f
+                  ? 'bg-gray-100 dark:bg-[#334155] text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+              >
+                <span>{f}</span>
+                {isUnread && (
+                  <span className="w-2 h-2 bg-red-500 rounded-full shadow-sm shadow-red-500/50"></span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -138,7 +147,7 @@ const NotificationCard: React.FC<{ data: Notification, onClick: () => void }> = 
             <span className="material-icons-round text-2xl">{data.icon}</span>
           </div>
           {!data.isRead && (
-            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-white dark:border-[#1e293b] shadow-sm animate-pulse"></span>
+            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white dark:border-[#1e293b] shadow-sm animate-pulse"></span>
           )}
         </div>
 
