@@ -122,6 +122,21 @@ export type AppContextType = {
     loading: boolean;
 };
 
+// Helper om te checken of een user rechten heeft (hoofdleiding en godmode hebben altijd true)
+export const hasAccess = (user: User | null | undefined, requiredRole: string) => {
+    if (!user) return false;
+    const mainRol = String(user.rol || '').toLowerCase();
+    if (mainRol === 'hoofdleiding' || mainRol === 'godmode' || mainRol === 'admin') return true;
+    
+    const req = requiredRole.toLowerCase();
+    if (mainRol.includes(req)) return true;
+    
+    // Check ook in de array van extra rollen
+    if (user.roles && user.roles.some(r => String(r).toLowerCase().includes(req))) return true;
+    
+    return false;
+};
+
 const DEFAULT_USER: User = {
     id: '',
     naam: 'Laden...',
@@ -530,7 +545,8 @@ function App() {
 
     const handleAddQuote = async (text: string, context: string, authorId: string) => {
         const author = users.find(u => u.id === authorId);
-        const authorName = author ? (author.naam || author.name || 'Onbekend') : authorId;
+        // Gebruik de nickname als die bestaat, anders de echte naam
+        const authorName = author ? (author.nickname || author.naam || author.name || 'Onbekend') : authorId;
         const tempId = Date.now().toString();
         const newQuote: QuoteItem = { id: tempId, text, authorId, authorName, context, date: new Date(), likes: [], dislikes: [], addedBy: currentUser.id, tekst: text, auteur: authorName, datum: new Date().toISOString(), upvotes: 0, toegevoegd_door: currentUser.id, created_at: new Date().toISOString() };
         setQuotes(prev => [newQuote, ...prev]);
@@ -625,6 +641,13 @@ function App() {
         syncToGoogleSheets: async (command: string, payload: any) => { const { data, error } = await supabase.functions.invoke('google-sheets-sync', { body: { command, payload } }); if (error) throw error; return data; }
     };
 
+    const RoleRoute = ({ children, role }: { children: React.ReactNode, role: string }) => {
+        if (!hasAccess(currentUser, role)) {
+            return <Navigate to="/" replace />;
+        }
+        return <>{children}</>;
+    };
+
     const ScrollToTop = () => {
         const { pathname } = useLocation();
         useEffect(() => { window.scrollTo(0, 0); const root = document.getElementById('root'); if (root) root.scrollTo(0, 0); }, [pathname]);
@@ -670,7 +693,7 @@ function App() {
                                         <Route index element={<HomeScreen />} />
 
                                         <Route path="agenda" element={<AgendaScreen />} />
-                                        <Route path="agenda/beheer" element={<AgendaManageScreen />} />
+                                        <Route path="agenda/beheer" element={<RoleRoute role="hoofdleiding"><AgendaManageScreen /></RoleRoute>} />
 
                                         <Route path="notificaties" element={<NotificationsScreen />} />
                                         <Route path="notificaties/nieuw" element={<NewMessageScreen />} />
@@ -680,25 +703,25 @@ function App() {
                                         <Route path="frituur/overzicht" element={<FriesOverviewScreen />} />
                                         <Route path="fries-comparison" element={<FriesComparisonScreen />} />
                                         <Route path="frituur/geschiedenis" element={<FriesHistoryScreen />} />
-                                        <Route path="team-drank/frieten" element={<TeamDrankFriesHistoryScreen />} />
-                                        <Route path="financien" element={<FinanceDashboardScreen />} />
-                                        <Route path="billing-dashboard" element={<TeamDrankDashboardScreen />} />
+                                        <Route path="team-drank/frieten" element={<RoleRoute role="drank"><TeamDrankFriesHistoryScreen /></RoleRoute>} />
+                                        <Route path="financien" element={<RoleRoute role="financiën"><FinanceDashboardScreen /></RoleRoute>} />
+                                        <Route path="billing-dashboard" element={<RoleRoute role="drank"><TeamDrankDashboardScreen /></RoleRoute>} />
 
                                         <Route path="strepen" element={<StrepenScreen />} />
                                         <Route path="strepen/geschiedenis" element={<StrepenHistoryScreen adminMode={false} />} />
-                                        <Route path="strepen/geschiedenis-alle" element={<StrepenHistoryScreen adminMode={true} />} />
-                                        <Route path="strepen/dashboard" element={<TeamDrankDashboardScreen />} />
-                                        <Route path="strepen/voorraad" element={<TeamDrankStockScreen />} />
-                                        <Route path="strepen/streaks" element={<TeamDrankStreaksScreen />} />
-                                        <Route path="strepen/facturatie" element={<TeamDrankInvoicesScreen />} />
-                                        <Route path="strepen/facturatie/nieuw" element={<TeamDrankBillingScreen />} />
-                                        <Route path="strepen/facturatie/archief" element={<TeamDrankArchiveScreen />} />
-                                        <Route path="strepen/facturatie/archief/:periodId" element={<TeamDrankInvoicesScreen />} />
-                                        <Route path="strepen/facturatie/periodes" element={<BillingPeriodsManageScreen />} />
-                                        <Route path="strepen/facturatie/excel" element={<TeamDrankExcelPreviewScreen />} />
-                                        <Route path="strepen/facturatie/billing-excel" element={<TeamDrankBillingExcelPreviewScreen />} />
-                                        <Route path="strepen/facturatie/beheer" element={<TeamDrankExcelBeheerScreen />} />
-                                        <Route path="strepen/overzicht" element={<ConsumptionOverviewScreen users={users} drinks={drinks} streaks={streaks} />} />
+                                        <Route path="strepen/geschiedenis-alle" element={<RoleRoute role="drank"><StrepenHistoryScreen adminMode={true} /></RoleRoute>} />
+                                        <Route path="strepen/dashboard" element={<RoleRoute role="drank"><TeamDrankDashboardScreen /></RoleRoute>} />
+                                        <Route path="strepen/voorraad" element={<RoleRoute role="drank"><TeamDrankStockScreen /></RoleRoute>} />
+                                        <Route path="strepen/streaks" element={<RoleRoute role="drank"><TeamDrankStreaksScreen /></RoleRoute>} />
+                                        <Route path="strepen/facturatie" element={<RoleRoute role="drank"><TeamDrankInvoicesScreen /></RoleRoute>} />
+                                        <Route path="strepen/facturatie/nieuw" element={<RoleRoute role="drank"><TeamDrankBillingScreen /></RoleRoute>} />
+                                        <Route path="strepen/facturatie/archief" element={<RoleRoute role="drank"><TeamDrankArchiveScreen /></RoleRoute>} />
+                                        <Route path="strepen/facturatie/archief/:periodId" element={<RoleRoute role="drank"><TeamDrankInvoicesScreen /></RoleRoute>} />
+                                        <Route path="strepen/facturatie/periodes" element={<RoleRoute role="drank"><BillingPeriodsManageScreen /></RoleRoute>} />
+                                        <Route path="strepen/facturatie/excel" element={<RoleRoute role="drank"><TeamDrankExcelPreviewScreen /></RoleRoute>} />
+                                        <Route path="strepen/facturatie/billing-excel" element={<RoleRoute role="drank"><TeamDrankBillingExcelPreviewScreen /></RoleRoute>} />
+                                        <Route path="strepen/facturatie/beheer" element={<RoleRoute role="drank"><TeamDrankExcelBeheerScreen /></RoleRoute>} />
+                                        <Route path="strepen/overzicht" element={<RoleRoute role="drank"><ConsumptionOverviewScreen users={users} drinks={drinks} streaks={streaks} /></RoleRoute>} />
 
                                         <Route path="mijn-factuur" element={<MyInvoiceScreen balance={balance} currentUser={currentUser} streaks={streaks} friesOrders={friesOrders} />} />
                                         
@@ -708,12 +731,12 @@ function App() {
                                         <Route path="quotes" element={<QuotesScreen />} />
                                         <Route path="quotes/beheer" element={<QuotesScreen enableManagement={true} />} />
 
-                                        <Route path="winkeltje/dashboard" element={<ShopDashboardScreen />} />
+                                        <Route path="winkeltje/dashboard" element={<RoleRoute role="winkeltje"><ShopDashboardScreen /></RoleRoute>} />
                                         <Route path="winkeltje/category/:categoryId" element={<ShopCategoryScreen />} />
-                                        <Route path="winkeltje/voorraad/tellen" element={<ShopInventoryScreen />} />
+                                        <Route path="winkeltje/voorraad/tellen" element={<RoleRoute role="winkeltje"><ShopInventoryScreen /></RoleRoute>} />
 
                                         <Route path="settings" element={<SettingsScreen />} />
-                                        <Route path="admin/rollen" element={<RolesManageScreen />} />
+                                        <Route path="admin/rollen" element={<RoleRoute role="hoofdleiding"><RolesManageScreen /></RoleRoute>} />
                                     </Route>
                                 ) : (
                                     <Route path="*" element={<Navigate to="/login" />} />

@@ -16,7 +16,7 @@ interface DrinkContextType {
   gsheetSharingEmail: string | null;
   loading: boolean;
   handleAddCost: (userId: string, drinkId: string | number, quantity?: number, userNaam?: string) => Promise<void>;
-  handleRemoveCost: (streakId: string) => Promise<void>;
+  handleRemoveCost: (streakId: string, isAdmin?: boolean) => Promise<void>;
   setDrinks: React.Dispatch<React.SetStateAction<Drink[]>>;
   setStreaks: React.Dispatch<React.SetStateAction<Streak[]>>;
   setBalance: React.Dispatch<React.SetStateAction<number>>;
@@ -183,7 +183,7 @@ export function DrinkProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const handleRemoveCost = async (streakId: string) => {
+  const handleRemoveCost = async (streakId: string, isAdmin: boolean = false) => {
     const cost = streaks.find(s => s.id === streakId);
     if (!cost) return;
 
@@ -192,7 +192,8 @@ export function DrinkProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (cost.timestamp.getTime() < Date.now() - 3600000) {
+    // Bypass de limiet als de user een admin is vanuit het history scherm
+    if (!isAdmin && new Date(cost.timestamp).getTime() < Date.now() - 3600000) {
       showToast('Enkel verwijderen binnen 1 uur toegestaan.', 'error');
       return;
     }

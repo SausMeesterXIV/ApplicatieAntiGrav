@@ -82,6 +82,12 @@ export const StrepenScreen: React.FC = () => {
 
   const displayCount = getCurrentCountRaw();
 
+  const validQuickDrinks = useMemo(() => {
+    return drinks.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM && !d.isTemporary);
+  }, [drinks]);
+  
+  const activeQuickDrinkId = String(currentUser?.quickDrinkId || (validQuickDrinks.length > 0 ? validQuickDrinks[0].id : ''));
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
       <header className="bg-white dark:bg-[#1e2330] pt-6 pb-6 px-4 shadow-sm relative z-10 rounded-b-[2rem] transition-colors">
@@ -266,27 +272,23 @@ export const StrepenScreen: React.FC = () => {
           <div className="bg-white dark:bg-[#1e2330] p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 transition-colors">
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Kies welk drankje je direct wilt kunnen strepen vanaf het startscherm. Dit wordt opgeslagen in je profiel.</p>
             <div className="grid grid-cols-2 gap-2">
-              {drinks.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM).map(drink => (
+              {validQuickDrinks.map(drink => (
                 <button 
                   key={`quick-${drink.id}`} 
                   onClick={async () => {
                     const newDrinkId = String(drink.id);
-                    // 1. Lokale state updaten voor instant feedback
                     onUpdateUser({ ...currentUser, id: currentUser?.id || '', quickDrinkId: newDrinkId } as User);
-                    // 2. Database effectief updaten zodat het bewaard blijft!
                     try {
                       await updateProfile(currentUser?.id || '', { quick_drink_id: newDrinkId });
-                      hapticSuccess();
-                      showToast(`${drink.name} is nu je quick-streep drankje!`, 'success');
+                      showToast(`${drink.name} ingesteld als Quick Streep!`, 'success');
                     } catch (e) {
-                      console.error('Fout bij opslaan quick drink', e);
                       showToast('Kon instelling niet opslaan', 'error');
                     }
                   }} 
-                  className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center justify-between ${String(currentUser?.quickDrinkId || (drinks.length > 0 ? drinks[0].id : null)) === String(drink.id) ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 text-blue-700 shadow-sm' : 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 text-gray-600 hover:bg-gray-100'}`}
+                  className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center justify-between ${activeQuickDrinkId === String(drink.id) ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 text-blue-700 shadow-sm' : 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 text-gray-600 hover:bg-gray-100'}`}
                 >
                   <span className="truncate">{drink.name}</span>
-                  {String(currentUser?.quickDrinkId || (drinks.length > 0 ? drinks[0].id : null)) === String(drink.id) && <span className="material-icons-round text-sm">check_circle</span>}
+                  {activeQuickDrinkId === String(drink.id) && <span className="material-icons-round text-sm">check_circle</span>}
                 </button>
               ))}
             </div>

@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useDrink } from '../contexts/DrinkContext';
 import { useAgenda } from '../contexts/AgendaContext';
 import { Event, QuoteItem, CountdownItem, User, Drink } from '../types';
+import { hasAccess } from '../App';
+import { SPECIAL_DRINKS } from '../lib/constants';
 
 import { hasRole } from '../lib/roleUtils';
 import { SkeletonWidget, SkeletonCard, SkeletonEvent } from '../components/Skeleton';
@@ -11,7 +13,7 @@ import { NavCard } from '../components/NavCard';
 
 export const HomeScreen: React.FC = () => {
   const { currentUser, loading: authLoading } = useAuth();
-  const { balances, handleQuickStreep, dranken: drinks, loading: drinkLoading } = useDrink();
+  const { balances, handleQuickStreep, handleAddCost, dranken: drinks, loading: drinkLoading } = useDrink();
   const { events, quotes, countdowns } = useAgenda();
   
   const loading = authLoading || drinkLoading;
@@ -21,10 +23,13 @@ export const HomeScreen: React.FC = () => {
 
   const displayName = currentUser?.nickname || currentUser?.name?.split(' ')[0] || 'Lid';
 
-  // OPTIMALISATIE: Bereken de fallback en quickDrink enkel opnieuw als de drankenlijst of gebruikerkeuze wijzigt.
+  // OPTIMALISATIE: Bereken de fallback en quickDrink. Uitsluitend permanente dranken!
   const quickDrink = useMemo(() => {
-    const fallback = drinks.length > 0 ? String(drinks[0].id) : null;
-    return drinks.find(d => String(d.id) === String(currentUser?.quickDrinkId || fallback));
+    const validDrinks = drinks.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM && !d.isTemporary);
+    const fallback = validDrinks.length > 0 ? validDrinks[0] : null;
+    
+    if (!currentUser?.quickDrinkId) return fallback;
+    return validDrinks.find(d => String(d.id) === String(currentUser.quickDrinkId)) || fallback;
   }, [drinks, currentUser?.quickDrinkId]);
 
   // OPTIMALISATIE: Gebruik useMemo om de events te filteren en te sorteren.
@@ -213,41 +218,71 @@ export const HomeScreen: React.FC = () => {
         {/* PRIMARY USER ACTIONS */}
         <div className="grid grid-cols-2 gap-4">
 
-          {/* Strepen Module */}
-          <div
-            onClick={() => navigate('/strepen')}
-            className="col-span-2 sm:col-span-1 bg-white dark:bg-[#1e2330] p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow cursor-pointer group"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-primary dark:text-blue-300">
-                  <span className="material-icons-round">local_bar</span>
+          {/* Geïntegreerde Strepen Kaart met Snel Actie */}
+          <div className="col-span-2 sm:col-span-1 bg-white dark:bg-[#1e2330] rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col transition-all">
+            
+            {/* Hoofdactie: Navigatie naar Strepen */}
+            <div 
+              onClick={() => navigate('/strepen')} 
+              className="p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center shrink-0">
+                  <span className="material-icons-round text-2xl">local_bar</span>
                 </div>
-                <h3 className="font-semibold text-lg text-gray-900 dark:text-white">Strepen</h3>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white text-lg leading-tight">Strepen</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Zet strepen en bekijk saldo</p>
+                </div>
               </div>
-              {handleQuickStreep && (
+              {quickDrink ? (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleQuickStreep();
+                    if (currentUser) {
+                      handleAddCost(currentUser.id, quickDrink.id, 1, currentUser.naam);
+                    }
                   }}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-full shadow-md active:scale-90 active:bg-blue-800 transition-all flex items-center gap-1.5 border border-blue-500/20"
-                  title={`Quick ${quickDrink?.name || 'Drink'}`}
+                  title={`Quick ${quickDrink.name}`}
                 >
-                  <span className="material-icons-round text-sm">local_bar</span>
-                  <span className="text-xs font-bold">+1</span>
+                  <span className="material-icons-round text-sm">bolt</span>
+                  <span className="text-xs font-bold">+1 {quickDrink.name}</span>
                 </button>
+              ) : (
+                <span className="material-icons-round text-gray-400">chevron_right</span>
               )}
             </div>
-            <div className="space-y-2">
-              <div
-                onClick={(e) => { e.stopPropagation(); navigate('/strepen'); }}
-                className="flex items-center justify-between text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <span className="text-gray-700 dark:text-gray-300">Strepen zetten</span>
-                <span className="material-icons-round text-xs text-gray-400">arrow_forward_ios</span>
+
+            {/* Subactie: Snel Bak Freedom (geïntegreerd aan de onderkant) */}
+            {drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM) && (
+              <div className="px-4 pb-4 pt-0">
+                <button 
+                  onClick={(e) => { 
+                    e.stopPropagation(); // Belangrijk: voorkomt dat je naar /strepen navigeert!
+                    const bak = drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM)!; 
+                    handleAddCost(currentUser?.id || '', bak.id, 1, currentUser?.naam);
+                  }} 
+                  className="w-full bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800/50 text-amber-700 dark:text-amber-400 py-3 px-4 rounded-xl flex items-center justify-between transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="material-icons-round text-amber-500 text-lg group-hover:scale-110 transition-transform">sports_bar</span>
+                    <div className="text-left flex flex-col">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-amber-500/80 mb-0.5">Snel Actie</span>
+                      <span className="text-sm font-bold leading-none">{SPECIAL_DRINKS.BAK_FREEDOM}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold opacity-70">
+                      € {drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM)?.price.toFixed(2).replace('.', ',')}
+                    </span>
+                    <div className="bg-amber-500 text-white w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm shadow-sm group-hover:bg-amber-600 transition-colors">
+                      +1
+                    </div>
+                  </div>
+                </button>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Frieten Module */}
@@ -356,7 +391,7 @@ export const HomeScreen: React.FC = () => {
 
         {/* --- ADMIN SECTIONS BELOW (Geoptimaliseerd met NavCard) --- */}
 
-        {(hasRole(currentUser, 'financiën') || hasRole(currentUser, 'hoofdleiding')) && (
+        {hasAccess(currentUser, 'financiën') && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="material-icons-round text-primary text-sm">account_balance</span>
@@ -374,7 +409,7 @@ export const HomeScreen: React.FC = () => {
           </section>
         )}
 
-        {hasRole(currentUser, 'hoofdleiding') && (
+        {hasAccess(currentUser, 'hoofdleiding') && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="material-icons-round text-primary text-sm">admin_panel_settings</span>
@@ -399,7 +434,7 @@ export const HomeScreen: React.FC = () => {
           </section>
         )}
 
-        {hasRole(currentUser, 'drank') && (
+        {hasAccess(currentUser, 'drank') && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="material-icons-round text-primary text-sm">local_drink</span>
@@ -424,7 +459,7 @@ export const HomeScreen: React.FC = () => {
           </section>
         )}
 
-        {hasRole(currentUser, 'sfeerbeheer') && (
+        {hasAccess(currentUser, 'sfeerbeheer') && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="material-icons-round text-primary text-sm">celebration</span>
@@ -456,7 +491,7 @@ export const HomeScreen: React.FC = () => {
           </section>
         )}
 
-        {hasRole(currentUser, 'winkeltje') && (
+        {hasAccess(currentUser, 'winkeltje') && (
           <section>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="material-icons-round text-primary text-sm">storefront</span>

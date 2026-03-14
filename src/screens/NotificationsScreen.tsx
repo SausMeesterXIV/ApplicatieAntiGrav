@@ -123,7 +123,12 @@ const NotificationCard: React.FC<{ data: Notification, onClick: () => void }> = 
 
   return (
     <div
-      onClick={onClick}
+      onClick={(e) => {
+        e.preventDefault();
+        if (!data.isRead) {
+          onClick();
+        }
+      }}
       className={`p-4 rounded-2xl border transition-all cursor-pointer active:scale-[0.99] ${data.isRead ? 'bg-white dark:bg-[#1e293b]/50 border-gray-100 dark:border-gray-800' : 'bg-white dark:bg-[#1e293b] border-blue-200 dark:border-blue-900/50 shadow-sm dark:shadow-md ring-1 ring-blue-50 dark:ring-blue-900/20'}`}
     >
       <div className="flex items-start gap-4">

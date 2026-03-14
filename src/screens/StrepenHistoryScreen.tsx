@@ -3,6 +3,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { AppContextType } from '../App';
 import { Streak } from '../types';
+import { useDrink } from '../contexts/DrinkContext';
 
 interface Props {
     adminMode?: boolean;
@@ -10,7 +11,12 @@ interface Props {
 
 export const StrepenHistoryScreen: React.FC<Props> = ({ adminMode = false }) => {
     const navigate = useNavigate();
-    const { streaks, users, currentUser, handleDeleteStreak } = useOutletContext<AppContextType>();
+    const { users, currentUser } = useOutletContext<AppContextType>();
+    const { streaks, handleRemoveCost } = useDrink(); // Haal ALTIJD de meest up-to-date streaks uit DrinkContext
+
+    const isTeamDrank = currentUser?.rol === 'hoofdleiding' || 
+                        currentUser?.rol === 'godmode' || 
+                        currentUser?.roles?.some((r: any) => String(r).toLowerCase().includes('drank'));
 
     interface BundledStreak {
         ids: string[];
@@ -43,9 +49,10 @@ export const StrepenHistoryScreen: React.FC<Props> = ({ adminMode = false }) => 
 
     const getUserName = (userId: string) => {
         if (!currentUser) return 'Onbekend';
-        if (userId === currentUser.id) return currentUser.nickname || currentUser.name || 'Jij';
+        // Gebruik uitsluitend de echte naam (naam/name) voor de geschiedenislogs
+        if (userId === currentUser.id) return currentUser.naam || currentUser.name || 'Jij';
         const u = (users || []).find(u => u.id === userId);
-        return u ? (u.nickname || u.name || u.naam) : 'Onbekend lid';
+        return u ? (u.naam || u.name) : 'Onbekend lid';
     };
 
     const getUserAvatar = (userId: string) => {
@@ -61,7 +68,8 @@ export const StrepenHistoryScreen: React.FC<Props> = ({ adminMode = false }) => 
         if (window.confirm(`Ben je zeker dat je deze ${count === 1 ? 'streep' : count + ' strepen'} wil verwijderen?`)) {
             setDeletingId(ids[0]);
             for (const id of ids) {
-                await handleDeleteStreak(id);
+                // Pass isTeamDrank in plaats van adminMode, zodat ze altijd rechten hebben
+                await handleRemoveCost(id, isTeamDrank); 
             }
             setDeletingId(null);
         }
@@ -206,8 +214,8 @@ export const StrepenHistoryScreen: React.FC<Props> = ({ adminMode = false }) => 
                                                 </div>
                                             </div>
                                         </div>
-                                        {/* Delete button */}
-                                        {(adminMode || bundle.userId === currentUser?.id) && (
+                                        {/* Delete button: Uitsluitend voor Team Drank & Admins */}
+                                        {isTeamDrank && (
                                             <button
                                                 onClick={(e) => handleRemove(bundle.ids, e)}
                                                 disabled={deletingId === bundle.ids[0]}
