@@ -9,13 +9,26 @@ export const ResetPasswordScreen: React.FC = () => {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        // Check if we have an active session/recovery token
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (!session) {
-                // Not in a recovery flow or logged in
+        let mounted = true;
+
+        // 1. Luister of er via de mail link een 'PASSWORD_RECOVERY' event of nieuwe sessie binnenkomt
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT' && mounted) {
                 navigate('/login');
             }
         });
+
+        // 2. Dubbelcheck de huidige status. Geen sessie na het laden? Terug naar login.
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session && mounted) {
+                navigate('/login');
+            }
+        });
+
+        return () => {
+            mounted = false;
+            subscription.unsubscribe();
+        };
     }, [navigate]);
 
     const handleReset = async (e: React.FormEvent) => {
@@ -23,6 +36,7 @@ export const ResetPasswordScreen: React.FC = () => {
         setLoading(true);
 
         try {
+            // Dit werkt enkel omdat de gebruiker via de mail-link tijdelijk geauthenticeerd is
             const { error } = await supabase.auth.updateUser({
                 password: password
             });

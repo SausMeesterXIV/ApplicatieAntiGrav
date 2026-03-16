@@ -684,7 +684,7 @@ function App() {
                             <ScrollToTop />
                             <Routes>
                                 <Route path="/login" element={!session ? <CredentialsScreen /> : <Navigate to="/" />} />
-                                <Route path="/reset-password" element={!session ? <ResetPasswordScreen /> : <Navigate to="/" />} />
+                                <Route path="/reset-password" element={<ResetPasswordScreen />} />
                                 <Route path="/credits" element={<CreditsScreen />} />
 
                                 {/* Protected Routes */}
