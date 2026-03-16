@@ -10,20 +10,24 @@ import { NavCard } from '../components/NavCard';
 
 export const TeamDrankDashboardScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { users, currentUser } = useAuth();
+  // 1. Haal 'loading' mee uit de useAuth hook
+  const { users, currentUser, loading } = useAuth();
   const { streaks, activePeriod, handleRemoveCost: handleDeleteStreak } = useDrink();
   const { friesOrders } = useFries();
   
   const canAccess = hasRole(currentUser, 'drank');
 
   React.useEffect(() => {
-    if (!canAccess) {
+    // 2. Wacht met de redirect check tot het laden voltooid is
+    if (!loading && !canAccess) {
       showToast('Geen toegang tot Team Drank dashboard', 'error');
       navigate('/');
     }
-  }, [canAccess, navigate]);
+  // 3. Vergeet loading niet in de dependency array
+  }, [canAccess, navigate, loading]);
 
-  if (!canAccess) return null;
+  // 4. Render niets zolang we nog aan het laden zijn, of als er geen toegang is
+  if (loading || !canAccess) return null;
 
   const [activeView, setActiveView] = useState<'dashboard' | 'balances' | 'logbook'>(() => {
     return (sessionStorage.getItem('teamDrankActiveView') as 'dashboard' | 'balances' | 'logbook') || 'dashboard';
