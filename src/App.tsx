@@ -725,7 +725,10 @@ function App() {
                 </div>
                 
                 {/* De navigatie-container plakt nu tegen de onderkant */}
-                <div className="w-full z-50 shrink-0">
+                <div 
+                    className="w-full z-50 shrink-0 bg-gray-50 dark:bg-[#0f172a]"
+                    style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+                >
                     <BottomNav notifications={notifications} />
                 </div>
             </div>

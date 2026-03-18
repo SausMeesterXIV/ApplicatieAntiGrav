@@ -14,7 +14,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({ notifications = [] }) => {
   const navItems = [
     { id: 'home', icon: 'home', label: 'Start' },
     { id: 'strepen', icon: 'local_bar', label: 'Strepen' },
-    { id: 'bierpong', icon: 'sports_bar', label: 'Bierpong' }, // TERUGGEZET NAAR OUDE ICOON
     { id: 'notificaties', icon: 'notifications', label: 'Meldingen', badge: true },
     { id: 'agenda', icon: 'event', label: 'Agenda' },
     { id: 'settings', icon: 'settings', label: 'Instellingen' },
