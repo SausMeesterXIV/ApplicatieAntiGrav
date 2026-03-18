@@ -124,7 +124,7 @@ export async function deleteDrank(id: string | number): Promise<void> {
 export async function fetchConsumpties(userId?: string): Promise<Streak[]> {
   let query = supabase
     .from('consumpties')
-    .select('*, dranken(naam, prijs)')
+    .select('*, dranken(naam, prijs), profiles(naam)')
     .order('datum', { ascending: false });
 
   if (userId) {
@@ -136,6 +136,7 @@ export async function fetchConsumpties(userId?: string): Promise<Streak[]> {
   return (data || []).map(c => ({
     id: c.id,
     userId: c.user_id,
+    userName: (c as any).profiles?.naam || c.user_naam || 'Onbekend',
     drinkId: c.drank_id,
     drinkName: (c as any).dranken?.naam || 'Onbekend',
     price: Number((c as any).dranken?.prijs || 0) * c.aantal,
@@ -145,14 +146,15 @@ export async function fetchConsumpties(userId?: string): Promise<Streak[]> {
   }));
 }
 
-export async function addConsumptie(userId: string, drankId: string, aantal: number = 1, periodId?: string, userNaam?: string): Promise<string> {
-  const { data, error } = await supabase
-    .from('consumpties')
-    .insert([{ user_id: userId, drank_id: drankId, aantal, period_id: periodId || null, user_naam: userNaam || null }])
-    .select('id')
-    .single();
+export async function addConsumptie(userId: string, drankId: string, aantal: number = 1, periodId?: string): Promise<void> {
+  const { error } = await (supabase as any).rpc('streep_drank', {
+    p_user_id: userId,
+    p_drank_id: drankId,
+    p_aantal: aantal,
+    p_period_id: periodId || null
+  });
+
   if (error) throw error;
-  return data.id;
 }
 
 export async function deleteConsumptie(id: string): Promise<void> {
@@ -164,21 +166,15 @@ export async function deleteConsumptie(id: string): Promise<void> {
 }
 
 export async function fetchBalanceForUser(userId: string): Promise<number> {
-  // Fetch both consumpties and frituur_bestellingen in parallel
-  const [consumptiesResult, frituurResult] = await Promise.all([
-    supabase
-      .from('consumpties')
-      .select('aantal, dranken(prijs)')
-      .eq('user_id', userId)
-      .is('factuur_id', null),
-    supabase
-      .from('frituur_bestellingen')
-      .select('totaal_prijs')
-      .eq('user_id', userId)
+  const [consumptiesResult, frituurResult, correctionsResult] = await Promise.all([
+    supabase.from('consumpties').select('aantal, dranken(prijs)').eq('user_id', userId).is('factuur_id', null),
+    supabase.from('frituur_bestellingen').select('totaal_prijs').eq('user_id', userId).is('period_id', null),
+    supabase.from('billing_corrections').select('correctie_bedrag').eq('user_id', userId)
   ]);
 
   if (consumptiesResult.error) throw consumptiesResult.error;
   if (frituurResult.error) throw frituurResult.error;
+  if (correctionsResult.error) throw correctionsResult.error;
 
   const consumptiesTotal = (consumptiesResult.data || []).reduce(
     (sum, c) => sum + (c.aantal * Number((c as any).dranken?.prijs || 0)), 0
@@ -188,11 +184,15 @@ export async function fetchBalanceForUser(userId: string): Promise<number> {
     (sum, f) => sum + Number(f.totaal_prijs || 0), 0
   );
 
-  return consumptiesTotal + frituurTotal;
+  const correctionsTotal = (correctionsResult.data || []).reduce(
+    (sum, corr) => sum + Number(corr.correctie_bedrag || 0), 0
+  );
+
+  return consumptiesTotal + frituurTotal + correctionsTotal;
 }
 
 export async function fetchAllBalances(): Promise<Record<string, number>> {
-  const [consumptiesResult, frituurResult] = await Promise.all([
+  const [consumptiesResult, frituurResult, correctionsResult] = await Promise.all([
     supabase
       .from('consumpties')
       .select('user_id, aantal, dranken(prijs)')
@@ -200,10 +200,15 @@ export async function fetchAllBalances(): Promise<Record<string, number>> {
     supabase
       .from('frituur_bestellingen')
       .select('user_id, totaal_prijs')
+      .is('period_id', null),
+    supabase
+      .from('billing_corrections')
+      .select('user_id, correctie_bedrag')
   ]);
 
   if (consumptiesResult.error) throw consumptiesResult.error;
   if (frituurResult.error) throw frituurResult.error;
+  if (correctionsResult.error) throw correctionsResult.error;
 
   const balances: Record<string, number> = {};
 
@@ -215,6 +220,11 @@ export async function fetchAllBalances(): Promise<Record<string, number>> {
   (frituurResult.data || []).forEach(f => {
     const amount = Number(f.totaal_prijs || 0);
     balances[f.user_id] = (balances[f.user_id] || 0) + amount;
+  });
+
+  (correctionsResult.data || []).forEach(corr => {
+    const amount = Number(corr.correctie_bedrag || 0);
+    balances[corr.user_id] = (balances[corr.user_id] || 0) + amount;
   });
 
   return balances;

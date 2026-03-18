@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -641,7 +641,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "profiles_quick_drink_id_fkey"
+            foreignKeyName: "fk_profiles_quick_drink"
             columns: ["quick_drink_id"]
             isOneToOne: false
             referencedRelation: "dranken"
@@ -1071,6 +1071,15 @@ export type Database = {
     }
     Functions: {
       archive_consumpties_period: { Args: never; Returns: Json }
+      streep_drank: {
+        Args: {
+          p_aantal: number
+          p_drank_id: string
+          p_period_id: string
+          p_user_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       factuur_status: "betaald" | "onbetaald"
@@ -1082,6 +1091,7 @@ export type Database = {
         | "sfeerbeheer"
         | "godmode"
         | "team drank"
+        | "hoofdleiding"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1218,6 +1228,7 @@ export const Constants = {
         "sfeerbeheer",
         "godmode",
         "team drank",
+        "hoofdleiding",
       ],
     },
   },

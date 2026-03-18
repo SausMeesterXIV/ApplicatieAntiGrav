@@ -135,6 +135,7 @@ export interface StockItem extends DbStockItemRow {
 export interface Streak {
     id: string;
     userId: string;
+    userName?: string;
     drinkId: string | number;
     drinkName: string;
     price: number;

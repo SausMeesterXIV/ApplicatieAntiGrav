@@ -43,7 +43,7 @@ export const TeamDrankExcelBeheerScreen: React.FC = () => {
             const drink = drinks.find(d => String(d.id) === String(streak.drinkId));
             return {
                 ...streak,
-                userName: user?.naam || user?.name || 'Onbekend',
+                userName: streak.userName || user?.naam || user?.name || 'Onbekend',
                 drinkName: drink?.name || streak.drinkName || 'Onbekend',
             };
         });
