@@ -397,7 +397,7 @@ function App() {
         const tempId = Math.random().toString(36).substr(2, 9);
         const newOrder: Order = {
             id: tempId, userId: orderForUser.id, userName: orderForUser.naam || orderForUser.name || 'Onbekend',
-            items, totalPrice: totalCost, date: new Date(), status: 'pending'
+            items, totalPrice: totalCost, date: new Date(), status: 'open'
         };
         setFriesOrders(prev => [newOrder, ...prev]);
 
@@ -442,7 +442,7 @@ function App() {
         if (!frituurSessieId) return;
         
         // Optimistische UI updates
-        setFriesOrders(prev => prev.map(o => ({ ...o, status: 'completed' as const })));
+        setFriesOrders(prev => prev.map(o => ({ ...o, status: 'geleverd' as const })));
         setFriesSessionStatus('closed');
         setFriesPickupTime(null);
 
@@ -483,7 +483,7 @@ function App() {
             }
 
             // 3. Bereken prijsverschil
-            const expectedAmount = friesOrders.filter(o => o.status === 'pending').reduce((acc, o) => acc + o.totalPrice, 0);
+            const expectedAmount = friesOrders.filter(o => o.status === 'open').reduce((acc, o) => acc + o.totalPrice, 0);
 
             if (Math.abs(actualAmount - expectedAmount) > 0.01) {
                 const targetUsers = users.filter(u => {

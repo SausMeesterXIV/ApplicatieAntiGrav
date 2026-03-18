@@ -66,7 +66,8 @@ export interface Order {
     items: CartItem[];
     totalPrice: number;
     date: Date;
-    status: 'pending' | 'completed' | 'open' | 'closed'; // Fixed to include common statuses
+    // We gebruiken hier exact de database enums voor continuïteit
+    status: 'open' | 'besteld' | 'geleverd'; 
     periodId?: string;
 }
 

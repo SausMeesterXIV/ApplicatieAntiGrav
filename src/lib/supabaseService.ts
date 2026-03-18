@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { formatTimeAgo } from './utils';
 import { User, Drink, Streak, StockItem, Order, QuoteItem, Notification, Event, BierpongGame, CountdownItem, BillingPeriod, BillingCorrection, DbDrankRow, DbProfileRow, DbEventRow, DbQuoteRow, DbBierpongGameRow, DbShopProductRow, DbShopVariantRow } from '../types';
 
 // ==================== PROFILES ====================
@@ -484,7 +485,7 @@ export async function fetchFrituurBestellingen(sessieId?: string): Promise<Order
     items: (b.items as any) || [],
     totalPrice: Number(b.totaal_prijs || 0),
     date: new Date(b.created_at),
-    status: b.status === 'geleverd' ? 'completed' as const : 'pending' as const,
+    status: b.status as 'open' | 'besteld' | 'geleverd', // Directe cast naar DB type
     periodId: b.period_id || undefined,
   }));
 }
@@ -567,13 +568,13 @@ export async function deleteFrituurBestelling(id: string): Promise<void> {
 }
 
 export async function archiveFrituurSessie(sessieId: string): Promise<void> {
-  // Mark all orders as delivered
+  // Markeer alle bestellingen als geleverd (match met enum)
   await supabase
     .from('frituur_bestellingen')
     .update({ status: 'geleverd' })
     .eq('sessie_id', sessieId);
 
-  // Close the session  
+  // Sluit de sessie
   await supabase
     .from('frituur_sessies')
     .update({ status: 'completed', closed_at: new Date().toISOString() })
@@ -727,33 +728,6 @@ export async function updateFactuurStatus(id: string, status: 'betaald' | 'onbet
     .update({ status })
     .eq('id', id);
   if (error) throw error;
-}
-
-// ==================== HELPERS ====================
-
-function formatTimeAgo(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Zonet';
-  if (diffMins < 60) return `${diffMins}m geleden`;
-  if (diffHours < 24) return `${diffHours}u geleden`;
-  if (diffDays < 7) return `${diffDays}d geleden`;
-  return date.toLocaleDateString('nl-BE');
-}
-
-/** Generate a stable numeric ID from a UUID string (for React keys) */
-function stableNumericId(uuid: string): number {
-  let hash = 0;
-  for (let i = 0; i < uuid.length; i++) {
-    const char = uuid.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0; // Convert to 32bit integer
-  }
-  return Math.abs(hash);
 }
 
 // ==================== COUNTDOWNS ====================

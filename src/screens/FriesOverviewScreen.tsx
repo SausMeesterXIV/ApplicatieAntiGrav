@@ -38,7 +38,7 @@ export const FriesOverviewScreen: React.FC = () => {
   const [tempPickupTime, setTempPickupTime] = useState('');
 
   // Filter only ACTIVE orders safely
-  const activeOrders = useMemo(() => (orders || []).filter(o => o?.status === 'pending'), [orders]);
+  const activeOrders = useMemo(() => (orders || []).filter(o => o?.status === 'open'), [orders]);
 
   useEffect(() => {
     if (pickupTime) {

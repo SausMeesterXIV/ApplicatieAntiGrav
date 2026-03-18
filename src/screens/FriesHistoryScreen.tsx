@@ -11,7 +11,7 @@ export const FriesHistoryScreen: React.FC = () => {
     // Group completed orders by date (day)
     const groupedByDate = (() => {
         // Toon uitsluitend bestellingen die effectief zijn afgerond
-        const completed = friesOrders.filter(o => o.userId === currentUser.id && o.status === 'completed');
+        const completed = friesOrders.filter(o => o.userId === currentUser.id && o.status === 'geleverd');
         const groups = new Map<string, { date: Date; orders: Order[]; total: number }>();
 
         completed.forEach(order => {

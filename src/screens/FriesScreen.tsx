@@ -59,7 +59,7 @@ export const FriesScreen: React.FC = () => {
   
   const showTodayAsHistory = sessionStatus === FRITUUR_STATUS.ORDERED;
   const myOwnOrders = myOrders.filter(o => o.userId === currentUser?.id);
-  const todayOrders = myOwnOrders.filter(o => isToday(o.date) && o.status === 'pending' && !showTodayAsHistory);
+  const todayOrders = myOwnOrders.filter(o => isToday(o.date) && o.status === 'open' && !showTodayAsHistory);
   
   const updateQuantity = (item: FryItem, delta: number) => {
     if (isAdmin || !isOrderingOpen) return;
