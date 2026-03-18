@@ -7,6 +7,7 @@ import { ChevronBack } from '../components/ChevronBack';
 import { showToast } from '../components/Toast';
 import { hasRole } from '../lib/roleUtils';
 import { NavCard } from '../components/NavCard';
+import { SPECIAL_DRINKS } from '../lib/constants';
 
 export const TeamDrankDashboardScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -103,6 +104,24 @@ export const TeamDrankDashboardScreen: React.FC = () => {
 
     return weeks;
   }, [periodStreaks]);
+
+  const topTenBeer = useMemo(() => {
+    const scores: Record<string, number> = {};
+    periodStreaks.forEach(s => {
+      if (s.drinkName === SPECIAL_DRINKS.PINT_FREEDOM) {
+        scores[s.userId] = (scores[s.userId] || 0) + s.amount;
+      }
+    });
+
+    return Object.entries(scores)
+      .map(([userId, count]) => ({
+        userId,
+        userName: users.find(u => u.id === userId)?.naam || 'Onbekend',
+        count
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+  }, [periodStreaks, users]);
 
   const onMinKnop = async (streakId: string) => {
     if (window.confirm('Weet je zeker dat je deze consumptie wil corrigeren (-1 streepje)?')) {
@@ -201,6 +220,40 @@ export const TeamDrankDashboardScreen: React.FC = () => {
                     onClick={() => navigate('/strepen/facturatie/archief')}
                   />
                 </div>
+              </div>
+            </section>
+
+            {/* Top 10 Bier Ranking */}
+            <section>
+              <div className="flex items-center gap-2 mb-4 px-1">
+                <span className="material-icons-round text-amber-500">emoji_events</span>
+                <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-sm">Top 10 Bier (Pinten)</h3>
+              </div>
+              
+              <div className="bg-white dark:bg-[#1e2330] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+                {topTenBeer.length > 0 ? (
+                  <div className="divide-y divide-gray-50 dark:divide-gray-800">
+                    {topTenBeer.map((item, index) => (
+                      <div key={item.userId} className="p-3 px-4 flex items-center justify-between group">
+                        <div className="flex items-center gap-3">
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${index === 0 ? 'bg-yellow-100 text-yellow-700' : index === 1 ? 'bg-gray-100 text-gray-700' : index === 2 ? 'bg-orange-100 text-orange-700' : 'bg-gray-50 text-gray-400'}`}>
+                            {index + 1}
+                          </span>
+                          <span className="font-bold text-gray-900 dark:text-white text-sm">{item.userName}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-black text-blue-600 dark:text-blue-400">{item.count}</span>
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">pintjes</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center">
+                    <span className="material-icons-round text-gray-200 text-4xl mb-2">sports_bar</span>
+                    <p className="text-xs text-gray-400 font-medium">Nog geen pintjes gedronken deze periode.</p>
+                  </div>
+                )}
               </div>
             </section>
           </>

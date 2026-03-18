@@ -35,7 +35,13 @@ export const FRITUUR_DB_CATEGORIES = [
 ] as const;
 
 export const SPECIAL_DRINKS = {
+  PINT_FREEDOM: 'Freedom',
   BAK_FREEDOM: 'Bak Freedom',
+} as const;
+
+export const SYSTEM_CONFIG = {
+  STANDARD_DRINK: 'Freedom', // De referentie voor het systeem
+  BAK_VALUE: 24,             // Wordt enkel gebruikt voor prijs/voorraad, niet voor bier-ranking
 } as const;
 
 export const SHOP_CATEGORIES = [
