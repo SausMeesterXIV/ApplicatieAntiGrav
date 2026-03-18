@@ -656,7 +656,7 @@ function App() {
 
     const MainLayout = () => {
         return (
-            <div className="text-base h-[100dvh] w-full flex flex-col overflow-hidden">
+            <div className="text-base w-full flex flex-col overflow-hidden" style={{ height: 'var(--app-height, 100dvh)' }}>
                 {/* Scrollbare content area */}
                 <div className="flex-1 w-full overflow-y-auto no-scrollbar">
                     <ErrorBoundary>
