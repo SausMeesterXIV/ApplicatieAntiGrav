@@ -207,7 +207,7 @@ export const AgendaManageScreen: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
       {/* Header */}
-      <header className="px-4 py-4 flex items-center gap-4 bg-gray-50/90 dark:bg-gray-900/90 backdrop-blur-sm z-10 transition-colors sticky top-0 border-b border-gray-100 dark:border-gray-800">
+      <header className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] flex items-center gap-4 bg-gray-50/90 dark:bg-gray-900/90 backdrop-blur-sm z-10 transition-colors sticky top-0 border-b border-gray-100 dark:border-gray-800">
         <ChevronBack onClick={() => navigate(-1)} />
         <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Agenda & Aftelklok</h1>
       </header>

@@ -99,7 +99,7 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200">
       {/* Header */}
-      <header className="px-4 py-4 sticky top-0 bg-gray-50 dark:bg-[#0f172a] z-10 flex items-center justify-between transition-colors duration-200">
+      <header className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] sticky top-0 bg-gray-50 dark:bg-[#0f172a] z-10 flex items-center justify-between transition-colors duration-200">
         <ChevronBack onClick={handleBack} className="text-blue-600 dark:text-blue-500" />
         <h1 className="text-base font-bold tracking-widest text-gray-500 dark:text-gray-400 uppercase">Mijn Rekening</h1>
         <button className="p-2 -mr-2 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400">

@@ -141,7 +141,7 @@ export const ConsumptionOverviewScreen: React.FC<ConsumptionOverviewScreenProps>
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200">
       {/* Header */}
-      <header className="px-4 py-4 flex items-center gap-4 sticky top-0 bg-gray-50/80 dark:bg-[#0f172a]/80 backdrop-blur-md z-10 transition-colors border-b border-gray-200/50 dark:border-gray-800/50">
+      <header className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] flex items-center gap-4 sticky top-0 bg-gray-50/80 dark:bg-[#0f172a]/80 backdrop-blur-md z-10 transition-colors border-b border-gray-200/50 dark:border-gray-800/50">
         <ChevronBack onClick={handleBack} />
         <div>
           <h1 className="text-2xl font-bold leading-tight tracking-tight">Consumptieoverzicht</h1>

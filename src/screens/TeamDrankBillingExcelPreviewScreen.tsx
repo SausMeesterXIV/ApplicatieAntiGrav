@@ -188,7 +188,7 @@ export const TeamDrankBillingExcelPreviewScreen: React.FC<TeamDrankBillingExcelP
    return (
       <div className="flex flex-col min-h-screen bg-white dark:bg-[#1e293b] text-gray-900 dark:text-white font-sans transition-colors duration-200">
          {/* Excel-like Header */}
-         <header className="bg-[#1D6F42] text-white px-4 py-3 shadow-md z-10">
+         <header className="bg-[#1D6F42] text-white px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 shadow-md z-10">
             <div className="flex items-center gap-4">
                <button onClick={onBack || (() => navigate(-1))} className="p-1 hover:bg-white/10 rounded-full transition-colors">
                   <span className="material-icons-round text-xl">arrow_back</span>

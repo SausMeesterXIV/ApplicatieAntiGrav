@@ -129,7 +129,7 @@ export const ShopCategoryScreen: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] pb-20">
-            <header className="px-6 py-6 flex items-center justify-between bg-gray-50 dark:bg-[#0f172a] sticky top-0 z-20">
+            <header className="px-6 pb-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] flex items-center justify-between bg-gray-50 dark:bg-[#0f172a] sticky top-0 z-20">
                 <div className="flex items-center gap-4">
                     <ChevronBack onClick={() => navigate(-1)} />
                     <div className="flex flex-col">

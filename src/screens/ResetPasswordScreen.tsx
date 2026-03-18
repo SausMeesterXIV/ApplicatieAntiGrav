@@ -53,7 +53,7 @@ export const ResetPasswordScreen: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200">
+        <div className="flex flex-col min-h-screen pt-[env(safe-area-inset-top,0px)] bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200">
             <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
                 <div className="w-full max-w-sm space-y-8">
                     <div className="flex flex-col items-center text-center">

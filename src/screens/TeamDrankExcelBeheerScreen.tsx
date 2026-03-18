@@ -388,7 +388,7 @@ export const TeamDrankExcelBeheerScreen: React.FC = () => {
     return (
         <div className="flex flex-col h-screen bg-white dark:bg-[#1e293b] text-gray-900 dark:text-white font-sans overflow-hidden">
             {/* === EXCEL TITLE BAR === */}
-            <header className="bg-[#217346] text-white h-10 flex items-center px-3 gap-3 shrink-0 z-20 shadow-md">
+            <header className="bg-[#217346] text-white h-[calc(2.5rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] flex items-center px-3 gap-3 shrink-0 z-20 shadow-md">
                 <button onClick={() => navigate(-1)} className="p-0.5 hover:bg-white/10 rounded transition-colors">
                     <span className="material-icons-round text-lg">arrow_back</span>
                 </button>

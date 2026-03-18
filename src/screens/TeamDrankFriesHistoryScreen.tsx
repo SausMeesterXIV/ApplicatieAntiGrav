@@ -116,7 +116,7 @@ export const TeamDrankFriesHistoryScreen: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] pb-24 transition-colors">
-            <header className="px-4 py-4 flex items-center gap-4 bg-white dark:bg-[#1e2330] shadow-sm sticky top-0 z-20">
+            <header className="px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-4 flex items-center gap-4 bg-white dark:bg-[#1e2330] shadow-sm sticky top-0 z-20">
                 <ChevronBack onClick={() => navigate(-1)} />
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">Admin Frituurgeschiedenis</h1>
             </header>

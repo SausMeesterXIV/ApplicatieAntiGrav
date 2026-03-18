@@ -16,7 +16,7 @@ export const ShopDashboardScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] pb-20">
-      <header className="px-6 py-6 flex items-center gap-4 bg-gray-50 dark:bg-[#0f172a] sticky top-0 z-10">
+      <header className="px-6 pb-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] flex items-center gap-4 bg-gray-50 dark:bg-[#0f172a] sticky top-0 z-10">
         <ChevronBack onClick={() => navigate(-1)} />
         <div className="flex flex-col">
           <span className="text-sm font-bold text-primary dark:text-blue-500 uppercase tracking-wider mb-1">KSA Winkeltje</span>

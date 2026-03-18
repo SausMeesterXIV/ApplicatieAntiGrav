@@ -140,7 +140,7 @@ export const TeamDrankDashboardScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
-      <header className="px-4 py-6 sticky top-0 bg-gray-50/90 dark:bg-[#0f172a]/90 backdrop-blur-md z-20 flex justify-between items-center border-b border-gray-200 dark:border-gray-800">
+      <header className="px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-6 sticky top-0 bg-gray-50/90 dark:bg-[#0f172a]/90 backdrop-blur-md z-20 flex justify-between items-center border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center gap-3">
           <ChevronBack onClick={handleBack} />
           <div>

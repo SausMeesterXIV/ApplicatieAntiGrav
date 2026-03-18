@@ -7,7 +7,7 @@ export const FinanceDashboardScreen: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a]">
-            <header className="px-6 py-6 flex items-center gap-4 bg-white dark:bg-[#1e2330] shadow-sm sticky top-0 z-20">
+            <header className="px-6 pb-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] flex items-center gap-4 bg-white dark:bg-[#1e2330] shadow-sm sticky top-0 z-20">
                 <ChevronBack onClick={() => navigate(-1)} />
                 <h1 className="text-2xl font-black text-gray-900 dark:text-white">Financiën</h1>
             </header>
