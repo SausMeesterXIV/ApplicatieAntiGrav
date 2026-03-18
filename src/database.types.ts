@@ -1071,6 +1071,10 @@ export type Database = {
     }
     Functions: {
       archive_consumpties_period: { Args: never; Returns: Json }
+      finalize_frituur_sessie: {
+        Args: { p_actual_amount: number; p_sessie_id: string }
+        Returns: Json
+      }
       streep_drank: {
         Args: {
           p_aantal: number
@@ -1078,7 +1082,7 @@ export type Database = {
           p_period_id: string
           p_user_id: string
         }
-        Returns: string
+        Returns: undefined
       }
     }
     Enums: {

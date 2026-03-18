@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from './supabase';
-import { Notification, BierpongGame } from '../types';
+import { Notification, BierpongGame, Order } from '../types';
 import { showToast } from '../components/Toast';
 import { formatTimeAgo } from './utils';
 
@@ -8,9 +8,17 @@ interface UseRealtimeOptions {
   userId: string | null;
   setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
   setBierpongGames: React.Dispatch<React.SetStateAction<BierpongGame[]>>;
+  setFriesOrders?: React.Dispatch<React.SetStateAction<Order[]>>;
+  frituurSessieId?: string | null;
 }
 
-export function useRealtimeSubscriptions({ userId, setNotifications, setBierpongGames }: UseRealtimeOptions) {
+export function useRealtimeSubscriptions({ 
+  userId, 
+  setNotifications, 
+  setBierpongGames,
+  setFriesOrders,
+  frituurSessieId
+}: UseRealtimeOptions) {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
@@ -75,6 +83,45 @@ export function useRealtimeSubscriptions({ userId, setNotifications, setBierpong
             if (prev.some(existing => existing.id === g.id)) return prev;
             return [...prev, mapped];
           });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'frituur_bestellingen' },
+        (payload) => {
+          if (!setFriesOrders) return;
+
+          if (payload.eventType === 'INSERT') {
+            const n = payload.new as any;
+            if (frituurSessieId && n.sessie_id !== frituurSessieId) return;
+
+            const mapped: Order = {
+              id: n.id,
+              userId: n.user_id,
+              userName: n.user_name || 'Onbekend',
+              items: n.items || [],
+              totalPrice: n.totaal_prijs || 0,
+              date: new Date(n.created_at),
+              status: n.status,
+              periodId: n.period_id
+            };
+
+            setFriesOrders(prev => {
+              if (prev.some(o => o.id === n.id)) return prev;
+              return [...prev, mapped];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const n = payload.new as any;
+            setFriesOrders(prev => prev.map(o => o.id === n.id ? {
+              ...o,
+              status: n.status,
+              totalPrice: n.totaal_prijs || 0,
+              items: n.items || o.items
+            } : o));
+          } else if (payload.eventType === 'DELETE') {
+            const old = payload.old as any;
+            setFriesOrders(prev => prev.filter(o => o.id !== old.id));
+          }
         }
       )
       .subscribe();

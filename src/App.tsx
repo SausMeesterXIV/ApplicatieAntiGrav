@@ -184,6 +184,8 @@ function App() {
         userId: session?.user?.id || null,
         setNotifications,
         setBierpongGames,
+        setFriesOrders,
+        frituurSessieId
     });
 
     useEffect(() => {
@@ -460,16 +462,29 @@ function App() {
     const handleArchiveFriesSession = async () => {
         if (!frituurSessieId) return;
         
-        // Optimistische UI updates
-        setFriesOrders(prev => prev.map(o => ({ ...o, status: 'geleverd' as const })));
-        setFriesSessionStatus('closed');
-        setFriesPickupTime(null);
+        // Sla oude staat op voor eventuele rollback
+        const prevOrders = [...friesOrders];
+        const prevStatus = friesSessionStatus;
+        const prevSessieId = frituurSessieId;
 
+        // Optimistische UI updates (worden nu pas doorgevoerd ALS we zeker zijn of we RPC direct aanroepen)
+        // In dit geval is handleArchiveFriesSession een 'silent' archiveer actie zonder bedrag.
+        // We gebruiken 0 als bedrag of we laten het over aan de betalingsflow.
+        
         try {
-            await db.archiveFrituurSessie(frituurSessieId);
+            setFriesOrders(prev => prev.map(o => ({ ...o, status: 'geleverd' as const })));
+            setFriesSessionStatus('closed');
+            setFriesPickupTime(null);
+            
+            await db.finalizeFrituurSessie(frituurSessieId, 0);
             setFrituurSessieId(null);
         } catch (error) {
             console.error('Archiveren mislukt', error);
+            // Rollback
+            setFriesOrders(prevOrders);
+            setFriesSessionStatus(prevStatus);
+            setFrituurSessieId(prevSessieId);
+            showToast('Archiveren mislukt. Probeer het opnieuw.', 'error');
         }
     };
 
@@ -478,11 +493,16 @@ function App() {
             showToast('Geen actieve sessie gevonden om af te sluiten', 'error');
             return;
         }
+
+        // Sla oude staat op voor rollback
+        const prevOrders = [...friesOrders];
+        const prevStatus = friesSessionStatus;
+        const prevSessieId = frituurSessieId;
         
         try {
             let receiptUrl = '';
             
-            // 1. Upload kasticket
+            // 1. Upload kasticket (optioneel, blokkeert de rest niet bij waarschuwing)
             if (receiptFile) {
                 try {
                     receiptUrl = await db.uploadReceipt(frituurSessieId, receiptFile);
@@ -491,19 +511,26 @@ function App() {
                 }
             }
 
-            // 2. Update actual_amount en receipt_url (WE LATEN DE STATUS HIER GERUST OM CRASH TE VOORKOMEN)
-            try {
-                await db.updateFrituurSessie(frituurSessieId, { 
-                    actual_amount: actualAmount, 
-                    receipt_url: receiptUrl
-                });
-            } catch (updateErr) {
-                console.warn("Kolommen ontbreken mogelijk, update geskipt", updateErr);
+            // 2. Update receipt_url (we doen dit apart omdat de RPC actual_amount al zet)
+            if (receiptUrl) {
+                try {
+                    await db.updateFrituurSessie(frituurSessieId, { receipt_url: receiptUrl });
+                } catch (updateErr) {
+                    console.warn("Kon receipt_url niet updaten", updateErr);
+                }
             }
 
-            // 3. Bereken prijsverschil
-            const expectedAmount = friesOrders.filter(o => o.status === 'open').reduce((acc, o) => acc + o.totalPrice, 0);
+            // 3. Atomische afronding via RPC
+            const result = await db.finalizeFrituurSessie(frituurSessieId, actualAmount);
+            
+            // 4. Update UI na succes
+            setFriesOrders(prev => prev.map(o => ({ ...o, status: 'geleverd' as const })));
+            setFriesSessionStatus('closed');
+            setFriesPickupTime(null);
+            setFrituurSessieId(null);
 
+            // 5. Check prijsverschil op basis van server-data
+            const expectedAmount = Number(result.expected_amount);
             if (Math.abs(actualAmount - expectedAmount) > 0.01) {
                 const targetUsers = users.filter(u => {
                     const roles = (u.roles || []).map(r => String(r).toLowerCase());
@@ -522,18 +549,30 @@ function App() {
                     db.addNotificatie(currentUser.id, user.id, notifTitle, notifContent, currentUser.naam || 'Systeem', '').catch(() => {}); 
                 });
 
-                handleAddNotification({ type: 'order', sender: 'Systeem', role: '', title: notifTitle, content: notifContent, time: 'Zonet', isRead: false, action: '', icon: 'price_change', color: 'bg-orange-100 dark:bg-orange-600/20 text-orange-600 dark:text-orange-500' } as any);
+                handleAddNotification({ 
+                    type: 'order', 
+                    sender: 'Systeem', 
+                    role: '', 
+                    title: notifTitle, 
+                    content: notifContent, 
+                    time: 'Zonet', 
+                    isRead: false, 
+                    action: '', 
+                    icon: 'price_change', 
+                    color: 'bg-orange-100 dark:bg-orange-600/20 text-orange-600 dark:text-orange-500' 
+                } as any);
 
-                await handleArchiveFriesSession(); // Sluit veilig af
                 showToast('Betaling afgerond — prijsverschil gemeld', 'warning');
             } else {
-                await handleArchiveFriesSession(); // Sluit veilig af
                 showToast('Betaling succesvol afgerond!', 'success');
             }
         } catch (error: any) {
             console.error('Grote fout bij afronden betaling:', error);
-            showToast('Fout: we sluiten de sessie nu af.', 'error');
-            await handleArchiveFriesSession(); // Zelfs bij fouten sluiten we de bestelling af!
+            // Rollback op error
+            setFriesOrders(prevOrders);
+            setFriesSessionStatus(prevStatus);
+            setFrituurSessieId(prevSessieId);
+            showToast('Fout bij het afronden. De sessie is niet gesloten.', 'error');
         }
     };
 

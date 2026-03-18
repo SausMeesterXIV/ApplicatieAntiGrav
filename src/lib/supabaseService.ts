@@ -577,18 +577,14 @@ export async function deleteFrituurBestelling(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function archiveFrituurSessie(sessieId: string): Promise<void> {
-  // Markeer alle bestellingen als geleverd (match met enum)
-  await supabase
-    .from('frituur_bestellingen')
-    .update({ status: 'geleverd' })
-    .eq('sessie_id', sessieId);
+export async function finalizeFrituurSessie(sessieId: string, actualAmount: number): Promise<{ expected_amount: number; actual_amount: number }> {
+  const { data, error } = await supabase.rpc('finalize_frituur_sessie', {
+    p_sessie_id: sessieId,
+    p_actual_amount: actualAmount
+  });
 
-  // Sluit de sessie
-  await supabase
-    .from('frituur_sessies')
-    .update({ status: 'completed', closed_at: new Date().toISOString() })
-    .eq('id', sessieId);
+  if (error) throw error;
+  return data as unknown as { expected_amount: number; actual_amount: number };
 }
 
 // ==================== BIERPONG ====================
