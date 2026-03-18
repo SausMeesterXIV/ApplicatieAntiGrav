@@ -657,20 +657,17 @@ function App() {
         return (
             <div 
                 className="text-base w-full flex flex-col overflow-hidden bg-gray-50 dark:bg-[#0f172a]" 
-                style={{ 
-                    height: '100dvh',
-                    paddingBottom: 'env(safe-area-inset-bottom, 0px)'
-                }}
+                style={{ height: 'var(--app-height, 100dvh)' }}
             >
-                {/* Scrollbare content area */}
                 <div className="flex-1 w-full overflow-y-auto no-scrollbar">
                     <ErrorBoundary>
                         <Outlet context={contextValue} />
                     </ErrorBoundary>
                 </div>
-                
-                {/* Navigatie */}
-                <div className="w-full z-50 shrink-0 bg-gray-50 dark:bg-[#0f172a]">
+                <div 
+                    className="w-full z-50 shrink-0 bg-gray-50 dark:bg-[#0f172a]" 
+                    style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)' }}
+                >
                     <BottomNav notifications={notifications} />
                 </div>
             </div>
