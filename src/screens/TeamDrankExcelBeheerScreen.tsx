@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { AppContextType } from '../App';
 import * as db from '../lib/supabaseService';
+import { supabase } from '../lib/supabase';
 import { showToast } from '../components/Toast';
 
 type SheetTab = 'consumpties' | 'dranken' | 'leden';
@@ -297,17 +298,51 @@ export const TeamDrankExcelBeheerScreen: React.FC = () => {
             }
 
             // 2. Prepare data for the current active sheet
-            const cols = getColumns();
-            const rows = getRowCount();
-            const values = [cols]; // Header row
+            const values: string[][] = [];
 
-            for (let i = 0; i < rows; i++) {
-                const row: string[] = [];
-                for (let j = 0; j < cols.length; j++) {
-                    const cellVal = getCellValue(i, j);
-                    row.push(cellVal);
+            if (activeSheet === 'consumpties') {
+                // FETCH FRESH FROM DATABASE VIA JOIN INSTEAD OF LOCAL TABLE STATE
+                const { data: rawData, error } = await supabase
+                    .from('consumpties')
+                    .select(`
+                        aantal,
+                        datum,
+                        dranken ( naam, prijs ),
+                        profiles ( naam ) 
+                    `)
+                    .eq('period_id', activePeriod.id)
+                    .order('datum', { ascending: false });
+
+                if (error) throw error;
+
+                // Headers without delete bin
+                values.push(['Datum', 'Tijd', 'Persoon', 'Drank', 'Aantal', 'Prijs (€)']);
+                
+                // Rows
+                for (const row of (rawData || [])) {
+                    const d = new Date(row.datum);
+                    values.push([
+                        d.toLocaleDateString('nl-BE'),
+                        d.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' }),
+                        (row.profiles as any)?.naam || 'Onbekend',
+                        (row.dranken as any)?.naam || 'Onbekend',
+                        String(row.aantal),
+                        Number((row.dranken as any)?.prijs || 0).toFixed(2).replace('.', ',')
+                    ]);
                 }
-                values.push(row);
+            } else {
+                // Dranken & Leden: from local table
+                const cols = getColumns();
+                values.push(cols);
+                const rowsCount = getRowCount();
+
+                for (let i = 0; i < rowsCount; i++) {
+                    const row: string[] = [];
+                    for (let j = 0; j < cols.length; j++) {
+                        row.push(getCellValue(i, j));
+                    }
+                    values.push(row);
+                }
             }
 
             // 3. Sync to the tab (using sheetId if available to handle renames)

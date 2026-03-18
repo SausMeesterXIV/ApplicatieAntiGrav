@@ -109,6 +109,19 @@ serve(async (req) => {
       })
       result = await res.json()
       if (result.error) throw new Error(`Sheets API (update_values): ${result.error.message} | Details: ${JSON.stringify(result.error)}`)
+    } else if (command === 'backup_spreadsheet') {
+      const { spreadsheetId, title } = payload
+      const backupTitle = title || `Backup_${new Date().toISOString().split('T')[0]}`
+      
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${spreadsheetId}/copy`, {
+        method: 'POST',
+        headers: authHeader,
+        body: JSON.stringify({ name: backupTitle })
+      })
+      
+      result = await res.json()
+      if (result.error) throw new Error(`Drive API (backup): ${result.error.message}`)
+      console.log(`Backup created: ${result.id}`)
     }
 
     return new Response(JSON.stringify(result), {

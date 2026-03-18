@@ -1078,3 +1078,11 @@ export async function updateFrituurBestelling(id: string, totaalPrijs: number, i
 
   if (error) throw error;
 }
+
+/** Trigger een backup van de huidige spreadsheet via de Edge Function */
+export async function backupSpreadsheet(spreadsheetId: string, title?: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('google-sheets-sync', {
+    body: { command: 'backup_spreadsheet', payload: { spreadsheetId, title } }
+  });
+  if (error) throw error;
+}

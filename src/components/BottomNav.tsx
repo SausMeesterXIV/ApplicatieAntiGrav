@@ -25,7 +25,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ notifications = [] }) => {
   return (
     <nav
       className="w-full border-t border-gray-200 dark:border-gray-800 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] pt-2 px-4 transition-colors duration-200"
-      style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
+      style={{ paddingBottom: '0.5rem' }}
     >
       <div className="flex justify-between items-center pb-1">
         {navItems.map((item) => (

@@ -221,15 +221,14 @@ function App() {
                 while (i < pendingStreaks.length) {
                     const streak = pendingStreaks[i];
                     try {
-                        const realId = await db.addConsumptie(
+                        await db.addConsumptie(
                             streak.userId, 
                             streak.drinkId, 
                             streak.quantity, 
-                            undefined, 
-                            streak.userName
+                            undefined
                         );
                         
-                        setStreaks(prev => prev.map(s => s.id === streak.tempId ? { ...s, id: realId } : s));
+                        // Real ID is now managed exclusively by Supabase via RPC, keeping temp ID in UI untill refresh
                         pendingStreaks.splice(i, 1);
                         localStorage.setItem('ksa_pending_streaks', JSON.stringify(pendingStreaks));
                         
@@ -350,8 +349,8 @@ function App() {
         setBalance(prev => prev + (amount * quantity));
 
         try {
-            const realId = await db.addConsumptie(currentUser.id, String(drink.id), quantity, activePeriod?.id, currentUser.naam);
-            setStreaks(prev => prev.map(s => s.id === tempId ? { ...s, id: realId } : s));
+            await db.addConsumptie(currentUser.id, String(drink.id), quantity, activePeriod?.id);
+            // Real ID is now managed exclusively by Supabase via RPC, keeping temp ID in UI untill refresh
             showToast(`${quantity}x ${drink.name} gestreept! (+€${(amount * quantity).toFixed(2)})`, 'success');
         } catch (error) {
             if (!navigator.onLine) {
@@ -656,7 +655,13 @@ function App() {
 
     const MainLayout = () => {
         return (
-            <div className="text-base w-full flex flex-col overflow-hidden" style={{ height: 'var(--app-height, 100dvh)' }}>
+            <div 
+                className="text-base w-full flex flex-col overflow-hidden bg-gray-50 dark:bg-[#0f172a]" 
+                style={{ 
+                    height: '100dvh',
+                    paddingBottom: 'env(safe-area-inset-bottom, 0px)'
+                }}
+            >
                 {/* Scrollbare content area */}
                 <div className="flex-1 w-full overflow-y-auto no-scrollbar">
                     <ErrorBoundary>
@@ -664,7 +669,7 @@ function App() {
                     </ErrorBoundary>
                 </div>
                 
-                {/* Navigatie: zit nu in de natuurlijke flex-flow en wordt nooit weggedrukt */}
+                {/* Navigatie */}
                 <div className="w-full z-50 shrink-0 bg-gray-50 dark:bg-[#0f172a]">
                     <BottomNav notifications={notifications} />
                 </div>
