@@ -656,8 +656,8 @@ function App() {
 
     const MainLayout = () => {
         return (
-            <div className="text-base h-full w-full flex flex-col overflow-hidden">
-                {/* Scrollbare content area. Geen bottom padding meer nodig! */}
+            <div className="text-base h-[100dvh] w-full flex flex-col overflow-hidden">
+                {/* Scrollbare content area */}
                 <div className="flex-1 w-full overflow-y-auto no-scrollbar">
                     <ErrorBoundary>
                         <Outlet context={contextValue} />

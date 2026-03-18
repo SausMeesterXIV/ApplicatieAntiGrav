@@ -3,9 +3,14 @@
 @tailwind utilities;
 
 @layer base {
-  html, body {
-    height: 100dvh; /* Essentieel voor iOS: schaalt mee met de Safari adresbalk */
-    min-height: -webkit-fill-available;
+  html {
+    height: 100%;
+    @apply bg-gray-50 dark:bg-[#0f172a];
+  }
+
+  body {
+    height: 100%;
+    height: -webkit-fill-available;
     width: 100vw;
     margin: 0;
     padding: 0;
@@ -19,7 +24,8 @@
 
   #root {
     @apply w-full flex flex-col bg-gray-50 dark:bg-[#0f172a];
-    height: 100dvh; /* Root container is exact zo hoog als het scherm */
+    height: 100%;
+    height: -webkit-fill-available;
     max-width: 28rem;
     position: relative;
     overflow: hidden; 
