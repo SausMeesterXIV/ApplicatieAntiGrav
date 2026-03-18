@@ -108,9 +108,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleSaveRoles = async (userId: string, targetRoles: string[]) => {
     try {
       await db.updateProfile(userId, { roles: targetRoles });
+      
+      // Update de lijst met gebruikers
       setUsers(prev => prev.map(u => 
         u.id === userId ? { ...u, roles: targetRoles } : u
       ));
+
+      // Belangrijk: Update ook de currentUser als deze persoon zichzelf aanpast
+      if (currentUser?.id === userId) {
+        setCurrentUser(prev => prev ? { ...prev, roles: targetRoles } : null);
+      }
     } catch (error) {
       console.error('Save roles error', error);
       throw error;
