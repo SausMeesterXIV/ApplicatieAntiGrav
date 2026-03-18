@@ -3,35 +3,34 @@
 @tailwind utilities;
 
 @layer base {
-  html, body {
+  html {
+    /* Zorg dat de browser-achtergrond direct de juiste kleur heeft */
+    @apply bg-gray-50 dark:bg-[#0f172a];
     height: 100%;
+  }
+
+  body {
+    /* Gebruik min-height om gaten te voorkomen */
+    min-height: 100%;
+    height: var(--app-height, 100dvh);
     width: 100vw;
     margin: 0;
     padding: 0;
-    /* Position fixed stopt de native scroll-bounce die gaten veroorzaakt */
-    position: fixed; 
-    overflow: hidden; 
-    overscroll-behavior-y: none;
-    -webkit-tap-highlight-color: transparent;
-    @apply bg-gray-50 dark:bg-[#0f172a] text-slate-800;
+    overflow: hidden;
+    background-color: transparent; /* Laat html-kleur doorschijnen */
+    display: flex;
+    justify-content: center;
   }
 
   #root {
     @apply w-full flex flex-col bg-gray-50 dark:bg-[#0f172a];
-    /* Fixeer root aan de schermranden */
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    height: 100%;
     max-width: 28rem;
-    margin: 0 auto; /* Centreer als het op een groter scherm draait */
-    overflow: hidden; 
-    box-shadow: 0 0 40px rgba(0,0,0,0.1);
+    position: relative;
+    /* Verwijder eventuele witruimte onderaan door verkeerde height-sync */
+    display: flex;
+    flex-direction: column;
   }
-
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
 
 .pt-safe { padding-top: env(safe-area-inset-top, 16px); }

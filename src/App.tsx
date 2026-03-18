@@ -723,9 +723,15 @@ function App() {
                         <Outlet context={contextValue} />
                     </ErrorBoundary>
                 </div>
+                
+                {/* Navigatie Container met geforceerde bufferzone */}
                 <div 
-                    className="w-full z-50 shrink-0 bg-gray-50 dark:bg-[#0f172a]" 
-                    style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)' }}
+                    className="w-full z-50 shrink-0 bg-white dark:bg-[#0f172a] border-t border-gray-200/50 dark:border-slate-800/50" 
+                    style={{ 
+                        /* env(...) zorgt voor de gsm-specifieke ruimte, de 12px is de extra marge zoals in foto 3 */
+                        paddingBottom: 'calc(env(safe-area-inset-bottom, 12px) + 8px)',
+                        paddingTop: '4px'
+                    }}
                 >
                     <BottomNav notifications={notifications} />
                 </div>
