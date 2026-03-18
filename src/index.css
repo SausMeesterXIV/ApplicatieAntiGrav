@@ -3,29 +3,29 @@
 @tailwind utilities;
 
 @layer base {
-  html {
+  html, body {
     height: 100%;
-    @apply bg-gray-50 dark:bg-[#0f172a];
-  }
-
-  body {
-    height: var(--app-height, 100dvh);
     width: 100vw;
     margin: 0;
     padding: 0;
-    overflow: hidden; /* Voorkomt pull-to-refresh op body-niveau */
+    /* Position fixed stopt de native scroll-bounce die gaten veroorzaakt */
+    position: fixed; 
+    overflow: hidden; 
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
-    display: flex;
-    justify-content: center;
     @apply bg-gray-50 dark:bg-[#0f172a] text-slate-800;
   }
 
   #root {
     @apply w-full flex flex-col bg-gray-50 dark:bg-[#0f172a];
-    height: var(--app-height, 100dvh);
+    /* Fixeer root aan de schermranden */
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
     max-width: 28rem;
-    position: relative;
+    margin: 0 auto; /* Centreer als het op een groter scherm draait */
     overflow: hidden; 
     box-shadow: 0 0 40px rgba(0,0,0,0.1);
   }

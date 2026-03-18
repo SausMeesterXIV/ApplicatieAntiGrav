@@ -187,6 +187,26 @@ function App() {
     });
 
     useEffect(() => {
+        const setAppHeight = () => {
+            // Forceer de exacte innerHeight als CSS variabele
+            document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+        };
+
+        window.addEventListener('resize', setAppHeight);
+        window.addEventListener('orientationchange', setAppHeight);
+        
+        // Initiële calls (meerdere keren om Capacitor WebView vertragingen op te vangen)
+        setAppHeight();
+        setTimeout(setAppHeight, 50);
+        setTimeout(setAppHeight, 300);
+
+        return () => {
+            window.removeEventListener('resize', setAppHeight);
+            window.removeEventListener('orientationchange', setAppHeight);
+        };
+    }, []);
+
+    useEffect(() => {
         const saved = localStorage.getItem('dark_mode');
         if (saved === 'true' || (saved === null && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
