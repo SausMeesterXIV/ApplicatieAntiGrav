@@ -723,13 +723,16 @@ function App() {
                         <Outlet context={contextValue} />
                     </ErrorBoundary>
                 </div>
-                
-                {/* De navigatie-container plakt nu tegen de onderkant */}
-                <div 
-                    className="w-full z-50 shrink-0 bg-gray-50 dark:bg-[#0f172a]"
-                    style={{ paddingBottom: 'var(--safe-area-bottom, 0px)' }}
-                >
+
+                {/* Nav + safe area fill — the outer wrapper has the nav bg color
+                    so even if safe-area-inset-bottom is 0 on first load, there's no white gap */}
+                <div className="w-full z-50 shrink-0 flex flex-col bg-white dark:bg-[#0f172a]">
                     <BottomNav notifications={notifications} />
+                    {/* Dedicated strip that fills the iOS home-indicator zone */}
+                    <div 
+                        className="w-full bg-white dark:bg-[#0f172a]"
+                        style={{ height: 'env(safe-area-inset-bottom, 0px)' }}
+                    />
                 </div>
             </div>
         );

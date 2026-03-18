@@ -4,20 +4,21 @@
 
 @layer base {
   html {
+    /* Lock native WebView bg - eliminates white flash before React renders */
+    background-color: #0f172a;
     height: 100%;
-    /* Lock de achtergrondkleur op het hoogste niveau */
-    @apply bg-gray-50 dark:bg-[#0f172a];
+    overflow: hidden;
   }
 
   body {
-    height: var(--app-height, 100dvh);
+    height: 100%;
     width: 100vw;
     margin: 0;
     padding: 0;
     overflow: hidden;
-    position: fixed; /* Voorkomt 'pulldown' witruimte */
     display: flex;
     justify-content: center;
+    /* Transparent so html bg-color shows through any uncovered area */
     background-color: transparent;
   }
 
@@ -25,8 +26,7 @@
     @apply w-full flex flex-col bg-gray-50 dark:bg-[#0f172a];
     height: 100%;
     max-width: 28rem;
-    position: relative;
-    /* Verwijder eventuele witruimte onderaan door verkeerde height-sync */
+    overflow: hidden;
     display: flex;
     flex-direction: column;
   }
