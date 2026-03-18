@@ -4,22 +4,21 @@
 
 @layer base {
   html {
-    /* Zorg dat de browser-achtergrond direct de juiste kleur heeft */
-    @apply bg-gray-50 dark:bg-[#0f172a];
     height: 100%;
+    /* Lock de achtergrondkleur op het hoogste niveau */
+    @apply bg-gray-50 dark:bg-[#0f172a];
   }
 
   body {
-    /* Gebruik min-height om gaten te voorkomen */
-    min-height: 100%;
     height: var(--app-height, 100dvh);
     width: 100vw;
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background-color: transparent; /* Laat html-kleur doorschijnen */
+    position: fixed; /* Voorkomt 'pulldown' witruimte */
     display: flex;
     justify-content: center;
+    background-color: transparent;
   }
 
   #root {
