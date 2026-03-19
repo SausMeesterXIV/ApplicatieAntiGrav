@@ -146,8 +146,14 @@ export async function fetchConsumpties(userId?: string): Promise<Streak[]> {
   }));
 }
 
-export async function addConsumptie(userId: string, drankId: string, aantal: number = 1, periodId?: string): Promise<void> {
-  const { error } = await (supabase as any).rpc('streep_drank', {
+export async function addConsumptie(
+  userId: string, 
+  drankId: string, 
+  aantal: number = 1, 
+  periodId?: string,
+  userNaam?: string
+): Promise<string> {
+  const { data, error } = await (supabase as any).rpc('streep_drank', {
     p_user_id: userId,
     p_drank_id: drankId,
     p_aantal: aantal,
@@ -155,6 +161,7 @@ export async function addConsumptie(userId: string, drankId: string, aantal: num
   });
 
   if (error) throw error;
+  return data as string;
 }
 
 export async function deleteConsumptie(id: string): Promise<void> {
