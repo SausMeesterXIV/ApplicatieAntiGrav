@@ -291,8 +291,8 @@ export const HomeScreen: React.FC = () => {
             className="bg-white dark:bg-[#1e2330] rounded-2xl p-2 shadow-sm border border-gray-100 dark:border-gray-800 cursor-pointer hover:shadow-md transition-shadow"
           >
             <div className="flex items-center gap-4 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl transition-colors">
-              <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl h-14 w-14 flex flex-col items-center justify-center shrink-0 border border-gray-200 dark:border-gray-700">
-                <span className="text-2xl">🏓</span>
+              <div className="bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl h-14 w-14 flex items-center justify-center shrink-0 border border-purple-200 dark:border-purple-800/50">
+                <span className="material-icons-round text-2xl">emoji_events</span>
               </div>
               <div className="flex-1">
                 <h3 className="font-bold text-gray-900 dark:text-white text-base">Leaderboard</h3>

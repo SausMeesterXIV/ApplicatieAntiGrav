@@ -240,18 +240,7 @@ export const SettingsScreen: React.FC = () => {
             </div>
           </div>
 
-          {hasAccess(currentUser, 'hoofdleiding') && (
-            <button
-               onClick={() => navigate('/admin/rollen')}
-               className="w-full flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <span className="material-icons-round text-blue-600 dark:text-blue-500">manage_accounts</span>
-                <span className="font-medium text-gray-900 dark:text-white">Rollen Beheer</span>
-              </div>
-              <span className="material-icons-round text-gray-400">chevron_right</span>
-            </button>
-          )}
+
 
           {/* Logout */}
           <button
