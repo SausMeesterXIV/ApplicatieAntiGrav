@@ -393,21 +393,23 @@ export async function fetchNotificaties(userId: string): Promise<Notification[]>
   return (data || []).map((n) => {
     // Haal de rol op uit de gekoppelde profiel-data
     const zenderRol = (n as any).profiles?.rol;
+    const type = (n as any).type || 'official';
     
     return {
       ...n,
       id: n.id,
-      type: 'official' as const,
+      type: type as any,
       sender: (n as any).profiles?.naam || n.zender_naam || 'Systeem',
-      // Logica: Alleen 'Hoofdleiding' tonen als de database rol exact 'hoofdleiding' is
       role: zenderRol === 'hoofdleiding' ? 'Hoofdleiding' : '',
       title: n.titel,
       content: n.bericht || '',
       time: formatTimeAgo(new Date(n.datum)),
       isRead: n.gelezen,
       action: n.action,
-      icon: 'notifications',
-      color: 'bg-blue-100 text-blue-600',
+      icon: type === 'nudge' ? 'touch_app' : 'notifications',
+      color: type === 'nudge' 
+        ? 'bg-orange-100 text-orange-600' 
+        : 'bg-blue-100 text-blue-600',
     };
   }) as Notification[];
 }
@@ -418,11 +420,20 @@ export async function addNotificatie(
   titel: string,
   bericht: string,
   zenderNaam?: string,
-  action?: string
+  action?: string,
+  type: string = 'official'
 ): Promise<void> {
   const { error } = await supabase
     .from('notificaties')
-    .insert([{ zender_id: zenderId, ontvanger_id: ontvangerId, titel, bericht, zender_naam: zenderNaam || null, action: action || null }]);
+    .insert([{ 
+      zender_id: zenderId, 
+      ontvanger_id: ontvangerId, 
+      titel, 
+      bericht, 
+      zender_naam: zenderNaam || null, 
+      action: action || null,
+      type: type
+    }]);
   if (error) throw error;
 }
 

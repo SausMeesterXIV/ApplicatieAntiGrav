@@ -15,18 +15,14 @@ export const NotificationsScreen: React.FC = () => {
   const getCategory = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    
-    // Zet beide tijden op middernacht voor een zuivere dag-vergelijking
     const d1 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    const diffInMs = d2.getTime() - d1.getTime();
-    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    const diff = Math.floor((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (diffInDays === 0) return 'Vandaag';
-    if (diffInDays === 1) return 'Gisteren';
-    if (diffInDays < 7) return 'Deze week';
-    if (diffInDays < 30) return 'Deze maand';
+    if (diff === 0) return 'Vandaag';
+    if (diff === 1) return 'Gisteren';
+    if (diff < 7) return 'Deze week';
+    if (diff < 30) return 'Deze maand';
     return 'Ouder';
   };
 
@@ -75,29 +71,22 @@ export const NotificationsScreen: React.FC = () => {
       <main className="flex-1 overflow-y-auto px-4 pb-nav-safe space-y-8">
         {loading ? (
           <div className="space-y-4 pt-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <SkeletonRow key={i} />
-            ))}
+            {Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)}
           </div>
         ) : (
           <>
             {['Vandaag', 'Gisteren', 'Deze week', 'Deze maand', 'Ouder'].map((category) => {
-              // Filter meldingen die bij deze categorie horen
               const categoryData = filteredData.filter(n => getCategory(n.datum) === category);
-
               if (categoryData.length === 0) return null;
 
               return (
                 <div key={category} className="space-y-4">
-                  {/* Grijze lijn met de tekst */}
                   <div className="flex items-center gap-3 px-2">
-                    <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] whitespace-nowrap">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
                       {category}
                     </span>
                     <div className="h-[1px] w-full bg-gray-200 dark:bg-gray-800/60"></div>
                   </div>
-
-                  {/* De melding-kaarten voor deze categorie */}
                   <div className="space-y-3">
                     {categoryData.map(notification => (
                       <NotificationCard
