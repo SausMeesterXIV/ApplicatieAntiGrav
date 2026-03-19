@@ -210,34 +210,21 @@ export const HomeScreen: React.FC = () => {
               </section>
             )}
 
-            {/* --- 3. BIERPONG KAMPIOENEN --- */}
-            {duoBierpongWinners && duoBierpongWinners.length > 0 && (
-              <section onClick={() => navigate('/bierpong')} className="mt-6 bg-gradient-to-br from-purple-600 to-indigo-800 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden cursor-pointer active:scale-[0.98] transition-transform">
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="material-icons-round text-yellow-400 text-sm">workspace_premium</span>
-                    <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-100">Bierpong Kampioenen</h2>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex -space-x-4">
-                      {duoBierpongWinners.slice(0, 2).map(id => {
-                        const user = users?.find(u => u.id === id);
-                        return (
-                          <img key={id} src={user?.avatar || `https://ui-avatars.com/api/?name=${user?.naam || 'K'}&background=random`} className="w-12 h-12 rounded-full border-2 border-purple-500 bg-purple-900 object-cover shadow-sm" alt="Champ" />
-                        );
-                      })}
-                    </div>
-                    <div>
-                      <p className="text-xl font-black leading-tight mb-1">
-                        {duoBierpongWinners.map(id => users?.find(u => u.id === id)?.naam?.split(' ')[0] || 'Lid').join(' & ')}
-                      </p>
-                      <p className="text-[10px] text-purple-200 font-bold uppercase tracking-wider">The Team to Beat 🍻</p>
-                    </div>
-                  </div>
-                </div>
-                <span className="material-icons-round absolute -right-6 -bottom-6 text-[100px] text-white/10 rotate-12 pointer-events-none">emoji_events</span>
-              </section>
-            )}
+
+            {/* LEADERBOARD KNOP */}
+            <div 
+              onClick={() => navigate('/bierpong')}
+              className="mt-6 bg-white dark:bg-[#1e293b] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all"
+            >
+              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+                <span className="material-icons-round text-2xl">emoji_events</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900 dark:text-white">Leaderboard</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Bekijk de stand</p>
+              </div>
+              <span className="material-icons-round text-gray-300 dark:text-gray-600">chevron_right</span>
+            </div>
 
             {/* QUOTE VAN DE WEEK */}
             {topQuote && (
@@ -351,7 +338,7 @@ export const HomeScreen: React.FC = () => {
                 </div>
                 <div className="grid gap-3">
                   <NavCard title="Agenda & Aftelklok" description="Events en sfeer beheren" icon="edit_calendar" iconColorClass="bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400" onClick={() => navigate('/agenda/beheer')} />
-                  <NavCard title="Bierpong" description="Bierpongtoernooi kampioenen" icon="emoji_events" iconColorClass="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" onClick={() => navigate('/bierpong/beheer')} />
+                  <NavCard title="Bierpong" description="Bierpongtoernooi kampioenen" icon="workspace_premium" iconColorClass="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" onClick={() => navigate('/bierpong/beheer')} />
                   <NavCard title="Quoteboek" description="Wall of Shame / Fame" icon="format_quote" iconColorClass="bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400" onClick={() => navigate('/quotes/beheer')} />
                 </div>
               </section>
