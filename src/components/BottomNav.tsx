@@ -23,10 +23,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({ notifications = [] }) => {
 
   return (
     <nav
-      className="w-full border-t border-gray-200 dark:border-gray-800 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] pt-2 px-4 transition-colors duration-200 bg-white dark:bg-[#0f172a]"
+      className="w-full border-t border-gray-200 dark:border-gray-800 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] pt-2 pb-2 px-4 transition-colors duration-200 bg-white dark:bg-[#0f172a]"
       style={{ 
-        /* Fix: Gebruik env() met een fallback van 12px voor de bufferzone onderaan */
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 12px) + 8px)' 
+        paddingBottom: 'max(env(safe-area-inset-bottom, 8px), 8px)' 
       }}
     >
       <div className="flex justify-between items-center">

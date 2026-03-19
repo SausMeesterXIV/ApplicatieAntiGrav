@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   ios: {
     // Lock the native WebView background so it never shows white during layout init
-    backgroundColor: '#0f172a',
+    backgroundColor: '#f9fafb',
     scrollEnabled: false,
     allowsLinkPreview: false,
   },

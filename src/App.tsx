@@ -716,7 +716,7 @@ function App() {
         return (
             <div 
                 className="text-base w-full flex flex-col overflow-hidden bg-gray-50 dark:bg-[#0f172a]" 
-                style={{ height: 'var(--app-height, 100dvh)' }}
+                style={{ height: '100vh' }}
             >
                 <div className="flex-1 w-full overflow-y-auto no-scrollbar">
                     <ErrorBoundary>
@@ -724,15 +724,8 @@ function App() {
                     </ErrorBoundary>
                 </div>
 
-                {/* Nav + safe area fill — the outer wrapper has the nav bg color
-                    so even if safe-area-inset-bottom is 0 on first load, there's no white gap */}
-                <div className="w-full z-50 shrink-0 flex flex-col bg-white dark:bg-[#0f172a]">
+                <div className="w-full z-50 shrink-0">
                     <BottomNav notifications={notifications} />
-                    {/* Dedicated strip that fills the iOS home-indicator zone */}
-                    <div 
-                        className="w-full bg-white dark:bg-[#0f172a]"
-                        style={{ height: 'env(safe-area-inset-bottom, 0px)' }}
-                    />
                 </div>
             </div>
         );
