@@ -651,6 +651,35 @@ export type Database = {
           },
         ]
       }
+      user_push_tokens: {
+        Row: {
+          created_at: string | null
+          device_type: string | null
+          token: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_type?: string | null
+          token: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_type?: string | null
+          token?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_votes: {
         Row: {
           created_at: string

@@ -1095,3 +1095,10 @@ export async function backupSpreadsheet(spreadsheetId: string, title?: string): 
   });
   if (error) throw error;
 }
+
+export async function savePushToken(userId: string, token: string, platform: string): Promise<void> {
+  const { error } = await supabase
+    .from('user_push_tokens')
+    .upsert({ user_id: userId, token, device_type: platform }, { onConflict: 'token' });
+  if (error) throw error;
+}
