@@ -365,13 +365,19 @@ export const BierpongScreen: React.FC = () => {
           )}
 
           {!showAllLeaders && leaderboard.length > 0 && (
-            <button
-              onClick={() => setShowAllLeaders(true)}
-              className="mt-4 mb-8 w-full bg-gray-100 dark:bg-[#1e293b] hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 px-4 rounded-xl transition-colors border border-gray-200 dark:border-gray-700 flex items-center justify-center gap-2"
+            <div 
+              onClick={() => { setShowAllLeaders(true); scrollToLeaderboard(); }}
+              className="mt-4 mb-8 bg-white dark:bg-[#1e293b] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all"
             >
-              <span className="material-icons-round text-sm">visibility</span>
-              Bekijk alles ({leaderboard.length} spelers)
-            </button>
+              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+                <span className="material-icons-round text-2xl">emoji_events</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900 dark:text-white">Leaderboard</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Bekijk de stand</p>
+              </div>
+              <span className="material-icons-round text-gray-300 dark:text-gray-600">chevron_right</span>
+            </div>
           )}
 
           {showAllLeaders && (

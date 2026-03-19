@@ -19,6 +19,7 @@ interface AgendaContextType {
   refreshAgendaData: () => Promise<void>;
   handleSaveCountdowns: (newCountdowns: CountdownItem[]) => Promise<void>;
   handleAddBierpongGame: (playerIds: string[], winnerIds: string[]) => Promise<void>;
+  handleSetBierpongKampioenen: (winnerIds: string[]) => Promise<void>;
   handleVoteQuote: (id: string, type: 'like' | 'dislike') => Promise<void>;
   handleAddQuote: (text: string, context: string, authorId: string) => Promise<void>;
   handleDeleteQuote: (id: string) => Promise<void>;
@@ -89,6 +90,7 @@ export function AgendaProvider({ children }: { children: ReactNode }) {
         showToast('Fout bij het opslaan van het evenement', 'error');
         const freshEvents = await db.fetchEvents();
         setEvents(freshEvents);
+        throw error; // Re-throw to allow UI to catch specific message
     }
   };
 
@@ -139,6 +141,19 @@ export function AgendaProvider({ children }: { children: ReactNode }) {
       showToast('Fout bij opslaan bierpong match', 'error');
       const fresh = await db.fetchBierpongGames();
       setBierpongGames(fresh);
+      throw error;
+    }
+  };
+
+  const handleSetBierpongKampioenen = async (winnerIds: string[]) => {
+    setDuoBierpongWinners(winnerIds);
+    try {
+      await db.setBierpongKampioenen(winnerIds);
+    } catch (error) {
+      showToast('Fout bij bijwerken kampioenen', 'error');
+      const fresh = await db.fetchBierpongKampioenen();
+      setDuoBierpongWinners(fresh);
+      throw error;
     }
   };
 
@@ -224,7 +239,7 @@ export function AgendaProvider({ children }: { children: ReactNode }) {
     <AgendaContext.Provider value={{
       events, countdowns, notifications, setNotifications,
       bierpongGames, setBierpongGames, duoBierpongWinners, quotes, loading,
-      refreshAgendaData, handleSaveCountdowns, handleAddBierpongGame,
+      refreshAgendaData, handleSaveCountdowns, handleAddBierpongGame, handleSetBierpongKampioenen,
       handleVoteQuote, handleAddQuote, handleDeleteQuote,
       handleSaveEvent, handleDeleteEvent, handleAddNotification, handleMarkNotificationAsRead
     }}>

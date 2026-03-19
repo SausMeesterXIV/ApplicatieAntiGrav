@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
-import { AppContextType } from '../App';
 import { User } from '../types';
-import * as db from '../lib/supabaseService';
+import { useAgenda } from '../contexts/AgendaContext';
+import { useAuth } from '../contexts/AuthContext';
+import { showToast } from '../components/Toast';
 
 export const BierpongManageScreen: React.FC = () => {
     const navigate = useNavigate();
-    const { users, duoBierpongWinners, setDuoBierpongWinners } = useOutletContext<AppContextType>();
+    const { users } = useAuth();
+    const { duoBierpongWinners, handleSetBierpongKampioenen } = useAgenda();
 
     const [search, setSearch] = useState('');
     const [selectedWinners, setSelectedWinners] = useState<string[]>(duoBierpongWinners);
@@ -21,7 +23,7 @@ export const BierpongManageScreen: React.FC = () => {
     const getUserAvatar = (userId: string) => users.find(u => u.id === userId)?.avatar;
 
     const toggleWinnerSelection = (userId: string) => {
-        setSelectedWinners(prev => {
+        setSelectedWinners((prev: string[]) => {
             if (prev.includes(userId)) return prev.filter(id => id !== userId);
             if (prev.length >= 2) return [prev[1], userId];
             return [...prev, userId];
@@ -34,13 +36,13 @@ export const BierpongManageScreen: React.FC = () => {
         
         setIsSaving(true);
         try {
-            await db.setBierpongKampioenen(selectedWinners);
-            setDuoBierpongWinners(selectedWinners);
+            await handleSetBierpongKampioenen(selectedWinners);
+            showToast('Bierpong kampioenen opgeslagen!', 'success');
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Fout bij het opslaan van kampioenen:', error);
-            // Je zou hier een toast kunnen toevoegen als die beschikbaar is
+            showToast('Fout bij opslaan kampioenen: ' + (error.message || 'Onbekende fout'), 'error');
         } finally {
             setIsSaving(false);
         }

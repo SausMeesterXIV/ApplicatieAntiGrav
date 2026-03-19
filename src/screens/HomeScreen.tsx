@@ -7,6 +7,7 @@ import { Event, QuoteItem, CountdownItem, User, Drink, Todo } from '../types';
 import { hasAccess } from '../App';
 import { SPECIAL_DRINKS } from '../lib/constants';
 import * as db from '../lib/supabaseService';
+import { supabase } from '../lib/supabase';
 
 import { SkeletonWidget, SkeletonCard, SkeletonEvent } from '../components/Skeleton';
 import { NavCard } from '../components/NavCard';
@@ -26,14 +27,36 @@ export const HomeScreen: React.FC = () => {
 
   const displayName = currentUser?.nickname || currentUser?.name?.split(' ')[0] || 'Lid';
 
-  // Laden van to-do's voor godmode
+  // 1. Data ophalen voor Godmode To-Do & Bierpong
   useEffect(() => {
+    // To-Do's (Alleen voor godmode)
     if (currentUser?.rol === 'godmode') {
       db.fetchPersonalTodos().then(setTodos).catch(console.error);
     }
-    db.fetchBierpongKampioenen().then(setDuoBierpongWinners).catch(console.error);
+
+    // Bierpong Kampioenen (Voor iedereen zichtbaar)
+    const fetchLatestBierpong = async () => {
+      try {
+        const { data } = await supabase
+          .from('bierpong_games')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        if (data && data.length > 0) {
+          const winners = data[0].winner_ids && data[0].winner_ids.length > 0 
+            ? data[0].winner_ids 
+            : [data[0].winner_id];
+          setDuoBierpongWinners(winners.filter(Boolean));
+        }
+      } catch (err) {
+        console.error("Fout bij ophalen bierpong winnaars", err);
+      }
+    };
+    fetchLatestBierpong();
   }, [currentUser]);
 
+  // To-Do Handlers
   const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTodo.trim() || !currentUser) return;
@@ -64,6 +87,7 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
+  // Memoized Data
   const quickDrink = useMemo(() => {
     const validDrinks = drinks.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM && !d.isTemporary);
     const fallback = validDrinks.length > 0 ? validDrinks[0] : null;
@@ -101,37 +125,6 @@ export const HomeScreen: React.FC = () => {
       .sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime());
   }, [countdowns]);
 
-  const renderCountdown = (item: CountdownItem, index: number) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const target = new Date(item.targetDate);
-    target.setHours(0, 0, 0, 0);
-    const diffTime = target.getTime() - today.getTime();
-    const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (daysLeft < 0) return null;
-
-    if (daysLeft === 0) {
-      return (
-        <div key={item.id} className="bg-gradient-to-r from-pink-500 to-rose-500 rounded-2xl p-4 text-white shadow-lg animate-pulse">
-          <div className="flex flex-col items-center justify-center">
-            <h2 className="text-xl font-extrabold text-center leading-tight">{item.title} is vandaag!</h2>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div key={item.id} className="rounded-2xl p-4 text-white shadow-lg bg-gradient-to-r from-blue-600 to-indigo-600">
-        <div className="flex justify-between items-center">
-          <div className="flex-1 pr-2">
-            <h2 className="text-sm font-bold uppercase tracking-wider mb-0.5">{item.title}</h2>
-            <p className="text-sm font-medium">Nog <span className="font-bold text-xl">{daysLeft}</span> nachten!</p>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="flex flex-col h-full relative bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
       <header className="px-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] pb-6 flex justify-between items-center bg-gray-50 dark:bg-[#0f172a] shadow-sm transition-colors sticky top-0 z-20">
@@ -153,28 +146,62 @@ export const HomeScreen: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* 📅 AANKOMENDE EVENEMENTEN WIDGET */}
-            {upcomingEvents.length > 0 && (
-              <section className="space-y-4">
+            {/* --- 1. PUBLIEKE WIDGETS (ZICHTBAAR VOOR IEDEREEN) --- */}
+
+            {/* --- 1. AFTELKLOKKEN --- */}
+            {validCountdowns && validCountdowns.length > 0 && (
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 px-1">
+                  <span className="material-icons-round text-primary text-sm">timer</span>
+                  <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Aftelklokken</h2>
+                </div>
+                <div className={`grid gap-3 ${validCountdowns.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+                  {validCountdowns.map((item) => {
+                    // Robuuste datum berekening
+                    const target = new Date(item.targetDate);
+                    target.setHours(0,0,0,0);
+                    const today = new Date();
+                    today.setHours(0,0,0,0);
+                    const daysLeft = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    
+                    if (daysLeft < 0) return null;
+                    
+                    return (
+                      <div key={item.id} className={`rounded-2xl p-4 text-white shadow-lg ${daysLeft === 0 ? 'bg-gradient-to-r from-rose-500 to-pink-500 animate-pulse' : 'bg-gradient-to-br from-blue-600 to-indigo-700'}`}>
+                        <h2 className="text-[10px] font-black uppercase tracking-wider opacity-80 mb-1">{item.title}</h2>
+                        <p className="text-lg font-black leading-none">{daysLeft === 0 ? 'Is vandaag! 🎉' : `Nog ${daysLeft} nachten!`}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* --- 2. AGENDA / AANKOMENDE EVENTS --- */}
+            {upcomingEvents && upcomingEvents.length > 0 && (
+              <section className="space-y-3 mt-6">
                 <div className="flex items-center justify-between px-1">
                   <div className="flex items-center gap-2">
-                    <span className="material-icons-round text-blue-600 text-sm">calendar_today</span>
-                    <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Aankomende Events</h2>
+                    <span className="material-icons-round text-primary text-sm">calendar_today</span>
+                    <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Agenda</h2>
                   </div>
-                  <button onClick={() => navigate('/agenda')} className="text-xs font-bold text-blue-600 dark:text-blue-400">Bekijk alles</button>
+                  <button onClick={() => navigate('/agenda')} className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Bekijk alles</button>
                 </div>
                 <div className="grid gap-3">
                   {upcomingEvents.map(event => (
                     <div key={event.id} onClick={() => navigate('/agenda')} className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform">
-                      <div className="flex flex-col items-center justify-center w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 shrink-0">
-                        <span className="text-[10px] font-black uppercase leading-none">{new Date(event.date).toLocaleDateString('nl-BE', { month: 'short' })}</span>
-                        <span className="text-lg font-black leading-none">{new Date(event.date).getDate()}</span>
+                      <div className="flex flex-col items-center justify-center w-14 h-14 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400 shrink-0">
+                        <span className="text-[10px] font-black uppercase leading-none mb-1">{new Date(event.date).toLocaleDateString('nl-BE', { month: 'short' })}</span>
+                        <span className="text-xl font-black leading-none">{new Date(event.date).getDate()}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-sm truncate dark:text-white">{event.title}</h3>
-                        <div className="flex items-center gap-2 mt-0.5 text-gray-500">
+                        <h3 className="font-bold text-base truncate dark:text-white mb-1">{event.title}</h3>
+                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                           <span className="material-icons-round text-[14px]">schedule</span>
-                          <span className="text-xs">{event.startTime || '20:00'} • {event.location}</span>
+                          <span className="text-xs font-medium">{event.startTime || '20:00'}</span>
+                          <span className="mx-1">•</span>
+                          <span className="material-icons-round text-[14px]">place</span>
+                          <span className="text-xs font-medium truncate">{event.location}</span>
                         </div>
                       </div>
                     </div>
@@ -183,35 +210,36 @@ export const HomeScreen: React.FC = () => {
               </section>
             )}
 
-            {/* 🏆 BIERPONG KAMPIOENEN WIDGET */}
+            {/* --- 3. BIERPONG KAMPIOENEN --- */}
             {duoBierpongWinners && duoBierpongWinners.length > 0 && (
-              <section className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
+              <section onClick={() => navigate('/bierpong')} className="mt-6 bg-gradient-to-br from-purple-600 to-indigo-800 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden cursor-pointer active:scale-[0.98] transition-transform">
                 <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-4">
                     <span className="material-icons-round text-yellow-400 text-sm">workspace_premium</span>
-                    <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-100">Huidige Bierpong Kampioenen</h2>
+                    <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-100">Bierpong Kampioenen</h2>
                   </div>
                   <div className="flex items-center gap-4">
-                    <div className="flex -space-x-3">
-                      {duoBierpongWinners.map(id => {
-                        const u = users.find(user => user.id === id);
+                    <div className="flex -space-x-4">
+                      {duoBierpongWinners.slice(0, 2).map(id => {
+                        const user = users?.find(u => u.id === id);
                         return (
-                          <img key={id} src={u?.avatar} className="w-10 h-10 rounded-full border-2 border-purple-500 bg-purple-800 object-cover" alt="Champ" />
+                          <img key={id} src={user?.avatar || `https://ui-avatars.com/api/?name=${user?.naam || 'K'}&background=random`} className="w-12 h-12 rounded-full border-2 border-purple-500 bg-purple-900 object-cover shadow-sm" alt="Champ" />
                         );
                       })}
                     </div>
                     <div>
-                      <p className="text-lg font-black leading-tight">
-                        {duoBierpongWinners.map(id => users.find(u => u.id === id)?.naam?.split(' ')[0]).join(' & ')}
+                      <p className="text-xl font-black leading-tight mb-1">
+                        {duoBierpongWinners.map(id => users?.find(u => u.id === id)?.naam?.split(' ')[0] || 'Lid').join(' & ')}
                       </p>
-                      <p className="text-[10px] text-purple-200 font-bold uppercase">The Team to Beat 🍻</p>
+                      <p className="text-[10px] text-purple-200 font-bold uppercase tracking-wider">The Team to Beat 🍻</p>
                     </div>
                   </div>
                 </div>
-                <span className="material-icons-round absolute -right-4 -bottom-4 text-8xl text-white/10 rotate-12">emoji_events</span>
+                <span className="material-icons-round absolute -right-6 -bottom-6 text-[100px] text-white/10 rotate-12 pointer-events-none">emoji_events</span>
               </section>
             )}
 
+            {/* QUOTE VAN DE WEEK */}
             {topQuote && (
               <section onClick={() => navigate('/quotes')} className="bg-white dark:bg-[#1e2330] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 cursor-pointer">
                 <div className="flex items-center gap-2 mb-3">
@@ -226,12 +254,7 @@ export const HomeScreen: React.FC = () => {
               </section>
             )}
 
-            {validCountdowns.length > 0 && (
-              <section className={`mb-6 ${validCountdowns.length > 1 ? "grid grid-cols-2 gap-3" : ""}`}>
-                {validCountdowns.map((item, index) => renderCountdown(item, index))}
-              </section>
-            )}
-
+            {/* SNELLE ACTIES (STREPEN / FRIETEN) */}
             <div className="grid grid-cols-2 gap-4">
               <div onClick={() => navigate('/strepen')} className="col-span-2 sm:col-span-1 bg-white dark:bg-[#1e2330] p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 cursor-pointer group">
                 <div className="flex items-center gap-3 mb-4">
@@ -239,7 +262,7 @@ export const HomeScreen: React.FC = () => {
                   <h3 className="font-semibold text-lg dark:text-white">Strepen</h3>
                 </div>
                 {quickDrink && (
-                  <button onClick={(e) => { e.stopPropagation(); if (currentUser) handleAddCost(currentUser.id, quickDrink.id, 1, currentUser.naam); }} className="w-full bg-blue-50 dark:bg-blue-900/20 py-3 px-4 rounded-xl flex items-center justify-between">
+                  <button onClick={(e) => { e.stopPropagation(); if (currentUser) handleAddCost(currentUser.id, quickDrink.id, 1, currentUser.naam); }} className="w-full bg-blue-50 dark:bg-blue-900/20 py-3 px-4 rounded-xl flex items-center justify-between hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
                     <span className="text-sm font-bold dark:text-blue-300">Snel {quickDrink.name}</span>
                     <span className="font-black text-lg text-blue-700 dark:text-blue-300">+1</span>
                   </button>
@@ -255,22 +278,22 @@ export const HomeScreen: React.FC = () => {
               </div>
             </div>
 
-            {/* PERSOONLIJKE TO-DO (GODMODE ONLY) */}
+            {/* --- 2. JOUW PERSOONLIJKE TO-DO (GODMODE ONLY) --- */}
             {currentUser?.rol === 'godmode' && (
-              <section className="space-y-3">
+              <section className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-800">
                 <div className="flex items-center gap-2 px-1">
                   <span className="material-icons-round text-primary text-sm">checklist</span>
                   <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Persoonlijke To-Do</h2>
                 </div>
                 <div className="bg-white dark:bg-[#1e2330] rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800">
                   <form onSubmit={handleAddTodo} className="flex gap-2 mb-4">
-                    <input type="text" value={newTodo} onChange={(e) => setNewTodo(e.target.value)} placeholder="Nieuwe taak..." className="flex-1 bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-white" />
-                    <button type="submit" className="bg-blue-600 text-white p-2 rounded-xl"><span className="material-icons-round">add</span></button>
+                    <input type="text" value={newTodo} onChange={(e) => setNewTodo(e.target.value)} placeholder="Nieuwe taak..." className="flex-1 bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <button type="submit" className="bg-blue-600 text-white p-2 rounded-xl hover:bg-blue-500 transition-colors"><span className="material-icons-round">add</span></button>
                   </form>
                   <div className="space-y-1">
                     {todos.map(todo => (
                       <div key={todo.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg group transition-colors">
-                        <button onClick={() => handleToggleTodo(todo.id, !todo.completed)} className={`w-5 h-5 rounded border flex items-center justify-center ${todo.completed ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-gray-600'}`}>
+                        <button onClick={() => handleToggleTodo(todo.id, !todo.completed)} className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${todo.completed ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-gray-600'}`}>
                           {todo.completed && <span className="material-icons-round text-white text-[14px]">check</span>}
                         </button>
                         <span className={`flex-1 text-sm ${todo.completed ? 'text-gray-400 line-through' : 'dark:text-white'}`}>{todo.task}</span>
@@ -282,10 +305,10 @@ export const HomeScreen: React.FC = () => {
               </section>
             )}
 
-            {/* --- ADMIN DASHBOARDS (HERSTELD) --- */}
-
+            {/* --- 3. ADMIN DASHBOARDS --- */}
+            
             {hasAccess(currentUser, 'financiën') && (
-              <section>
+              <section className="pt-2">
                 <div className="flex items-center gap-2 mb-3 px-1">
                   <span className="material-icons-round text-primary text-sm">account_balance</span>
                   <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Financiën</h2>

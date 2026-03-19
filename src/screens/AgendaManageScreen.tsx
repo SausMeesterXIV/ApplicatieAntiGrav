@@ -9,7 +9,7 @@ import { showToast } from '../components/Toast';
 export const AgendaManageScreen: React.FC = () => {
   const navigate = useNavigate();
     const { availableRoles } = useAuth();
-  const { handleAddNotification: onAddNotification, events, handleSaveEvent: onSaveEvent, handleDeleteEvent: onDeleteEvent, countdowns, handleSaveCountdowns: onSaveCountdowns } = useAgenda();
+  const { handleAddNotification: onAddNotification, events, handleSaveEvent: onSaveEvent, handleDeleteEvent: onDeleteEvent, countdowns, handleSaveCountdowns: onSaveCountdowns, refreshAgendaData } = useAgenda();
 
   // Countdown State (2 Slots fixed ID '1' and '2')
   const [cd1Active, setCd1Active] = useState(false);
@@ -99,7 +99,7 @@ export const AgendaManageScreen: React.FC = () => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title || !dateStr) return;
 
     // Parse the date input properly
@@ -130,40 +130,45 @@ export const AgendaManageScreen: React.FC = () => {
       created_at: new Date().toISOString()
     };
 
-    onSaveEvent(eventPayload);
-
-    if (editingId) {
-      // Trigger Notification for UPDATE
-      onAddNotification({
-        type: 'agenda',
-        sender: 'Agenda Update',
-        role: 'AGENDA',
-        title: 'Event Bijgewerkt',
-        content: `Het event '${title}' is bijgewerkt met nieuwe informatie.`,
-        time: 'Zonet',
-        isRead: false,
-        action: 'Bekijken',
-        icon: 'edit_calendar',
-        color: 'bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-500'
-      } as any);
-      setEditingId(null);
-    } else {
-      // Trigger Notification for NEW
-      onAddNotification({
-        type: 'agenda',
-        sender: 'Nieuw Event',
-        role: 'AGENDA',
-        title: title,
-        content: description || 'Er is een nieuw evenement toegevoegd aan de agenda.',
-        time: 'Zonet',
-        isRead: false,
-        action: 'Bekijken',
-        icon: 'event',
-        color: 'bg-green-100 dark:bg-green-600/20 text-green-600 dark:text-green-500'
-      } as any);
+    try {
+      await onSaveEvent(eventPayload);
+      showToast('Evenement succesvol opgeslagen!', 'success');
+      await refreshAgendaData(); // Ensure HomeScreen is updated
+      
+      if (editingId) {
+        // Trigger Notification for UPDATE
+        onAddNotification({
+          type: 'agenda',
+          sender: 'Agenda Update',
+          role: 'AGENDA',
+          title: 'Event Bijgewerkt',
+          content: `Het event '${title}' is bijgewerkt met nieuwe informatie.`,
+          time: 'Zonet',
+          isRead: false,
+          action: 'Bekijken',
+          icon: 'edit_calendar',
+          color: 'bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-500'
+        } as any);
+        setEditingId(null);
+      } else {
+        // Trigger Notification for NEW
+        onAddNotification({
+          type: 'agenda',
+          sender: 'Nieuw Event',
+          role: 'AGENDA',
+          title: title,
+          content: description || 'Er is een nieuw evenement toegevoegd aan de agenda.',
+          time: 'Zonet',
+          isRead: false,
+          action: 'Bekijken',
+          icon: 'event',
+          color: 'bg-green-100 dark:bg-green-600/20 text-green-600 dark:text-green-500'
+        } as any);
+      }
+      resetForm();
+    } catch (error: any) {
+      showToast('Fout bij opslaan: ' + (error.message || 'Onbekende fout'), 'error');
     }
-
-    resetForm();
   };
 
   const handleSaveCountdown = () => {

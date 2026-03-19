@@ -253,9 +253,7 @@ export async function fetchEvents(): Promise<Event[]> {
 export async function saveEvent(event: Event): Promise<Event> {
   const payload = {
     titel: event.title,
-    datum: event.date instanceof Date 
-      ? `${event.date.getFullYear()}-${String(event.date.getMonth() + 1).padStart(2, '0')}-${String(event.date.getDate()).padStart(2, '0')}` 
-      : String(event.date),
+    datum: event.date instanceof Date ? event.date.toISOString().split('T')[0] : String(event.date),
     tijd: event.startTime || '20:00',
     locatie: event.location,
     type: event.type,
@@ -629,14 +627,9 @@ export async function fetchBierpongGames(): Promise<BierpongGame[]> {
 export async function addBierpongGame(playerIds: string[], winnerIds: string[]): Promise<BierpongGame> {
   const { data, error } = await supabase
     .from('bierpong_games')
-    .insert([{ 
-        player_ids: playerIds, 
-        winner_ids: winnerIds, 
-        winner_id: winnerIds[0] // Fallback voor oude veld
-    }])
+    .insert([{ player_ids: playerIds, winner_ids: winnerIds, winner_id: winnerIds[0] }])
     .select()
     .single();
-    
   if (error) throw error;
   return {
     ...data,
@@ -775,27 +768,16 @@ export async function fetchCountdowns(): Promise<CountdownItem[]> {
 }
 
 export async function saveCountdowns(countdowns: CountdownItem[]): Promise<void> {
-  const payload = countdowns.map(c => {
-    const targetStr = c.targetDate instanceof Date ? `${c.targetDate.getFullYear()}-${String(c.targetDate.getMonth() + 1).padStart(2, '0')}-${String(c.targetDate.getDate()).padStart(2, '0')}` : String(c.targetDate);
-    return {
-      id: c.id,
-      title: c.title,
-      target_date: targetStr
-    };
-  });
+  const payload = countdowns.map(c => ({
+    id: c.id,
+    title: c.title,
+    target_date: c.targetDate instanceof Date ? c.targetDate.toISOString().split('T')[0] : String(c.targetDate)
+  }));
 
-  // Fetch existing IDs to determine which ones to remove
   const { data: existing } = await supabase.from('countdowns').select('id');
-  const existingIds = (existing || []).map((r: any) => r.id);
-  const newIds = countdowns.map(c => c.id);
-  const toDelete = existingIds.filter((id: string) => !newIds.includes(id));
+  const toDelete = (existing || []).map(r => r.id).filter(id => !countdowns.map(c => c.id).includes(id));
 
-  // Delete removed countdowns
-  if (toDelete.length > 0) {
-    await supabase.from('countdowns').delete().in('id', toDelete);
-  }
-
-  // Upsert remaining (insert or update)
+  if (toDelete.length > 0) await supabase.from('countdowns').delete().in('id', toDelete);
   if (payload.length > 0) {
     const { error } = await supabase.from('countdowns').upsert(payload, { onConflict: 'id' });
     if (error) throw error;
