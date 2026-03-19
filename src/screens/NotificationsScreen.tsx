@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAgenda } from '../contexts/AgendaContext';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { Notification } from '../types';
 import { SkeletonRow } from '../components/Skeleton';
 
 export const NotificationsScreen: React.FC = () => {
   const navigate = useNavigate();
-    const { loading } = useAuth();
+  const { loading } = useAuth();
   const { notifications, handleMarkNotificationAsRead: onMarkAsRead } = useAgenda();
   const [filter, setFilter] = useState<'Alles' | 'Nudges' | 'Officieel'>('Alles');
 
+  // Hulpprogramma voor exacte datum-groepering
   const getCategory = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -37,13 +38,11 @@ export const NotificationsScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white transition-colors duration-200">
-      {/* Header */}
       <header className="px-4 pb-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] flex items-center gap-2 sticky top-0 bg-gray-50 dark:bg-[#0f172a] z-10 transition-colors">
         <ChevronBack onClick={() => navigate(-1)} />
         <h1 className="text-3xl font-bold tracking-tight">Meldingen</h1>
       </header>
 
-      {/* Tabs */}
       <div className="px-6 pb-4">
         <div className="flex bg-white dark:bg-[#1e293b] p-1 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 transition-colors">
           {['Alles', 'Nudges', 'Officieel'].map((f) => {
@@ -58,20 +57,19 @@ export const NotificationsScreen: React.FC = () => {
                   }`}
               >
                 <span>{f}</span>
-                {isUnread && (
-                  <span className="w-2 h-2 bg-red-500 rounded-full shadow-sm shadow-red-500/50"></span>
-                )}
+                {isUnread && <span className="w-2 h-2 bg-red-500 rounded-full shadow-sm shadow-red-500/50"></span>}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* List */}
       <main className="flex-1 overflow-y-auto px-4 pb-nav-safe space-y-8">
         {loading ? (
           <div className="space-y-4 pt-2">
-            {Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonRow key={i} />
+            ))}
           </div>
         ) : (
           <>
@@ -81,12 +79,14 @@ export const NotificationsScreen: React.FC = () => {
 
               return (
                 <div key={category} className="space-y-4">
+                  {/* Grijze lijn met tekst die NOOIT verspringt */}
                   <div className="flex items-center gap-3 px-2">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                    <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] whitespace-nowrap shrink-0">
                       {category}
                     </span>
                     <div className="h-[1px] w-full bg-gray-200 dark:bg-gray-800/60"></div>
                   </div>
+
                   <div className="space-y-3">
                     {categoryData.map(notification => (
                       <NotificationCard
@@ -116,7 +116,6 @@ export const NotificationsScreen: React.FC = () => {
 const NotificationCard: React.FC<{ data: Notification, onClick: () => void }> = ({ data, onClick }) => {
   const navigate = useNavigate();
 
-  // Parse action: supports "LABEL|URL" format for navigable buttons
   const parseAction = (action: string) => {
     if (action.includes('|')) {
       const [label, url] = action.split('|');
@@ -128,31 +127,21 @@ const NotificationCard: React.FC<{ data: Notification, onClick: () => void }> = 
   const actionInfo = data.action ? parseAction(data.action) : null;
 
   const handleActionClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Don't trigger the card's onClick (mark as read)
-    if (actionInfo?.url) {
-      navigate(actionInfo.url);
-    }
+    e.stopPropagation();
+    if (actionInfo?.url) navigate(actionInfo.url);
   };
 
   return (
     <div
-      onClick={(e) => {
-        e.preventDefault();
-        if (!data.isRead) {
-          onClick();
-        }
-      }}
+      onClick={() => !data.isRead && onClick()}
       className={`p-4 rounded-2xl border transition-all cursor-pointer active:scale-[0.99] ${data.isRead ? 'bg-white dark:bg-[#1e293b]/50 border-gray-100 dark:border-gray-800' : 'bg-white dark:bg-[#1e293b] border-blue-200 dark:border-blue-900/50 shadow-sm dark:shadow-md ring-1 ring-blue-50 dark:ring-blue-900/20'}`}
     >
       <div className="flex items-start gap-4">
-        {/* Icon */}
         <div className="relative shrink-0">
           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${data.color}`}>
             <span className="material-icons-round text-2xl">{data.icon}</span>
           </div>
-          {!data.isRead && (
-            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white dark:border-[#1e293b] shadow-sm animate-pulse"></span>
-          )}
+          {!data.isRead && <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white dark:border-[#1e293b] shadow-sm animate-pulse"></span>}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -161,18 +150,17 @@ const NotificationCard: React.FC<{ data: Notification, onClick: () => void }> = 
               <h3 className={`font-bold text-sm ${data.isRead ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>
                 {data.sender}
               </h3>
+              {/* Rol-label fix: whitespace-nowrap toegevoegd */}
               {data.role && (
-                <span className="bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-600/30">
+                <span className="bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-600/30 whitespace-nowrap shrink-0">
                   {data.role}
                 </span>
               )}
             </div>
-
           </div>
 
           {data.title && <p className="text-gray-900 dark:text-white text-sm font-medium mb-1">{data.title}</p>}
-
-          <p className={`text-sm leading-relaxed ${data.type === 'nudge' ? 'italic text-gray-500 dark:text-gray-400' : 'text-gray-500 dark:text-gray-400'}`}>
+          <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
             {data.content}
           </p>
 
