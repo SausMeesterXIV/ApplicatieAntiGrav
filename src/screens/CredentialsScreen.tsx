@@ -12,15 +12,31 @@ export const CredentialsScreen: React.FC = () => {
   const [isRegister, setIsRegister] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
+  // Validatie logica
+  const TEST_EMAIL = 'it.takes.jaguarke@gmail.com';
+  const REQUIRED_DOMAIN = '@ksa-aalter.be';
+
+  const isValidEmailDomain = (emailAddr: string) => {
+    const cleanedEmail = emailAddr.trim().toLowerCase();
+    return cleanedEmail.endsWith(REQUIRED_DOMAIN) || cleanedEmail === TEST_EMAIL;
+  };
+
   const handleForgotPassword = async () => {
     if (!email.trim()) {
       showToast('Vul eerst je email in om een reset link te ontvangen.', 'error');
       return;
     }
+    
+    if (!isValidEmailDomain(email)) {
+      showToast(`Gebruik een geldig ${REQUIRED_DOMAIN} adres.`, 'error');
+      return;
+    }
+
     setLoading(true);
     try {
+      // Gebruik een robuuste redirect URL voor zowel web als mobiel
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: 'https://applicatieantigrav.vercel.app/reset-password',
       });
       if (error) throw error;
       showToast('Wachtwoord reset link verstuurd naar je email!', 'success');
@@ -33,6 +49,12 @@ export const CredentialsScreen: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isValidEmailDomain(email)) {
+      showToast(`Inloggen mislukt: gebruik je ${REQUIRED_DOMAIN} email.`, 'error');
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -50,7 +72,6 @@ export const CredentialsScreen: React.FC = () => {
           .single();
 
         if (profile && profile.actief === false) {
-          // Sign out immediately and show deactivation message
           await supabase.auth.signOut();
           showToast('Sorry, je account is gedeactiveerd. Voor verdere vragen moet je bij de hoofdleiding zijn!', 'error');
           return;
@@ -69,6 +90,12 @@ export const CredentialsScreen: React.FC = () => {
       showToast('Vul je naam in', 'error');
       return;
     }
+
+    if (!isValidEmailDomain(email)) {
+      showToast(`Registreren verplicht met een ${REQUIRED_DOMAIN} email adres.`, 'error');
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -77,21 +104,20 @@ export const CredentialsScreen: React.FC = () => {
         options: {
           data: {
             naam: naam.trim(),
-            full_name: naam.trim(), // Comon metadata key
+            full_name: naam.trim(),
             display_name: naam.trim()
           },
         },
       });
       if (error) throw error;
 
-      // Use upsert instead of insert to handle cases where a trigger might have already created a profile
       if (data.user) {
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert([{
             id: data.user.id,
             naam: naam.trim(),
-            name: naam.trim(), // Ensure both are set
+            name: naam.trim(),
             email: email,
             rol: 'standaard',
             actief: true,
@@ -99,8 +125,6 @@ export const CredentialsScreen: React.FC = () => {
 
         if (profileError) {
           console.error('Profile creation/update error:', profileError);
-          // If upsert fails, we still try to proceed since the user is authed, 
-          // but we might want to warn them.
         }
       }
 
@@ -148,8 +172,12 @@ export const CredentialsScreen: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-2xl px-5 py-4 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
-                placeholder="naam@email.be"
+                placeholder="voornaam.achternaam@ksa-aalter.be"
               />
+              {/* Visuele hint voor de gebruiker */}
+              <p className="mt-2 ml-1 text-[10px] text-gray-400 dark:text-gray-500 italic">
+                * Verplicht met @ksa-aalter.be email adres
+              </p>
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2 ml-1">Wachtwoord</label>
@@ -206,11 +234,10 @@ export const CredentialsScreen: React.FC = () => {
             >
               Bekijk Credits
             </button>
-            <p className="text-[10px] text-gray-300 dark:text-gray-600">Versie 1.0.0 (Build 2026.03)</p>
+            <p className="text-[10px] text-gray-300 dark:text-gray-600">Versie 1.0.1 (Build 2026.03)</p>
           </div>
         </div>
       </main>
     </div>
   );
 };
-

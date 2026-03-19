@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { App as CapacitorApp } from '@capacitor/app';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { supabase } from './lib/supabase';
 import { Session } from '@supabase/supabase-js';
@@ -191,6 +192,26 @@ function App() {
         setFriesOrders,
         frituurSessieId
     });
+
+    useEffect(() => {
+        // Luister naar deep links (bijv. vanuit e-mail op smartphone)
+        const setupDeepLinks = async () => {
+            CapacitorApp.addListener('appUrlOpen', async (data) => {
+                const url = new URL(data.url);
+                
+                // Als de URL '/reset-password' bevat of een recovery token
+                if (url.pathname.includes('reset-password') || url.hash.includes('type=recovery')) {
+                    // Forceer navigatie naar de reset pagina
+                    window.location.href = data.url;
+                }
+            });
+        };
+
+        setupDeepLinks();
+        return () => {
+            CapacitorApp.removeAllListeners();
+        };
+    }, []);
 
     useEffect(() => {
         const setAppHeight = () => {

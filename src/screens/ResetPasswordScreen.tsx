@@ -11,16 +11,21 @@ export const ResetPasswordScreen: React.FC = () => {
     useEffect(() => {
         let mounted = true;
 
-        // 1. Luister of er via de mail link een 'PASSWORD_RECOVERY' event of nieuwe sessie binnenkomt
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_OUT' && mounted) {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (!mounted) return;
+
+            // Supabase stuurt dit event als je via een herstel-link binnenkomt
+            if (event === 'PASSWORD_RECOVERY') {
+                console.log('Wachtwoord herstelmodus actief');
+            } else if (event === 'SIGNED_OUT') {
                 navigate('/login');
             }
         });
 
-        // 2. Dubbelcheck de huidige status. Geen sessie na het laden? Terug naar login.
+        // Check of we een sessie hebben (de link logt je tijdelijk in)
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (!session && mounted) {
+                // Als er geen sessie is, is de link ongeldig of verlopen
                 navigate('/login');
             }
         });
