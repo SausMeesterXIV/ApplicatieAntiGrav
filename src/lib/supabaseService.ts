@@ -253,7 +253,9 @@ export async function fetchEvents(): Promise<Event[]> {
 export async function saveEvent(event: Event): Promise<Event> {
   const payload = {
     titel: event.title,
-    datum: event.date instanceof Date ? `${event.date.getFullYear()}-${String(event.date.getMonth() + 1).padStart(2, '0')}-${String(event.date.getDate()).padStart(2, '0')}` : String(event.date),
+    datum: event.date instanceof Date 
+      ? `${event.date.getFullYear()}-${String(event.date.getMonth() + 1).padStart(2, '0')}-${String(event.date.getDate()).padStart(2, '0')}` 
+      : String(event.date),
     tijd: event.startTime || '20:00',
     locatie: event.location,
     type: event.type,
@@ -263,25 +265,14 @@ export async function saveEvent(event: Event): Promise<Event> {
     beschrijving: event.description || null,
   };
 
-  const isNew = !event.id || event.id.length < 10 || !event.id.includes('-');
+  const isNew = !event.id || event.id.startsWith('temp-') || !event.id.includes('-');
 
-  if (!isNew) {
-    // Update existing
-    const { data, error } = await supabase
-      .from('events')
-      .update(payload)
-      .eq('id', event.id)
-      .select()
-      .single();
+  if (isNew) {
+    const { data, error } = await supabase.from('events').insert([payload]).select().single();
     if (error) throw error;
     return mapEvent(data);
   } else {
-    // Insert new
-    const { data, error } = await supabase
-      .from('events')
-      .insert([payload])
-      .select()
-      .single();
+    const { data, error } = await supabase.from('events').update(payload).eq('id', event.id).select().single();
     if (error) throw error;
     return mapEvent(data);
   }
@@ -638,9 +629,14 @@ export async function fetchBierpongGames(): Promise<BierpongGame[]> {
 export async function addBierpongGame(playerIds: string[], winnerIds: string[]): Promise<BierpongGame> {
   const { data, error } = await supabase
     .from('bierpong_games')
-    .insert([{ player_ids: playerIds, winner_ids: winnerIds, winner_id: winnerIds[0] }])
+    .insert([{ 
+        player_ids: playerIds, 
+        winner_ids: winnerIds, 
+        winner_id: winnerIds[0] // Fallback voor oude veld
+    }])
     .select()
     .single();
+    
   if (error) throw error;
   return {
     ...data,

@@ -13,12 +13,13 @@ import { NavCard } from '../components/NavCard';
 import { showToast } from '../components/Toast';
 
 export const HomeScreen: React.FC = () => {
-  const { currentUser, loading: authLoading } = useAuth();
+  const { currentUser, users, loading: authLoading } = useAuth();
   const { balances, handleAddCost, dranken: drinks, loading: drinkLoading } = useDrink();
   const { events, quotes, countdowns } = useAgenda();
   
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState('');
+  const [duoBierpongWinners, setDuoBierpongWinners] = useState<string[]>([]);
   
   const loading = authLoading || drinkLoading;
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ export const HomeScreen: React.FC = () => {
     if (currentUser?.rol === 'godmode') {
       db.fetchPersonalTodos().then(setTodos).catch(console.error);
     }
+    db.fetchBierpongKampioenen().then(setDuoBierpongWinners).catch(console.error);
   }, [currentUser]);
 
   const handleAddTodo = async (e: React.FormEvent) => {
@@ -151,6 +153,65 @@ export const HomeScreen: React.FC = () => {
           </div>
         ) : (
           <>
+            {/* 📅 AANKOMENDE EVENEMENTEN WIDGET */}
+            {upcomingEvents.length > 0 && (
+              <section className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="material-icons-round text-blue-600 text-sm">calendar_today</span>
+                    <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Aankomende Events</h2>
+                  </div>
+                  <button onClick={() => navigate('/agenda')} className="text-xs font-bold text-blue-600 dark:text-blue-400">Bekijk alles</button>
+                </div>
+                <div className="grid gap-3">
+                  {upcomingEvents.map(event => (
+                    <div key={event.id} onClick={() => navigate('/agenda')} className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform">
+                      <div className="flex flex-col items-center justify-center w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 shrink-0">
+                        <span className="text-[10px] font-black uppercase leading-none">{new Date(event.date).toLocaleDateString('nl-BE', { month: 'short' })}</span>
+                        <span className="text-lg font-black leading-none">{new Date(event.date).getDate()}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-sm truncate dark:text-white">{event.title}</h3>
+                        <div className="flex items-center gap-2 mt-0.5 text-gray-500">
+                          <span className="material-icons-round text-[14px]">schedule</span>
+                          <span className="text-xs">{event.startTime || '20:00'} • {event.location}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* 🏆 BIERPONG KAMPIOENEN WIDGET */}
+            {duoBierpongWinners && duoBierpongWinners.length > 0 && (
+              <section className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="material-icons-round text-yellow-400 text-sm">workspace_premium</span>
+                    <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-100">Huidige Bierpong Kampioenen</h2>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex -space-x-3">
+                      {duoBierpongWinners.map(id => {
+                        const u = users.find(user => user.id === id);
+                        return (
+                          <img key={id} src={u?.avatar} className="w-10 h-10 rounded-full border-2 border-purple-500 bg-purple-800 object-cover" alt="Champ" />
+                        );
+                      })}
+                    </div>
+                    <div>
+                      <p className="text-lg font-black leading-tight">
+                        {duoBierpongWinners.map(id => users.find(u => u.id === id)?.naam?.split(' ')[0]).join(' & ')}
+                      </p>
+                      <p className="text-[10px] text-purple-200 font-bold uppercase">The Team to Beat 🍻</p>
+                    </div>
+                  </div>
+                </div>
+                <span className="material-icons-round absolute -right-4 -bottom-4 text-8xl text-white/10 rotate-12">emoji_events</span>
+              </section>
+            )}
+
             {topQuote && (
               <section onClick={() => navigate('/quotes')} className="bg-white dark:bg-[#1e2330] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 cursor-pointer">
                 <div className="flex items-center gap-2 mb-3">
