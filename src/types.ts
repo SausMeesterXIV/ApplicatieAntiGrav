@@ -129,6 +129,14 @@ export interface StockItem extends DbStockItemRow {
     color: string | null;
 }
 
+export interface Todo {
+    id: string;
+    user_id: string;
+    task: string;
+    completed: boolean;
+    created_at: string;
+}
+
 export interface Streak {
     id: string;
     userId: string;

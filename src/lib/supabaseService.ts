@@ -1120,3 +1120,39 @@ export async function savePushToken(userId: string, token: string, platform: str
     .upsert({ user_id: userId, token, device_type: platform }, { onConflict: 'token' });
   if (error) throw error;
 }
+
+// ==================== PERSONAL TODOS ====================
+export async function fetchPersonalTodos(): Promise<import('../types').Todo[]> {
+  const { data, error } = await (supabase
+    .from('personal_todos' as any) as any)
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addPersonalTodo(task: string, userId: string): Promise<import('../types').Todo> {
+  const { data, error } = await (supabase
+    .from('personal_todos' as any) as any)
+    .insert([{ task, user_id: userId }])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function togglePersonalTodo(id: string, completed: boolean): Promise<void> {
+  const { error } = await (supabase
+    .from('personal_todos' as any) as any)
+    .update({ completed })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function deletePersonalTodo(id: string): Promise<void> {
+  const { error } = await (supabase
+    .from('personal_todos' as any) as any)
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
