@@ -68,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           avatar_url: null,
           avatar: `https://i.pravatar.cc/150?u=${userId}`,
           created_at: new Date().toISOString(),
+          fcm_token: null,
           quick_drink_id: null
         };
         const updatedUsers = [...usersData, cUser];

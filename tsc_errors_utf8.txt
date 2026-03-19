@@ -1,0 +1,5 @@
+﻿src/contexts/AuthContext.tsx(59,9): error TS2741: Property 'fcm_token' is missing in type '{ id: string; naam: any; name: any; email: string; rol: "standaard"; actief: true; roles: never[]; nickname: null; avatar_url: null; avatar: string; created_at: string; quick_drink_id: null; }' but required in type 'User'.
+src/contexts/AuthContext.tsx(74,18): error TS2345: Argument of type '(User | null)[]' is not assignable to parameter of type 'SetStateAction<User[]>'.
+  Type '(User | null)[]' is not assignable to type 'User[]'.
+    Type 'User | null' is not assignable to type 'User'.
+      Type 'null' is not assignable to type 'User'.

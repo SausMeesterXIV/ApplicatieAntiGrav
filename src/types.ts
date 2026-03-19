@@ -33,6 +33,7 @@ export interface User extends Omit<DbProfileRow, 'id' | 'rol'> {
     status?: 'online' | 'offline';
     role?: string; // Legacy alias/display role
     quick_drink_id: string | null;
+    fcm_token: string | null;
     quickDrinkId?: string; // Optioneel alias
     created_at: string;
     balance?: number;

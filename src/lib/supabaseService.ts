@@ -40,6 +40,7 @@ function mapProfileToUser(p: DbProfileRow): User {
     avatar: p.avatar_url || `https://i.pravatar.cc/150?u=${p.id}`,
     roles: p.roles || [],
     quickDrinkId: p.quick_drink_id || undefined,
+    fcm_token: p.fcm_token || null,
     balance: 0,
   };
 }
@@ -591,6 +592,15 @@ export async function finalizeFrituurSessie(sessieId: string, actualAmount: numb
 }
 
 // ==================== BIERPONG ====================
+
+export async function updateUserFcmToken(userId: string, token: string | null) {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ fcm_token: token } as any)
+    .eq('id', userId);
+  
+  if (error) throw error;
+}
 
 export async function fetchBierpongGames(): Promise<BierpongGame[]> {
   const { data, error } = await supabase

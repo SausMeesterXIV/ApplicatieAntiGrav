@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { usePushNotifications } from './hooks/usePushNotifications';
 import { supabase } from './lib/supabase';
 import { Session } from '@supabase/supabase-js';
 import { User, Drink, Streak, StockItem, FryItem, Order, CountdownItem, BierpongGame, QuoteItem, Notification, Event, BillingPeriod } from './types';
@@ -43,7 +44,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { RolesManageScreen } from './screens/RolesManageScreen';
 import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
 import { BillingPeriodsManageScreen } from './screens/BillingPeriodsManageScreen';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DrinkProvider } from './contexts/DrinkContext';
 import { AgendaProvider } from './contexts/AgendaContext';
 import { FriesProvider } from './contexts/FriesContext';
@@ -148,6 +149,7 @@ const DEFAULT_USER: User = {
     avatar_url: '',
     avatar: 'https://i.pravatar.cc/150?u=default',
     nickname: '',
+    fcm_token: null,
     quick_drink_id: null,
     quickDrinkId: undefined,
     created_at: new Date().toISOString()
@@ -161,6 +163,7 @@ function App() {
     const [loading, setLoading] = useState(true);
 
     const [currentUser, setCurrentUser] = useState<User>(DEFAULT_USER);
+    usePushNotifications(currentUser);
     const [users, setUsers] = useState<User[]>([]);
     const [drinks, setDrinks] = useState<Drink[]>([]);
     const [availableRoles, setAvailableRoles] = useState<import('./types').RoleDefinition[]>([]);

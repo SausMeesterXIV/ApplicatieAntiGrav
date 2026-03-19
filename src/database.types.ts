@@ -614,6 +614,7 @@ export type Database = {
           quick_drink_id: string | null
           rol: Database["public"]["Enums"]["user_role"]
           roles: string[] | null
+          fcm_token: string | null
         }
         Insert: {
           actief?: boolean
@@ -626,6 +627,7 @@ export type Database = {
           quick_drink_id?: string | null
           rol?: Database["public"]["Enums"]["user_role"]
           roles?: string[] | null
+          fcm_token?: string | null
         }
         Update: {
           actief?: boolean
