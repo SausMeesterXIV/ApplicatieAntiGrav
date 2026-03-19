@@ -384,25 +384,32 @@ export async function voteQuote(quoteId: string, userId: string, voteType: 'like
 export async function fetchNotificaties(userId: string): Promise<Notification[]> {
   const { data, error } = await supabase
     .from('notificaties')
-    .select('*, profiles!notificaties_zender_id_fkey(naam)')
+    .select('*, profiles!notificaties_zender_id_fkey(naam, rol)')
     .or(`ontvanger_id.eq.all,ontvanger_id.eq.${userId}`)
     .order('datum', { ascending: false });
 
   if (error) throw error;
-  return (data || []).map((n) => ({
-    ...n,
-    id: n.id,
-    type: 'official' as const,
-    sender: (n as any).profiles?.naam || n.zender_naam || 'Systeem',
-    role: 'Lid',
-    title: n.titel,
-    content: n.bericht || '',
-    time: formatTimeAgo(new Date(n.datum)),
-    isRead: n.gelezen,
-    action: n.action,
-    icon: 'notifications',
-    color: 'bg-blue-100 text-blue-600',
-  })) as Notification[];
+  
+  return (data || []).map((n) => {
+    // Haal de rol op uit de gekoppelde profiel-data
+    const zenderRol = (n as any).profiles?.rol;
+    
+    return {
+      ...n,
+      id: n.id,
+      type: 'official' as const,
+      sender: (n as any).profiles?.naam || n.zender_naam || 'Systeem',
+      // Logica: Alleen 'Hoofdleiding' tonen als de database rol exact 'hoofdleiding' is
+      role: zenderRol === 'hoofdleiding' ? 'Hoofdleiding' : '',
+      title: n.titel,
+      content: n.bericht || '',
+      time: formatTimeAgo(new Date(n.datum)),
+      isRead: n.gelezen,
+      action: n.action,
+      icon: 'notifications',
+      color: 'bg-blue-100 text-blue-600',
+    };
+  }) as Notification[];
 }
 
 export async function addNotificatie(

@@ -12,6 +12,24 @@ export const NotificationsScreen: React.FC = () => {
   const { notifications, handleMarkNotificationAsRead: onMarkAsRead } = useAgenda();
   const [filter, setFilter] = useState<'Alles' | 'Nudges' | 'Officieel'>('Alles');
 
+  const getCategory = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    
+    // Zet beide tijden op middernacht voor een zuivere dag-vergelijking
+    const d1 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const diffInMs = d2.getTime() - d1.getTime();
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+    if (diffInDays === 0) return 'Vandaag';
+    if (diffInDays === 1) return 'Gisteren';
+    if (diffInDays < 7) return 'Deze week';
+    if (diffInDays < 30) return 'Deze maand';
+    return 'Ouder';
+  };
+
   const filteredData = filter === 'Alles'
     ? notifications
     : filter === 'Nudges'
@@ -54,7 +72,7 @@ export const NotificationsScreen: React.FC = () => {
       </div>
 
       {/* List */}
-      <main className="flex-1 overflow-y-auto px-4 pb-nav-safe space-y-6">
+      <main className="flex-1 overflow-y-auto px-4 pb-nav-safe space-y-8">
         {loading ? (
           <div className="space-y-4 pt-2">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -63,45 +81,42 @@ export const NotificationsScreen: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* Today Section */}
-            <div>
-              <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-2">Vandaag</h2>
-              <div className="space-y-3">
-                {filteredData.filter(n => !n.time.includes('Gisteren') && !n.time.includes('u geleden')).map(notification => (
-                  <NotificationCard
-                    key={notification.id}
-                    data={notification}
-                    onClick={() => onMarkAsRead(notification.id)}
-                  />
-                ))}
-                {/* Include 'Zonet' and recent hours here too */}
-                {filteredData.filter(n => n.time === 'Zonet' || n.time.includes('u geleden')).map(notification => (
-                  <NotificationCard
-                    key={notification.id}
-                    data={notification}
-                    onClick={() => onMarkAsRead(notification.id)}
-                  />
-                ))}
+            {['Vandaag', 'Gisteren', 'Deze week', 'Deze maand', 'Ouder'].map((category) => {
+              // Filter meldingen die bij deze categorie horen
+              const categoryData = filteredData.filter(n => getCategory(n.datum) === category);
 
-                {filteredData.filter(n => !n.time.includes('Gisteren')).length === 0 && (
-                  <p className="text-gray-500 text-sm px-2 italic">Geen meldingen vandaag.</p>
-                )}
-              </div>
-            </div>
+              if (categoryData.length === 0) return null;
 
-            {/* Yesterday/Older Section */}
-            <div>
-              <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-2">Gisteren</h2>
-              <div className="space-y-3">
-                {filteredData.filter(n => n.time.includes('Gisteren')).map(notification => (
-                  <NotificationCard
-                    key={notification.id}
-                    data={notification}
-                    onClick={() => onMarkAsRead(notification.id)}
-                  />
-                ))}
+              return (
+                <div key={category} className="space-y-4">
+                  {/* Grijze lijn met de tekst */}
+                  <div className="flex items-center gap-3 px-2">
+                    <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] whitespace-nowrap">
+                      {category}
+                    </span>
+                    <div className="h-[1px] w-full bg-gray-200 dark:bg-gray-800/60"></div>
+                  </div>
+
+                  {/* De melding-kaarten voor deze categorie */}
+                  <div className="space-y-3">
+                    {categoryData.map(notification => (
+                      <NotificationCard
+                        key={notification.id}
+                        data={notification}
+                        onClick={() => onMarkAsRead(notification.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+
+            {filteredData.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <span className="material-icons-round text-5xl text-gray-300 dark:text-gray-700 mb-2">notifications_off</span>
+                <p className="text-gray-500 text-sm italic">Geen meldingen gevonden.</p>
               </div>
-            </div>
+            )}
           </>
         )}
       </main>
