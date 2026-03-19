@@ -210,10 +210,15 @@ function App() {
 
     useEffect(() => {
         const saved = localStorage.getItem('dark_mode');
-        if (saved === 'true' || (saved === null && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        const isDark = saved === 'true' || (saved === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        const metaThemeColor = document.getElementById('theme-color-meta');
+        
+        if (isDark) {
             document.documentElement.classList.add('dark');
+            if (metaThemeColor) metaThemeColor.setAttribute("content", "#0f172a");
         } else {
             document.documentElement.classList.remove('dark');
+            if (metaThemeColor) metaThemeColor.setAttribute("content", "#ffffff");
         }
     }, []);
 

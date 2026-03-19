@@ -15,8 +15,8 @@ export default defineConfig({
         description: 'De officiële KSA LeidingsApp voor strepen, agenda, frituur en meer.',
         start_url: '/',
         display: 'standalone',
-        background_color: '#0f172a',
-        theme_color: '#0f172a',
+        background_color: '#ffffff',
+        theme_color: '#ffffff',
         icons: [
           {
             src: 'pwa-192x192.jpg',

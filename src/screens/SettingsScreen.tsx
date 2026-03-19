@@ -47,8 +47,10 @@ export const SettingsScreen: React.FC = () => {
     const newIsDark = !isDark;
     if (newIsDark) {
       document.documentElement.classList.add('dark');
+      document.getElementById('theme-color-meta')?.setAttribute("content", "#0f172a");
     } else {
       document.documentElement.classList.remove('dark');
+      document.getElementById('theme-color-meta')?.setAttribute("content", "#ffffff");
     }
     setIsDark(newIsDark);
     localStorage.setItem('dark_mode', String(newIsDark));
