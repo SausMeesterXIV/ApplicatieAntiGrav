@@ -1,4 +1,3 @@
-﻿src/screens/FriesScreen.tsx(119,28): error TS2345: Argument of type '{ name: string; price: number; category: "frieten" | "snacks" | "sauzen" | "huisbereid" | "burgers" | "spaghetti"; }' is not assignable to parameter of type 'Omit<FryItem, "id">'.
-  Type '{ name: string; price: number; category: "frieten" | "snacks" | "sauzen" | "huisbereid" | "burgers" | "spaghetti"; }' is missing the following properties from type 'Omit<FryItem, "id">': created_at, description
-src/screens/TeamDrankExcelBeheerScreen.tsx(96,33): error TS2551: Property 'category' does not exist on type 'Drink'. Did you mean 'categorie'?
-src/screens/TeamDrankStockScreen.tsx(111,11): error TS2740: Type '{ id: string; name: string; price: number; isTemporary: true; validUntil: string; icon: string; }' is missing the following properties from type 'Drink': categorie, created_at, huidige_voorraad, is_temporary, and 3 more.
+﻿src/screens/BierpongScreen.tsx(427,92): error TS2551: Property 'role' does not exist on type 'User'. Did you mean 'rol'?
+src/screens/FriesScreen.tsx(124,133): error TS2551: Property 'role' does not exist on type 'User'. Did you mean 'rol'?
+src/screens/NudgeSelectorScreen.tsx(92,66): error TS2551: Property 'role' does not exist on type 'User'. Did you mean 'rol'?

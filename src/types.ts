@@ -20,22 +20,22 @@ export type DbNotificationRow = Database['public']['Tables']['notificaties']['Ro
 
 // 2. Koppel ze aan je frontend interfaces
 export interface User extends Omit<DbProfileRow, 'id' | 'rol'> {
-    id: string; // Ensure UUID is always string
+    id: string;
     naam: string;
-    name: string; // Alias for naam for consistency
+    name: string; 
     email: string;
     actief: boolean;
     rol: Database['public']['Enums']['user_role'] | 'winkeltje' | 'financiën' | 'hoofdleiding' | 'godmode';
-    roles: string[]; // Frontend expectation is string[] (not null)
+    roles: string[];
     nickname: string | null;
     avatar_url: string | null;
-    avatar?: string; // Legacy alias
-    role?: string; // Legacy alias/display role
+    avatar: string; // Verplicht voor legacy compatibiliteit
     status?: 'online' | 'offline';
-    balance?: number;
+    role?: string; // Legacy alias/display role
     quick_drink_id: string | null;
-    quickDrinkId?: string; // Legacy alias
+    quickDrinkId?: string; // Optioneel alias
     created_at: string;
+    balance?: number;
 }
 
 export type BillingPeriod = DbBillingPeriodRow;
@@ -43,11 +43,10 @@ export type InkoopFactuur = DbInkoopFactuurRow;
 export type BillingCorrection = DbBillingCorrectionRow;
 
 export interface Drink extends DbDrankRow {
-    name: string; // Alias for naam
-    price: number; // Alias for prijs
-    isTemporary?: boolean; // Alias for is_temporary
-    validUntil?: string | null; // Alias for valid_until
-    icon?: string | null;
+    name: string;
+    price: number;
+    isTemporary?: boolean;
+    validUntil?: string | null;
 }
 
 export interface FryItem extends DbFriesItemRow {
@@ -71,16 +70,13 @@ export interface Order {
     periodId?: string;
 }
 
-export interface Event extends Omit<DbEventRow, 'id' | 'type' | 'responsible'> {
-    id: string; // Match Database string ID
-    title: string; // Alias for titel
+export interface Event extends DbEventRow {
+    title: string;
+    location: string; // Alias voor 'locatie'
+    description?: string | null; // Alias voor 'beschrijving'
+    startTime: string;
+    endTime?: string | null;
     date: Date;
-    startTime: string; // Alias for start_time
-    endTime?: string | null; // Alias for end_time
-    location: string; // Alias for locatie
-    description?: string | null; // Alias for beschrijving
-    type: string | null;
-    responsible: string | null;
 }
 
 export interface Transaction {
@@ -109,9 +105,9 @@ export interface Notification extends DbNotificationRow {
 }
 
 export interface QuoteItem extends DbQuoteRow {
-    text: string; // Alias for tekst
-    authorName: string; // Alias for auteur
-    authorId?: string; // Alias for toegevoegd_door if needed
+    text: string;
+    authorName: string;
+    authorId: string; // Toegevoegd om TS2353 op te lossen
     date: Date;
     likes: string[];
     dislikes: string[];

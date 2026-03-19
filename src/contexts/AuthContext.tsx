@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           roles: [],
           nickname: null,
           avatar_url: null,
+          avatar: `https://i.pravatar.cc/150?u=${userId}`,
           created_at: new Date().toISOString(),
           quick_drink_id: null
         };

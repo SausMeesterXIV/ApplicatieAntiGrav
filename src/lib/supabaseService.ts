@@ -37,10 +37,10 @@ function mapProfileToUser(p: DbProfileRow): User {
   return {
     ...p,
     name: p.naam,
+    avatar: p.avatar_url || `https://i.pravatar.cc/150?u=${p.id}`,
     roles: p.roles || [],
-    avatar: p.avatar_url || `https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y`,
     quickDrinkId: p.quick_drink_id || undefined,
-    balance: 0, // Calculated separately
+    balance: 0,
   };
 }
 
@@ -290,13 +290,11 @@ function mapEvent(e: DbEventRow): Event {
   return {
     ...e,
     title: e.titel,
-    date: new Date(e.datum),
     location: e.locatie,
-    type: e.type || 'vergadering',
+    description: e.beschrijving,
     startTime: e.start_time || e.tijd || '20:00',
-    endTime: e.end_time ?? null,
-    responsible: e.responsible ?? null,
-    description: e.beschrijving ?? null,
+    endTime: e.end_time || null,
+    date: new Date(e.datum),
   };
 }
 
@@ -328,17 +326,15 @@ export async function fetchQuotes(): Promise<QuoteItem[]> {
 }
 
 function mapQuote(q: DbQuoteRow, votes: any[] = []): QuoteItem {
-    return {
-      ...q,
-      text: q.tekst,
-      authorId: q.auteur, // This stores the author name or ID
-      authorName: q.auteur,
-      context: q.context || null,
-      date: new Date(q.datum),
-      likes: votes.filter(v => v.vote_type === 'like').map(v => v.user_id),
-      dislikes: votes.filter(v => v.vote_type === 'dislike').map(v => v.user_id),
-      addedBy: q.toegevoegd_door || q.auteur,
-    };
+  return {
+    ...q,
+    text: q.tekst,
+    authorName: q.auteur,
+    authorId: q.toegevoegd_door || '', 
+    date: new Date(q.datum),
+    likes: votes.filter(v => v.vote_type === 'like').map(v => v.user_id),
+    dislikes: votes.filter(v => v.vote_type === 'dislike').map(v => v.user_id),
+  };
 }
 
 export async function addQuote(tekst: string, auteur: string, context: string, toegevoegdDoor: string): Promise<QuoteItem> {

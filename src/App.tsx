@@ -145,10 +145,11 @@ const DEFAULT_USER: User = {
     rol: 'standaard',
     roles: [],
     actief: true,
+    avatar_url: '',
     avatar: 'https://i.pravatar.cc/150?u=default',
     nickname: '',
-    avatar_url: '',
     quick_drink_id: null,
+    quickDrinkId: undefined,
     created_at: new Date().toISOString()
 };
 
