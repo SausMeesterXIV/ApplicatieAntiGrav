@@ -8,7 +8,6 @@ import { hasAccess } from '../App';
 import { SPECIAL_DRINKS } from '../lib/constants';
 import * as db from '../lib/supabaseService';
 
-import { hasRole } from '../lib/roleUtils';
 import { SkeletonWidget, SkeletonCard, SkeletonEvent } from '../components/Skeleton';
 import { NavCard } from '../components/NavCard';
 import { showToast } from '../components/Toast';
@@ -26,7 +25,7 @@ export const HomeScreen: React.FC = () => {
 
   const displayName = currentUser?.nickname || currentUser?.name?.split(' ')[0] || 'Lid';
 
-  // Alleen to-do's laden als gebruiker Godmode is
+  // Laden van to-do's voor godmode
   useEffect(() => {
     if (currentUser?.rol === 'godmode') {
       db.fetchPersonalTodos().then(setTodos).catch(console.error);
@@ -145,7 +144,11 @@ export const HomeScreen: React.FC = () => {
 
       <main className="flex-1 px-4 py-6 space-y-6 pb-24">
         {loading ? (
-          <div className="space-y-6"><SkeletonCard lines={2} /><div className="grid grid-cols-2 gap-3"><SkeletonWidget /><SkeletonWidget /></div></div>
+          <div className="space-y-6">
+            <SkeletonCard lines={2} />
+            <div className="grid grid-cols-2 gap-3"><SkeletonWidget /><SkeletonWidget /></div>
+            <SkeletonEvent />
+          </div>
         ) : (
           <>
             {topQuote && (
@@ -155,7 +158,10 @@ export const HomeScreen: React.FC = () => {
                   <h2 className="text-xs font-bold text-yellow-600 uppercase tracking-widest">Quote van de week</h2>
                 </div>
                 <p className="text-gray-900 dark:text-white font-serif italic text-lg">"{topQuote.text}"</p>
-                <p className="text-xs font-bold text-gray-500 mt-2">— {topQuote.authorName}</p>
+                <div className="flex items-center gap-2 mt-3 text-gray-500">
+                  <div className="w-5 h-5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-[10px] font-bold text-yellow-700">{topQuote.authorName.charAt(0)}</div>
+                  <span className="text-xs font-bold">{topQuote.authorName}</span>
+                </div>
               </section>
             )}
 
@@ -188,7 +194,7 @@ export const HomeScreen: React.FC = () => {
               </div>
             </div>
 
-            {/* PERSOONLIJKE TO-DO (GODMODE ONLY) - GEPLAATST BOVEN FINANCIEN */}
+            {/* PERSOONLIJKE TO-DO (GODMODE ONLY) */}
             {currentUser?.rol === 'godmode' && (
               <section className="space-y-3">
                 <div className="flex items-center gap-2 px-1">
@@ -215,6 +221,8 @@ export const HomeScreen: React.FC = () => {
               </section>
             )}
 
+            {/* --- ADMIN DASHBOARDS (HERSTELD) --- */}
+
             {hasAccess(currentUser, 'financiën') && (
               <section>
                 <div className="flex items-center gap-2 mb-3 px-1">
@@ -225,16 +233,53 @@ export const HomeScreen: React.FC = () => {
               </section>
             )}
 
-            {hasAccess(currentUser, 'admin') && (
+            {hasAccess(currentUser, 'hoofdleiding') && (
               <section className="space-y-3">
                 <div className="flex items-center gap-2 mb-3 px-1">
                   <span className="material-icons-round text-primary text-sm">admin_panel_settings</span>
-                  <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Admin</h2>
+                  <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hoofdleiding</h2>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <NavCard title="Bar Beheer" icon="liquor" iconColorClass="bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400" onClick={() => navigate('/team-drank-dashboard')} />
-                  <NavCard title="Frituur Admin" icon="restaurant" iconColorClass="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" onClick={() => navigate('/admin-frituur')} />
+                <div className="grid gap-3">
+                  <NavCard title="Rollen & Beheer" description="Rechten aanpassen" icon="manage_accounts" iconColorClass="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" onClick={() => navigate('/admin/rollen')} />
+                  <NavCard title="Bericht Versturen" description="Naar leiding of groepen" icon="send" iconColorClass="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" onClick={() => navigate('/notificaties/nieuw')} />
                 </div>
+              </section>
+            )}
+
+            {hasAccess(currentUser, 'drank') && (
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 mb-3 px-1">
+                  <span className="material-icons-round text-primary text-sm">local_drink</span>
+                  <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Team Drank</h2>
+                </div>
+                <div className="grid gap-3">
+                  <NavCard title="Team Drank Beheer" description="Dashboard, Strepen & Facturen" icon="local_bar" iconColorClass="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" onClick={() => navigate('/strepen/dashboard')} />
+                  <NavCard title="Frituur Admin" description="Kasticketjes & Prijsverschillen" icon="fastfood" iconColorClass="bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400" onClick={() => navigate('/team-drank/frieten')} />
+                </div>
+              </section>
+            )}
+
+            {hasAccess(currentUser, 'sfeerbeheer') && (
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 mb-3 px-1">
+                  <span className="material-icons-round text-primary text-sm">celebration</span>
+                  <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sfeerbeheer</h2>
+                </div>
+                <div className="grid gap-3">
+                  <NavCard title="Agenda & Aftelklok" description="Events en sfeer beheren" icon="edit_calendar" iconColorClass="bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400" onClick={() => navigate('/agenda/beheer')} />
+                  <NavCard title="Bierpong" description="Bierpongtoernooi kampioenen" icon="emoji_events" iconColorClass="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" onClick={() => navigate('/bierpong/beheer')} />
+                  <NavCard title="Quoteboek" description="Wall of Shame / Fame" icon="format_quote" iconColorClass="bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400" onClick={() => navigate('/quotes/beheer')} />
+                </div>
+              </section>
+            )}
+
+            {hasAccess(currentUser, 'winkeltje') && (
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 mb-3 px-1">
+                  <span className="material-icons-round text-primary text-sm">storefront</span>
+                  <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Winkeltje</h2>
+                </div>
+                <NavCard title="Winkeltje Dashboard" description="Beheer kledij en materiaal" icon="dashboard" iconColorClass="bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400" onClick={() => navigate('/winkeltje/dashboard')} />
               </section>
             )}
           </>
