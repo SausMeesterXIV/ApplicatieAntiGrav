@@ -23,25 +23,34 @@ export const CredentialsScreen: React.FC = () => {
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
-      showToast('Vul eerst je email in om een reset link te ontvangen.', 'error');
+      showToast('Vul eerst je email in.', 'error');
       return;
     }
     
+    // Check of de mail wel toegestaan is (@ksa-aalter.be of test-mail)
     if (!isValidEmailDomain(email)) {
-      showToast(`Gebruik een geldig ${REQUIRED_DOMAIN} adres.`, 'error');
+      showToast(`Wachtwoord reset alleen voor @ksa-aalter.be adressen.`, 'error');
       return;
     }
 
     setLoading(true);
     try {
-      // Gebruik een robuuste redirect URL voor zowel web als mobiel
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://applicatieantigrav.vercel.app/reset-password',
+      // Dynamische redirect: werkt op localhost én op de echte site
+      const baseUrl = window.location.origin;
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${baseUrl}/reset-password`,
       });
+      
       if (error) throw error;
-      showToast('Wachtwoord reset link verstuurd naar je email!', 'success');
+      
+      showToast('Check je inbox (en spam)! De link is verstuurd.', 'success');
     } catch (error: any) {
-      showToast(error.message || 'Fout bij het versturen van de reset link', 'error');
+      // Geef duidelijke foutmelding bij rate limits
+      if (error.status === 429) {
+        showToast('Te veel aanvragen. Probeer het over een uur opnieuw.', 'error');
+      } else {
+        showToast(error.message || 'Fout bij verzenden reset link', 'error');
+      }
     } finally {
       setLoading(false);
     }
