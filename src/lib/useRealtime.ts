@@ -26,6 +26,7 @@ export function useRealtimeSubscriptions({
 
     const channel = supabase
       .channel('realtime-updates')
+      // A. LIVE NOTIFICATIES (Bijv: "Iemand heeft voor jou besteld")
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notificaties' },
@@ -49,24 +50,11 @@ export function useRealtimeSubscriptions({
             color: 'bg-blue-100 text-blue-600',
           } as Notification;
 
-          setNotifications(prev => {
-            if (prev.some(existing => existing.id === n.id)) return prev;
-            return [mapped, ...prev];
-          });
-
+          setNotifications(prev => [mapped, ...prev]);
           showToast(`📬 ${n.titel}`, 'info');
         }
       )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'notificaties' },
-        (payload) => {
-          const n = payload.new as any;
-          setNotifications(prev =>
-            prev.map(notif => notif.id === n.id ? { ...notif, isRead: n.gelezen } : notif)
-          );
-        }
-      )
+      // B. LIVE BIERPONG UPDATES
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'bierpong_games' },
@@ -78,13 +66,10 @@ export function useRealtimeSubscriptions({
             winnerIds: g.winner_ids || [],
             timestamp: new Date(g.created_at),
           } as BierpongGame;
-
-          setBierpongGames(prev => {
-            if (prev.some(existing => existing.id === g.id)) return prev;
-            return [...prev, mapped];
-          });
+          setBierpongGames(prev => [...prev, mapped]);
         }
       )
+      // C. LIVE FRIET BESTELLINGEN
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'frituur_bestellingen' },
@@ -93,6 +78,7 @@ export function useRealtimeSubscriptions({
 
           if (payload.eventType === 'INSERT') {
             const n = payload.new as any;
+            // Filter op de huidige sessie
             if (frituurSessieId && n.sessie_id !== frituurSessieId) return;
 
             const mapped: Order = {
@@ -102,19 +88,21 @@ export function useRealtimeSubscriptions({
               items: n.items || [],
               totalPrice: n.totaal_prijs || 0,
               date: new Date(n.created_at),
-              status: n.status,
+              status: n.status as 'open' | 'besteld' | 'geleverd',
               periodId: n.period_id
             };
 
-            setFriesOrders(prev => {
-              if (prev.some(o => o.id === n.id)) return prev;
-              return [...prev, mapped];
-            });
+            setFriesOrders(prev => [mapped, ...prev]);
+            
+            // Toon melding bij een nieuwe bestelling (handig voor de frituur-verantwoordelijke!)
+            if (n.user_id !== userId) {
+                showToast(`🍟 Nieuwe bestelling van ${n.user_name}!`, 'success');
+            }
           } else if (payload.eventType === 'UPDATE') {
             const n = payload.new as any;
             setFriesOrders(prev => prev.map(o => o.id === n.id ? {
               ...o,
-              status: n.status,
+              status: n.status as any,
               totalPrice: n.totaal_prijs || 0,
               items: n.items || o.items
             } : o));
@@ -133,5 +121,5 @@ export function useRealtimeSubscriptions({
         supabase.removeChannel(channelRef.current);
       }
     };
-  }, [userId]); // Alleen userId als dependency voor maximale stabiliteit
+  }, [userId, frituurSessieId]); // Nu luistert de effect ook naar sessie-wissels!
 }

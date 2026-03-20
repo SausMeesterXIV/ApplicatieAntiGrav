@@ -565,8 +565,12 @@ export async function addFrituurBestelling(
   totaalPrijs: number,
   periodId?: string
 ): Promise<string> {
-  // Debug log om te controleren wat er verzonden wordt
-  console.log("🍟 Bestelling naar DB:", { userId, userName, totaalPrijs });
+  
+  // Maak een veilige snack_naam, zelfs als items leeg is of stukgaat
+  let veiligeSnackNaam = 'Bestelling via App';
+  if (items && items.length > 0) {
+      veiligeSnackNaam = items.map(i => i.name).join(', ').substring(0, 200);
+  }
 
   const { data, error } = await supabase
     .from('frituur_bestellingen')
@@ -574,11 +578,8 @@ export async function addFrituurBestelling(
       user_id: userId,
       user_name: userName,
       sessie_id: sessieId,
-      // Genereer een leesbare tekst voor de database, met fallback
-      snack_naam: items.length > 0 
-        ? items.map(i => i.name).join(', ').substring(0, 200) 
-        : 'Frituur bestelling',
-      items: items as any,
+      snack_naam: veiligeSnackNaam,
+      items: items || [],
       totaal_prijs: totaalPrijs,
       status: 'open',
       period_id: periodId || null,
@@ -587,7 +588,7 @@ export async function addFrituurBestelling(
     .single();
 
   if (error) {
-    console.error("❌ Frituur DB Fout:", error.message, error.details);
+    console.error("❌ Definitieve DB Fout:", error.message, error.details);
     throw error;
   }
   return data.id;
