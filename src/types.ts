@@ -160,6 +160,7 @@ export interface RoleDefinition {
     label: string;
     icon: string;
     color: string;
+    category?: 'Bestuur' | 'Team' | 'Groep';
 }
 
 export interface ShopProduct extends DbShopProductRow {

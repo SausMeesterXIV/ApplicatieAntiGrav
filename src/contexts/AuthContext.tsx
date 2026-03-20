@@ -74,31 +74,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setCurrentUser(cUser);
 
-      // Synchronisatie van beschikbare rollen
+      // Haal de rollen op uit de database
       const loadedRoles = await db.fetchAvailableRoles();
-      const defaultRoles = [
-        { id: '1', label: 'Hoofdleiding', icon: 'admin_panel_settings', color: 'bg-red-100 text-red-700 border-red-200' },
-        { id: '2', label: 'Financiën', icon: 'account_balance', color: 'bg-green-100 text-green-700 border-green-200' },
-        { id: '3', label: 'Sfeerbeheer', icon: 'celebration', color: 'bg-purple-100 text-purple-700 border-purple-200' },
-        { id: '4', label: 'Drank', icon: 'local_bar', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-        { id: '5', label: 'Materiaal', icon: 'build', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-        { id: '6', label: 'Kookploeg', icon: 'restaurant', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
-        { id: '14', label: 'winkeltje', icon: 'shopping_bag', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-      ];
-
-      if (!loadedRoles || loadedRoles.length === 0) {
-        // Eerste keer instellen
-        setAvailableRoles(defaultRoles);
-        await db.saveAvailableRoles(defaultRoles);
+      if (loadedRoles && loadedRoles.length > 0) {
+        setAvailableRoles(loadedRoles);
       } else {
-        // Merge: Zorg dat alle standaard rollen bestaan, maar behoud nieuwe aangemaakte rollen
-        const merged = [...loadedRoles];
-        defaultRoles.forEach(def => {
-          if (!merged.find(m => m.label.toLowerCase() === def.label.toLowerCase())) {
-            merged.push(def);
-          }
-        });
-        setAvailableRoles(merged);
+        // Alleen als de database leeg is, gebruiken we de hardcoded lijst
+        const defaultRoles = [
+          // Bestuur & Teams (Elk een eigen kleur)
+          { id: '1', label: 'Hoofdleiding', icon: 'admin_panel_settings', color: 'bg-red-100 text-red-700 border-red-200', category: 'Bestuur' },
+          { id: '2', label: 'Financiën', icon: 'account_balance', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', category: 'Team' },
+          { id: '3', label: 'Sfeerbeheer', icon: 'celebration', color: 'bg-purple-100 text-purple-700 border-purple-200', category: 'Team' },
+          { id: '4', label: 'Drank', icon: 'local_bar', color: 'bg-blue-100 text-blue-700 border-blue-200', category: 'Team' },
+          { id: '5', label: 'Materiaal', icon: 'build', color: 'bg-orange-100 text-orange-700 border-orange-200', category: 'Team' },
+          { id: '6', label: 'Kookploeg', icon: 'restaurant', color: 'bg-amber-100 text-amber-700 border-amber-200', category: 'Team' },
+          { id: '14', label: 'winkeltje', icon: 'shopping_bag', color: 'bg-pink-100 text-pink-700 border-pink-200', category: 'Team' },
+          
+          // Leidingsgroepen (Allemaal hetzelfde zachte blauw)
+          { id: '7', label: 'Pagadders', icon: 'groups', color: 'bg-sky-50 text-sky-600 border-sky-100', category: 'Groep' },
+          { id: '8', label: 'Kabouters', icon: 'groups', color: 'bg-sky-50 text-sky-600 border-sky-100', category: 'Groep' },
+          { id: '9', label: 'Sloebers', icon: 'groups', color: 'bg-sky-50 text-sky-600 border-sky-100', category: 'Groep' },
+          { id: '10', label: 'Tieners', icon: 'groups', color: 'bg-sky-50 text-sky-600 border-sky-100', category: 'Groep' },
+          { id: '11', label: 'JIM', icon: 'groups', color: 'bg-sky-50 text-sky-600 border-sky-100', category: 'Groep' },
+          { id: '12', label: 'SIM', icon: 'groups', color: 'bg-sky-50 text-sky-600 border-sky-100', category: 'Groep' },
+          { id: '13', label: 'KIM', icon: 'groups', color: 'bg-sky-50 text-sky-600 border-sky-100', category: 'Groep' },
+        ];
+        setAvailableRoles(defaultRoles as any);
+        await db.saveAvailableRoles(defaultRoles as any);
       }
     } catch (e) {
       console.error("Error loading auth data", e);

@@ -37,39 +37,39 @@ export const NewMessageScreen: React.FC = () => {
 
     setIsSending(true);
 
-    try {
-      const senderId = currentUser?.id || '';
-      const senderName = isOfficial ? 'KSA Aalter' : (currentUser?.naam || 'Leiding');
-      
-      // Bepaal de ontvangers
-      let recipientIds: string[] = [];
-      
-      if (targetType === 'group') {
-        if (selectedGroup === 'everyone') recipientIds = ['all'];
-        else if (selectedGroup === 'leaders') recipientIds = users.map(u => u.id);
-        else if (selectedGroup === 'admins') recipientIds = users.filter(u => u.rol === 'hoofdleiding' || u.rol === 'godmode').map(u => u.id);
-        // Voor 'debtors' zou je de balances moeten checken, hier versimpeld naar 'all'
-        else recipientIds = ['all'];
-      } else {
-        recipientIds = selectedUsers;
+    // Gebruik setTimeout om de UI de kans te geven de 'isSending' status te tekenen
+    setTimeout(async () => {
+      try {
+        const senderId = currentUser?.id || '';
+        const senderName = isOfficial ? 'KSA Aalter' : (currentUser?.naam || 'Leiding');
+        
+        let recipientIds: string[] = [];
+        
+        if (targetType === 'group') {
+          if (selectedGroup === 'everyone') recipientIds = ['all'];
+          else if (selectedGroup === 'leaders') recipientIds = users.map(u => u.id);
+          else if (selectedGroup === 'admins') recipientIds = users.filter(u => u.rol === 'hoofdleiding' || u.rol === 'godmode').map(u => u.id);
+          else recipientIds = ['all'];
+        } else {
+          recipientIds = selectedUsers;
+        }
+
+        // Verstuur meldingen in kleine batches om de browser niet te bevriezen
+        const promises = recipientIds.map(id => 
+          db.addNotificatie(senderId, id, subject, content, senderName, '')
+        );
+
+        await Promise.all(promises);
+        
+        hapticSuccess();
+        showToast('Bericht succesvol verzonden!', 'success');
+        navigate(-1);
+      } catch (error: any) {
+        console.error('Send error:', error);
+        showToast('Fout bij verzenden', 'error');
+        setIsSending(false);
       }
-
-      // Verstuur de meldingen (parallel om INP te minimaliseren)
-      const promises = recipientIds.map(id => 
-        db.addNotificatie(senderId, id, subject, content, senderName, '')
-      );
-
-      await Promise.all(promises);
-
-      hapticSuccess();
-      showToast('Bericht succesvol verzonden!', 'success');
-      navigate(-1);
-    } catch (error: any) {
-      console.error('Send error:', error);
-      showToast('Fout bij verzenden: ' + (error.message || 'Probeer opnieuw'), 'error');
-    } finally {
-      setIsSending(false);
-    }
+    }, 10); // 10ms vertraging is genoeg om INP te voorkomen
   };
 
   const recipientCount = targetType === 'group' ? (selectedGroup === 'everyone' ? users.length : 'Groep') : selectedUsers.length;

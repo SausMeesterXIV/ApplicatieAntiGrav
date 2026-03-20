@@ -207,3 +207,8 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(156, 163, 175, 0.5);
 }
+
+.material-icons-round {
+  pointer-events: none;
+  user-select: none;
+}

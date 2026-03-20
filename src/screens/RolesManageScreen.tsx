@@ -50,32 +50,37 @@ export const RolesManageScreen: React.FC = () => {
   const [newRoleColor, setNewRoleColor] = useState('bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800');
   const [isDeletingRoles, setIsDeletingRoles] = useState(false);
   const [pendingDeactivationUser, setPendingDeactivationUser] = useState<User | null>(null);
+  const [newRoleCategory, setNewRoleCategory] = useState<'Team' | 'Groep'>('Team');
 
   const handleCreateRole = () => {
     if (!newRoleLabel) return;
     const newRole = {
-      id: Date.now().toString(),
+      id: Date.now().toString(), // Timestamp zorgt voor de juiste sorteer-volgorde
       label: newRoleLabel,
       icon: newRoleIcon,
-      color: newRoleColor
+      color: newRoleColor,
+      category: newRoleCategory // <--- Belangrijk voor de sortering!
     };
     handleSaveAvailableRoles([...availableRoles, newRole]);
     setIsAddingRole(false);
     setNewRoleLabel('');
-    setNewRoleIcon('star');
+    setNewRoleCategory('Team');
   };
   
   const handleDeleteRole = async (id: string, label: string) => {
-    if (window.confirm(`Ben je zeker dat je de rol '${label}' wilt verwijderen? Deze wordt ook verwijderd bij alle gebruikers.`)) {
-      try {
-        const updatedAvailableRoles = availableRoles.filter(r => r.id !== id);
-        
-        // 1. Update de beschikbare rollen lijst in de database
-        await handleSaveAvailableRoles(updatedAvailableRoles);
-        
-        // 2. Opschonen: Verwijder deze rol bij alle lokale gebruikers die hem hebben
-        const usersWithThisRole = localUsers.filter(u => (u.roles || []).includes(label));
-        
+    if (!window.confirm(`Ben je zeker dat je de rol '${label}' wilt verwijderen? Deze wordt ook verwijderd bij alle gebruikers.`)) return;
+
+    try {
+      // 1. Maak de nieuwe lijst van beschikbare rollen
+      const updatedAvailableRoles = availableRoles.filter(r => r.id !== id);
+      
+      // 2. Sla dit op in de database (app_settings)
+      await handleSaveAvailableRoles(updatedAvailableRoles);
+
+      // 3. OPSCHONEN: Zoek gebruikers die deze rol hebben en verwijder deze uit hun array
+      const usersWithThisRole = localUsers.filter(u => (u.roles || []).includes(label));
+      
+      if (usersWithThisRole.length > 0) {
         const updatePromises = usersWithThisRole.map(user => {
           const newRoles = (user.roles || []).filter(r => r !== label);
           return db.updateProfile(user.id, { roles: newRoles });
@@ -83,17 +88,18 @@ export const RolesManageScreen: React.FC = () => {
 
         await Promise.all(updatePromises);
 
-        // 3. Update lokale state
+        // Update ook de lokale lijst met gebruikers zodat de UI klopt
         setLocalUsers(prev => prev.map(u => ({
           ...u,
           roles: (u.roles || []).filter(r => r !== label)
         })));
-        
-        setActiveAssignRole(null);
-        showToast(`Rol '${label}' volledig verwijderd`, 'success');
-      } catch (error) {
-        showToast('Fout bij het volledig verwijderen van de rol', 'error');
       }
+
+      setActiveAssignRole(null);
+      showToast(`Rol '${label}' succesvol verwijderd`, 'success');
+    } catch (error) {
+      console.error("Delete role error:", error);
+      showToast('Fout bij verwijderen uit database', 'error');
     }
   };
 
@@ -122,51 +128,54 @@ export const RolesManageScreen: React.FC = () => {
     setToggles(newToggles);
   };
 
-  const toggleRoleForUser = async (userId: string, role: string) => {
-    const user = localUsers.find(u => u.id === userId);
-    if (!user) return;
+  const toggleRoleForUser = (userId: string, role: string) => {
+    // Gebruik een transition of timeout om de UI thread niet te blokkeren
+    requestAnimationFrame(async () => {
+      const user = localUsers.find(u => u.id === userId);
+      if (!user) return;
 
-    const hasRole = (user.roles || []).includes(role);
-    const HOOFDLEIDING_LABEL = 'Hoofdleiding';
+      const hasRole = (user.roles || []).includes(role);
+      const HOOFDLEIDING_LABEL = 'Hoofdleiding';
 
-    if (role === HOOFDLEIDING_LABEL) {
-      if (!hasRole && userId === currentUser?.id) {
-        showToast('Je kunt jezelf niet tot hoofdleiding maken', 'error');
-        return;
-      }
-      
-      if (hasRole) {
-        const hoofdleidingCount = localUsers.filter(u => (u.roles || []).includes(HOOFDLEIDING_LABEL)).length;
-        if (hoofdleidingCount <= 1) {
-          showToast('Er moet altijd minstens Ã©Ã©n hoofdleiding blijven', 'error');
+      if (role === HOOFDLEIDING_LABEL) {
+        if (!hasRole && userId === currentUser?.id) {
+          showToast('Je kunt jezelf niet tot hoofdleiding maken', 'error');
           return;
         }
+        
+        if (hasRole) {
+          const hoofdleidingCount = localUsers.filter(u => (u.roles || []).includes(HOOFDLEIDING_LABEL)).length;
+          if (hoofdleidingCount <= 1) {
+            showToast('Er moet altijd minstens Ã©Ã©n hoofdleiding blijven', 'error');
+            return;
+          }
+        }
       }
-    }
 
-    let newRoles = [...(user.roles || [])];
+      let newRoles = [...(user.roles || [])];
 
-    if (hasRole) {
-      newRoles = newRoles.filter(r => r !== role);
-    } else {
-      newRoles.push(role);
-    }
+      if (hasRole) {
+        newRoles = newRoles.filter(r => r !== role);
+      } else {
+        newRoles.push(role);
+      }
 
-    const updatedUser = { ...user, roles: newRoles };
+      const updatedUser = { ...user, roles: newRoles };
 
-    // Optimistic update
-    setLocalUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+      // Optimistic update
+      setLocalUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
 
-    try {
-      await db.updateProfile(userId, { roles: newRoles });
-      // Sync to global context
-      setUsersContext(prev => prev.map(u => u.id === userId ? updatedUser : u));
-      showToast(`Rol '${role}' ${hasRole ? 'verwijderd' : 'toegevoegd'}`, 'success');
-    } catch (error) {
-      // Rollback
-      setLocalUsers(prev => prev.map(u => u.id === userId ? user : u));
-      showToast('Fout bij het opslaan van de rol', 'error');
-    }
+      try {
+        await db.updateProfile(userId, { roles: newRoles });
+        // Sync to global context
+        setUsersContext(prev => prev.map(u => u.id === userId ? updatedUser : u));
+        showToast(`Rol '${role}' ${hasRole ? 'verwijderd' : 'toegevoegd'}`, 'success');
+      } catch (error) {
+        // Rollback
+        setLocalUsers(prev => prev.map(u => u.id === userId ? user : u));
+        showToast('Fout bij het opslaan van de rol', 'error');
+      }
+    });
   };
 
   const handleResetNickname = (userId: string) => {
@@ -251,8 +260,28 @@ export const RolesManageScreen: React.FC = () => {
       setLocalUsers(prev => prev.map(u => u.id === user.id ? user : u)); // Rollback
       showToast('Fout bij het aanpassen van account status', 'error');
     }
-  }
+  };
 
+  const renderRoleButton = (role: any) => {
+    const isActive = activeAssignRole === role.label;
+    const baseColor = role.color;
+
+    return (
+      <div key={role.id} className="flex flex-col items-center gap-1 shrink-0">
+        <button
+          onClick={() => setActiveAssignRole(isActive ? null : role.label)}
+          className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all whitespace-nowrap ${isActive
+            ? `${baseColor} ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-[#0f172a] scale-105 shadow-md`
+            : 'bg-white dark:bg-[#1e293b] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+            }`}
+        >
+          <span className={`material-icons-round text-lg ${isActive ? '' : 'text-gray-400'}`}>{role.icon}</span>
+          <span className="font-bold text-sm">{role.label}</span>
+          {isActive && <span className="material-icons-round text-sm ml-1">check_circle</span>}
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans relative transition-colors duration-200">
@@ -277,47 +306,34 @@ export const RolesManageScreen: React.FC = () => {
 
         {/* QUICK ASSIGN TOOLBAR */}
         <section className="mb-6">
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Snelle Rol Toewijzing</h2>
-          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-            {availableRoles.map(role => {
-              const isActive = activeAssignRole === role.label;
-              const baseColor = role.color;
-
-              return (
-                <div key={role.id} className="flex flex-col items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => setActiveAssignRole(isActive ? null : role.label)}
-                    className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all whitespace-nowrap ${isActive
-                      ? `${baseColor} ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-[#0f172a] scale-105 shadow-md`
-                      : 'bg-white dark:bg-[#1e293b] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                      }`}
-                  >
-                    <span className={`material-icons-round text-lg ${isActive ? '' : 'text-gray-400'}`}>{role.icon}</span>
-                    <span className="font-bold text-sm">{role.label}</span>
-                    {isActive && <span className="material-icons-round text-sm ml-1">check_circle</span>}
-                  </button>
-                </div>
-              );
-            })}
-            {isUserHoofdleiding && (
-              <div className="flex gap-2 shrink-0">
-                <button
-                  onClick={() => setIsAddingRole(true)}
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-gray-400 text-gray-500 text-sm font-bold transition-all whitespace-nowrap hover:bg-gray-100 dark:hover:bg-gray-800"
-                >
-                  <span className="material-icons-round text-lg text-gray-400">add</span>
-                  Nieuwe Rol
-                </button>
-                <button
-                  onClick={() => setIsDeletingRoles(true)}
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-red-400 text-red-500 text-sm font-bold transition-all whitespace-nowrap hover:bg-red-50 dark:hover:bg-red-900/10"
-                >
-                  <span className="material-icons-round text-lg">delete_sweep</span>
-                  Beheer
-                </button>
-              </div>
-            )}
+          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">Teams & Functies</h2>
+          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar mb-4">
+            {availableRoles.filter(r => r.category !== 'Groep').map(role => renderRoleButton(role))}
           </div>
+
+          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">Leidingsgroepen</h2>
+          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+            {availableRoles.filter(r => r.category === 'Groep').map(role => renderRoleButton(role))}
+          </div>
+
+          {isUserHoofdleiding && (
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setIsAddingRole(true)}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-gray-400 text-gray-500 text-sm font-bold transition-all whitespace-nowrap hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <span className="material-icons-round text-lg text-gray-400">add</span>
+                Nieuwe Rol
+              </button>
+              <button
+                onClick={() => setIsDeletingRoles(true)}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-red-400 text-red-500 text-sm font-bold transition-all whitespace-nowrap hover:bg-red-50 dark:hover:bg-red-900/10"
+              >
+                <span className="material-icons-round text-lg">delete_sweep</span>
+                Beheer
+              </button>
+            </div>
+          )}
 
           {/* Active Mode Banner */}
           {activeAssignRole && (
@@ -587,6 +603,18 @@ export const RolesManageScreen: React.FC = () => {
             </select>
           </div>
 
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Categorie</label>
+            <select 
+              value={newRoleCategory}
+              onChange={(e) => setNewRoleCategory(e.target.value as 'Team' | 'Groep')}
+              className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white appearance-none"
+            >
+              <option value="Team">Functie / Team</option>
+              <option value="Groep">Leidingsgroep</option>
+            </select>
+          </div>
+
           <div className="flex gap-3 pt-4">
             <button onClick={() => setIsAddingRole(false)} className="flex-1 px-4 py-3.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 transition-colors">Annuleren</button>
             <button disabled={!newRoleLabel || !newRoleIcon} onClick={handleCreateRole} className="flex-1 px-4 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-500 disabled:opacity-50 transition-colors">Aanmaken</button>
@@ -604,20 +632,36 @@ export const RolesManageScreen: React.FC = () => {
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 font-medium">Verwijder rollen die niet meer nodig zijn.</p>
 
           <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1 no-scrollbar">
-            {availableRoles.map(role => (
-              <div key={role.id} className="flex items-center justify-between p-3.5 bg-gray-50 dark:bg-[#0f172a] rounded-2xl border border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-3">
-                  <span className="material-icons-round text-gray-400">{role.icon}</span>
-                  <span className="font-bold text-gray-900 dark:text-white">{role.label}</span>
+            {[...availableRoles]
+              .sort((a, b) => {
+                const isAGroep = a.category === 'Groep';
+                const isBGroep = b.category === 'Groep';
+
+                // 1. Groepen (leidingsgroepen) gaan altijd naar onder (return 1)
+                if (isAGroep && !isBGroep) return 1;
+                if (!isAGroep && isBGroep) return -1;
+
+                // 2. Binnen de categorieën: Sorteer op ID (ID is timestamp). 
+                return (a.id || '').localeCompare(b.id || '');
+              })
+              .map(role => (
+                <div key={role.id} className="flex items-center justify-between p-3.5 bg-gray-50 dark:bg-[#0f172a] rounded-2xl border border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-3">
+                    <span className="material-icons-round text-gray-400" style={{ pointerEvents: 'none' }}>{role.icon}</span>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-gray-900 dark:text-white leading-tight">{role.label}</span>
+                      <span className="text-[10px] text-gray-400 uppercase font-medium">{role.category || 'Functie'}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteRole(role.id, role.label)}
+                    className="p-2 transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl"
+                  >
+                    <span className="material-icons-round">delete_outline</span>
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleDeleteRole(role.id, role.label)}
-                  className="p-2 transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl"
-                >
-                  <span className="material-icons-round">delete_outline</span>
-                </button>
-              </div>
-            ))}
+              ))
+            }
             {availableRoles.length === 0 && (
               <div className="text-center py-8 text-gray-400 italic text-sm">Geen rollen gevonden.</div>
             )}
