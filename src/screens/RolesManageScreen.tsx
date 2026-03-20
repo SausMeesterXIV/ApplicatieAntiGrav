@@ -65,10 +65,35 @@ export const RolesManageScreen: React.FC = () => {
     setNewRoleIcon('star');
   };
   
-  const handleDeleteRole = (id: string, label: string) => {
-    if(window.confirm(`Ben je zeker dat je de rol ${label} wilt verwijderen?`)) {
-      handleSaveAvailableRoles(availableRoles.filter(r => r.id !== id));
-      setActiveAssignRole(null);
+  const handleDeleteRole = async (id: string, label: string) => {
+    if (window.confirm(`Ben je zeker dat je de rol '${label}' wilt verwijderen? Deze wordt ook verwijderd bij alle gebruikers.`)) {
+      try {
+        const updatedAvailableRoles = availableRoles.filter(r => r.id !== id);
+        
+        // 1. Update de beschikbare rollen lijst in de database
+        await handleSaveAvailableRoles(updatedAvailableRoles);
+        
+        // 2. Opschonen: Verwijder deze rol bij alle lokale gebruikers die hem hebben
+        const usersWithThisRole = localUsers.filter(u => (u.roles || []).includes(label));
+        
+        const updatePromises = usersWithThisRole.map(user => {
+          const newRoles = (user.roles || []).filter(r => r !== label);
+          return db.updateProfile(user.id, { roles: newRoles });
+        });
+
+        await Promise.all(updatePromises);
+
+        // 3. Update lokale state
+        setLocalUsers(prev => prev.map(u => ({
+          ...u,
+          roles: (u.roles || []).filter(r => r !== label)
+        })));
+        
+        setActiveAssignRole(null);
+        showToast(`Rol '${label}' volledig verwijderd`, 'success');
+      } catch (error) {
+        showToast('Fout bij het volledig verwijderen van de rol', 'error');
+      }
     }
   };
 

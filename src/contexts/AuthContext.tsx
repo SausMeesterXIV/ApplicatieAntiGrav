@@ -50,7 +50,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function loadAuthData(userId: string) {
     try {
-      // 1. Load users & current user
       const usersData = await db.fetchAllProfiles();
       setUsers(usersData);
 
@@ -66,39 +65,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           roles: [],
           nickname: null,
           avatar_url: null,
-          avatar: `https://i.pravatar.cc/150?u=${userId}`,
+          avatar: '', // Fallback logic in UI handles this
           created_at: new Date().toISOString(),
           fcm_token: null,
           quick_drink_id: null
         };
-        const updatedUsers = [...usersData, cUser];
-        setUsers(updatedUsers);
+        setUsers(prev => [...prev, cUser!]);
       }
       setCurrentUser(cUser);
 
-      // 2. Load roles configuration
+      // Synchronisatie van beschikbare rollen
       const loadedRoles = await db.fetchAvailableRoles();
+      const defaultRoles = [
+        { id: '1', label: 'Hoofdleiding', icon: 'admin_panel_settings', color: 'bg-red-100 text-red-700 border-red-200' },
+        { id: '2', label: 'Financiën', icon: 'account_balance', color: 'bg-green-100 text-green-700 border-green-200' },
+        { id: '3', label: 'Sfeerbeheer', icon: 'celebration', color: 'bg-purple-100 text-purple-700 border-purple-200' },
+        { id: '4', label: 'Drank', icon: 'local_bar', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+        { id: '5', label: 'Materiaal', icon: 'build', color: 'bg-orange-100 text-orange-700 border-orange-200' },
+        { id: '6', label: 'Kookploeg', icon: 'restaurant', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+        { id: '14', label: 'winkeltje', icon: 'shopping_bag', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+      ];
+
       if (!loadedRoles || loadedRoles.length === 0) {
-        const defaultRoles = [
-          { id: '1', label: 'Hoofdleiding', icon: 'admin_panel_settings', color: 'bg-red-100 text-red-700 border-red-200' },
-          { id: '2', label: 'Financiën', icon: 'account_balance', color: 'bg-green-100 text-green-700 border-green-200' },
-          { id: '3', label: 'Sfeerbeheer', icon: 'celebration', color: 'bg-purple-100 text-purple-700 border-purple-200' },
-          { id: '4', label: 'Drank', icon: 'local_bar', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-          { id: '5', label: 'Materiaal', icon: 'build', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-          { id: '6', label: 'Kookploeg', icon: 'restaurant', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
-          { id: '7', label: 'Pagadders', icon: 'groups', color: 'bg-blue-50 text-blue-600 border-blue-100' },
-          { id: '8', label: 'Kabouters', icon: 'groups', color: 'bg-pink-50 text-pink-600 border-pink-100' },
-          { id: '9', label: 'Sloebers', icon: 'groups', color: 'bg-green-50 text-green-600 border-green-100' },
-          { id: '10', label: 'Tieners', icon: 'groups', color: 'bg-yellow-50 text-yellow-600 border-yellow-100' },
-          { id: '11', label: 'JIM', icon: 'groups', color: 'bg-orange-50 text-orange-600 border-orange-100' },
-          { id: '12', label: 'SIM', icon: 'groups', color: 'bg-purple-50 text-purple-600 border-purple-100' },
-          { id: '13', label: 'KIM', icon: 'groups', color: 'bg-red-50 text-red-600 border-red-100' },
-          { id: '14', label: 'winkeltje', icon: 'shopping_bag', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-        ];
+        // Eerste keer instellen
         setAvailableRoles(defaultRoles);
-        db.saveAvailableRoles(defaultRoles).catch(e => console.error("Failed to save default roles", e));
+        await db.saveAvailableRoles(defaultRoles);
       } else {
-        setAvailableRoles(loadedRoles);
+        // Merge: Zorg dat alle standaard rollen bestaan, maar behoud nieuwe aangemaakte rollen
+        const merged = [...loadedRoles];
+        defaultRoles.forEach(def => {
+          if (!merged.find(m => m.label.toLowerCase() === def.label.toLowerCase())) {
+            merged.push(def);
+          }
+        });
+        setAvailableRoles(merged);
       }
     } catch (e) {
       console.error("Error loading auth data", e);
