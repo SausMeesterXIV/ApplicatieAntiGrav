@@ -380,10 +380,16 @@ export async function fetchNotificaties(userId: string): Promise<Notification[]>
 
   if (error) throw error;
   
+  // Haal lokaal geheugen op van gelezen meldingen
+  const seenIds = JSON.parse(localStorage.getItem('antigrav_seen_notifs') || '[]');
+  
   return (data || []).map((n) => {
     // Haal de rol op uit de gekoppelde profiel-data
     const zenderRol = (n as any).profiles?.rol;
     const type = (n as any).type || 'official';
+    
+    // Een melding is gelezen als de DB dat zegt OF als wij het lokaal hebben onthouden
+    const isGelezen = n.gelezen || seenIds.includes(String(n.id));
     
     return {
       ...n,
@@ -395,7 +401,7 @@ export async function fetchNotificaties(userId: string): Promise<Notification[]>
       title: n.titel,
       content: n.bericht || '',
       time: formatTimeAgo(new Date(n.datum)),
-      isRead: n.gelezen,
+      isRead: isGelezen,
       action: n.action,
       icon: type === 'nudge' ? 'touch_app' : 'notifications',
       color: type === 'nudge' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600',

@@ -116,9 +116,22 @@ export function AgendaProvider({ children }: { children: ReactNode }) {
   };
 
   const handleMarkNotificationAsRead = async (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    // 1. Update direct de lijst in de app (voor het rode bolletje)
+    setNotifications(prev => prev.map(n => String(n.id) === id ? { ...n, isRead: true } : n));
+
+    // 2. Sla de ID op in localStorage zodat het bij een refresh/navigatie onthouden blijft
+    const seenIds = JSON.parse(localStorage.getItem('antigrav_seen_notifs') || '[]');
+    if (!seenIds.includes(String(id))) {
+        seenIds.push(String(id));
+        localStorage.setItem('antigrav_seen_notifs', JSON.stringify(seenIds));
+    }
+
     try {
-        await db.markNotificatieGelezen(id);
+        const notif = notifications.find(n => String(n.id) === id);
+        // Alleen naar de database schrijven als het een persoonlijke melding is (ontvanger_id !== 'all')
+        if (notif && (notif as any).ontvanger_id !== 'all') {
+            await db.markNotificatieGelezen(id);
+        }
     } catch (error) {
         console.error('Failed to mark notification as read:', error);
     }

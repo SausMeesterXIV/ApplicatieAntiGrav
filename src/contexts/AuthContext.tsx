@@ -53,26 +53,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const usersData = await db.fetchAllProfiles();
       setUsers(usersData);
 
-      let cUser = usersData.find(u => u.id === userId) || null;
+      let cUser = usersData.find(u => u.id === userId);
       if (!cUser && session?.user?.email) {
         cUser = {
           id: userId,
-          naam: (session.user.user_metadata as any)?.name || 'Onbekend',
-          name: (session.user.user_metadata as any)?.name || 'Onbekend',
+          naam: (session.user.user_metadata as any)?.full_name || 'Onbekend',
+          name: (session.user.user_metadata as any)?.full_name || 'Onbekend',
           email: session.user.email || '',
           rol: 'standaard',
           actief: true,
           roles: [],
           nickname: null,
           avatar_url: null,
-          avatar: '', // Fallback logic in UI handles this
+          avatar: '',
           created_at: new Date().toISOString(),
           fcm_token: null,
           quick_drink_id: null
         };
         setUsers(prev => [...prev, cUser!]);
       }
-      setCurrentUser(cUser);
+      setCurrentUser(cUser || null);
 
       // Haal de rollen op uit de database
       const loadedRoles = await db.fetchAvailableRoles();

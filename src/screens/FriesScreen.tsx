@@ -122,7 +122,7 @@ export const FriesScreen: React.FC = () => {
           {filteredUsers.map(user => (
             <div key={user.id} onClick={() => selectUserForOrder(user)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-[#1e2330] cursor-pointer">
               <UserAvatar user={user} size="md" />
-              <div><p className="font-bold text-gray-900 dark:text-white">{user.naam}</p><p className="text-xs text-gray-500">{user.role}</p></div>
+              <div><p className="font-bold text-gray-900 dark:text-white">{user.naam}</p><p className="text-xs text-gray-500">{user.rol}</p></div>
             </div>
           ))}
         </main>

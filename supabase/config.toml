@@ -1,4 +1,12 @@
 
+[auth.email.template.confirmation]
+subject = "Welkom bij de KSA app! Bevestig je account 🚀"
+content_path = "./templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Wachtwoord herstellen voor KSA app"
+content_path = "./templates/recovery.html"
+
 [functions.google-sheets-sync]
 enabled = true
 verify_jwt = true

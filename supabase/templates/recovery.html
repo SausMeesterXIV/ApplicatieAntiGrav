@@ -1,0 +1,17 @@
+<div style="font-family: sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+  <h2 style="color: #1e293b; margin-top: 0;">Wachtwoord vergeten?</h2>
+  <p style="color: #475569; line-height: 1.6;">
+    Geen paniek, het overkomt de beste. Klik op de knop hieronder om een nieuw wachtwoord in te stellen voor je account.
+  </p>
+  <div style="margin: 30px 0; text-align: center;">
+    <a href="{{ .ConfirmationURL }}" style="background-color: #ef4444; color: white; padding: 14px 28px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block;">
+      Wachtwoord Resetten
+    </a>
+  </div>
+  <p style="color: #64748b; font-size: 14px;">
+    Heb je dit niet zelf aangevraagd? Dan kun je deze mail veilig negeren. Er is niets aan je account gewijzigd.
+  </p>
+  <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;">
+    Link: <span style="word-break: break-all; color: #ef4444;">{{ .ConfirmationURL }}</span>
+  </p>
+</div>

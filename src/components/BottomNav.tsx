@@ -19,7 +19,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ notifications = [] }) => {
     { id: 'settings', icon: 'settings', label: 'Instellingen' },
   ];
 
-  const hasUnread = notifications.some(n => !n.isRead);
+  // Controleer ongelezen meldingen met dubbele check op localStorage
+  const hasUnread = React.useMemo(() => {
+    const seenIds = JSON.parse(localStorage.getItem('antigrav_seen_notifs') || '[]');
+    return notifications.some(n => !n.isRead && !seenIds.includes(String(n.id)));
+  }, [notifications]);
 
   return (
     <nav
