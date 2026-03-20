@@ -565,13 +565,19 @@ export async function addFrituurBestelling(
   totaalPrijs: number,
   periodId?: string
 ): Promise<string> {
+  // Debug log om te controleren wat er verzonden wordt
+  console.log("🍟 Bestelling naar DB:", { userId, userName, totaalPrijs });
+
   const { data, error } = await supabase
     .from('frituur_bestellingen')
     .insert([{
       user_id: userId,
       user_name: userName,
       sessie_id: sessieId,
-      snack_naam: items.map(i => i.name).join(', '),
+      // Genereer een leesbare tekst voor de database, met fallback
+      snack_naam: items.length > 0 
+        ? items.map(i => i.name).join(', ').substring(0, 200) 
+        : 'Frituur bestelling',
       items: items as any,
       totaal_prijs: totaalPrijs,
       status: 'open',
@@ -579,7 +585,11 @@ export async function addFrituurBestelling(
     }])
     .select('id')
     .single();
-  if (error) throw error;
+
+  if (error) {
+    console.error("❌ Frituur DB Fout:", error.message, error.details);
+    throw error;
+  }
   return data.id;
 }
 
