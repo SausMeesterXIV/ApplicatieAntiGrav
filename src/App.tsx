@@ -738,7 +738,11 @@ function App() {
 
     const ScrollToTop = () => {
         const { pathname } = useLocation();
-        useEffect(() => { window.scrollTo(0, 0); const root = document.getElementById('root'); if (root) root.scrollTo(0, 0); }, [pathname]);
+        useEffect(() => { 
+            window.scrollTo(0, 0); 
+            const mainContainer = document.getElementById('main-scroll-container');
+            if (mainContainer) mainContainer.scrollTo(0, 0);
+        }, [pathname]);
         return null;
     };
 
@@ -748,7 +752,7 @@ function App() {
                 className="text-base w-full flex flex-col overflow-hidden bg-gray-50 dark:bg-[#0f172a]" 
                 style={{ height: '100vh' }}
             >
-                <div className="flex-1 w-full overflow-y-auto no-scrollbar">
+                <div id="main-scroll-container" className="flex-1 w-full overflow-y-auto no-scrollbar">
                     <ErrorBoundary>
                         <Outlet context={contextValue} />
                     </ErrorBoundary>

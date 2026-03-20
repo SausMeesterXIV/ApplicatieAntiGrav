@@ -54,6 +54,13 @@ export const AgendaManageScreen: React.FC = () => {
     }
   }, [countdowns]);
 
+  // Fix: Scroll naar boven bij binnenkomst
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const scrollContainer = document.getElementById('main-scroll-container');
+    if (scrollContainer) scrollContainer.scrollTo(0, 0);
+  }, []);
+
   // Event Form State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
@@ -217,7 +224,7 @@ export const AgendaManageScreen: React.FC = () => {
         <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Agenda & Aftelklok</h1>
       </header>
 
-      <main className="flex-1 px-4 space-y-8 overflow-y-auto pb-32">
+      <main className="flex-1 px-4 space-y-8 pb-32">
 
         {/* Upcoming List */}
         <section>

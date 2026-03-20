@@ -198,7 +198,7 @@ export const AgendaScreen: React.FC = () => {
       </div>
 
       {/* Event List */}
-      <div className="px-4 pb-nav-safe pt-2 space-y-4">
+      <div className="px-4 pb-nav-safe pt-2 space-y-6">
         {loading ? (
           <div className="space-y-4">
             <SkeletonEvent />
@@ -206,42 +206,63 @@ export const AgendaScreen: React.FC = () => {
             <SkeletonEvent />
           </div>
         ) : allUpcomingEvents.length > 0 ? (
-          allUpcomingEvents.map(event => {
-            const d = new Date(event.date);
-            const dateStr = d.toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'short' });
+          (() => {
+            // Group events by date string (YYYY-MM-DD)
+            const groupedEvents: { [key: string]: typeof allUpcomingEvents } = {};
+            allUpcomingEvents.forEach(event => {
+              const d = new Date(event.date);
+              const dateStr = d.toISOString().split('T')[0];
+              if (!groupedEvents[dateStr]) {
+                groupedEvents[dateStr] = [];
+              }
+              groupedEvents[dateStr].push(event);
+            });
 
-            return (
-              <div key={event.id}>
-                <h3 className="px-2 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{dateStr}</h3>
-                <div className="bg-white dark:bg-[#1e2330] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col gap-3 relative overflow-hidden group transition-colors">
-                  <div className={`absolute top-0 left-0 w-1 h-full ${event.type === 'vergadering' ? 'bg-gray-300 dark:bg-gray-600' : 'bg-blue-600'}`}></div>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mb-1 uppercase tracking-wide ${event.type === 'vergadering' ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'}`}>
-                        {event.type || 'Event'}
-                      </span>
-                      <h4 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">{event.title}</h4>
-                      {event.description && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{event.description}</p>}
-                    </div>
-                    <div className="text-right">
-                      <span className={`block text-xl font-semibold ${event.type === 'vergadering' ? 'text-gray-900 dark:text-white' : 'text-blue-600 dark:text-blue-400'}`}>{event.startTime}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300">
-                    <span className="material-icons-round text-gray-400 text-base">location_on</span>
-                    <span>{event.location}</span>
+            return Object.keys(groupedEvents).map(dateStr => {
+              const group = groupedEvents[dateStr];
+              const d = new Date(dateStr);
+              // Use a consistent date formatting
+              const formattedDate = d.toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'short' });
+
+              return (
+                <div key={dateStr} className="space-y-3">
+                  <h3 className="px-2 text-sm font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.15em] mb-1">{formattedDate}</h3>
+                  <div className="space-y-3">
+                    {group.map(event => (
+                      <div key={event.id} className="bg-white dark:bg-[#1e2330] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col gap-3 relative overflow-hidden group transition-colors">
+                        <div className={`absolute top-0 left-0 w-1 h-full ${event.type === 'vergadering' ? 'bg-gray-300 dark:bg-gray-600' : 'bg-blue-600'}`}></div>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mb-1 uppercase tracking-wide ${event.type === 'vergadering' ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'}`}>
+                              {event.type || 'Event'}
+                            </span>
+                            <h4 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">{event.title}</h4>
+                            {event.description && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{event.description}</p>}
+                          </div>
+                          <div className="text-right flex flex-col items-end">
+                            <span className={`block text-xl font-black ${event.type === 'vergadering' ? 'text-gray-900 dark:text-white' : 'text-blue-600 dark:text-blue-400'}`}>{event.startTime}</span>
+                            {event.endTime && <span className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">tot {event.endTime}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-400">
+                          <span className="material-icons-round text-blue-500 text-base">location_on</span>
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            });
+          })()
         ) : (
           <div className="flex flex-col items-center justify-center py-10 text-gray-400">
             <span className="material-icons-round text-4xl mb-2 opacity-50">event_busy</span>
-            <p>Geen komende evenementen.</p>
+            <p className="font-medium italic">Geen komende evenementen.</p>
           </div>
         )}
       </div>
+
     </div>
   );
 };
