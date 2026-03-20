@@ -132,8 +132,21 @@ export const HomeScreen: React.FC = () => {
           <span className="text-sm font-bold text-primary dark:text-blue-500 uppercase tracking-wider mb-1">KSA Aalter</span>
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white leading-none">Welkom, {displayName}</h1>
         </div>
-        <div onClick={() => navigate('/settings')} className="h-16 w-16 rounded-full border-2 border-white dark:border-gray-700 shadow-md overflow-hidden cursor-pointer active:scale-95 transition-transform shrink-0">
-          <img src={currentUser?.avatar} alt="Profile" className="h-full w-full object-cover" />
+        <div 
+          onClick={() => navigate('/settings')} 
+          className="w-10 h-10 rounded-full border-2 border-gray-100 dark:border-gray-800 overflow-hidden relative flex items-center justify-center shadow-sm cursor-pointer active:scale-95 transition-transform shrink-0"
+        >
+          {currentUser?.avatar_url ? (
+            <img 
+              src={currentUser.avatar_url} 
+              alt="Profielfoto" 
+              className="w-full h-full rounded-full object-cover" 
+            />
+          ) : (
+            <div className="w-full h-full rounded-full flex items-center justify-center font-bold text-lg bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+              {(currentUser?.nickname || currentUser?.naam || 'U')[0].toUpperCase()}
+            </div>
+          )}
         </div>
       </header>
 
