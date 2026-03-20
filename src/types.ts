@@ -25,7 +25,7 @@ export interface User extends Omit<DbProfileRow, 'id' | 'rol'> {
     name: string; 
     email: string;
     actief: boolean;
-    rol: Database['public']['Enums']['user_role'] | 'hoofdleiding' | 'team_drank' | 'standaard' | 'sfeerbeheer' | 'godmode' | 'winkeltje' | 'financiën';
+    rol: string;
     roles: string[];
     nickname: string | null;
     avatar_url: string | null;

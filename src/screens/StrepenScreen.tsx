@@ -9,6 +9,7 @@ import { StrepenAdminPanel } from '../components/Strepen/StrepenAdminPanel';
 import { SPECIAL_DRINKS } from '../lib/constants';
 import { updateProfile } from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
+import { hasRole } from '../lib/roleUtils';
 
 export const StrepenScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -21,9 +22,7 @@ export const StrepenScreen: React.FC = () => {
   const [totalToday, setTotalToday] = useState(0); 
   const [isManageMode, setIsManageMode] = useState(false);
 
-  const isTeamDrank = currentUser?.rol === 'hoofdleiding' || 
-                      currentUser?.rol === 'godmode' || 
-                      currentUser?.roles?.some(r => r.toLowerCase().includes('drank'));
+  const isTeamDrank = hasRole(currentUser, 'drank') || hasRole(currentUser, 'hoofdleiding');
 
   useEffect(() => {
     if (!selectedDrink && drinks.length > 0) setSelectedDrink(drinks[0]);
