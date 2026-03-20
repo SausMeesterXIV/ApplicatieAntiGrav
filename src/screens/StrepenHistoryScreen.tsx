@@ -4,6 +4,7 @@ import { ChevronBack } from '../components/ChevronBack';
 import { AppContextType } from '../App';
 import { Streak } from '../types';
 import { useDrink } from '../contexts/DrinkContext';
+import { UserAvatar } from '../components/UserAvatar';
 
 interface Props {
     adminMode?: boolean;
@@ -182,11 +183,7 @@ export const StrepenHistoryScreen: React.FC<Props> = ({ adminMode = false }) => 
                                     <div key={bundle.ids[0]} className="p-3 sm:p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                         <div className="flex items-center gap-3 min-w-0 flex-1">
                                             {adminMode ? (
-                                                <img
-                                                    src={getUserAvatar(bundle.userId) || `https://ui-avatars.com/api/?name=${encodeURIComponent(getUserName(bundle.userId))}&background=random`}
-                                                    alt=""
-                                                    className="w-10 h-10 rounded-full object-cover shrink-0 border border-gray-100 dark:border-gray-700"
-                                                />
+                                                <UserAvatar user={{ id: bundle.userId, name: getUserName(bundle.userId), avatar: getUserAvatar(bundle.userId) }} size="md" />
                                             ) : (
                                                 <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center shrink-0">
                                                     <span className="material-icons-round">local_bar</span>

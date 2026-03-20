@@ -8,6 +8,7 @@ import { archiveConsumptiesPeriod, fetchBillingPeriods, fetchOpenBillingPeriod, 
 import { showToast } from '../components/Toast';
 import { Modal } from '../components/Modal';
 import { SkeletonRow } from '../components/Skeleton';
+import { UserAvatar } from '../components/UserAvatar';
 
 export const TeamDrankBillingScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -408,9 +409,7 @@ export const TeamDrankBillingScreen: React.FC = () => {
               >
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <div className="relative shrink-0">
-                    <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 overflow-hidden shadow-inner">
-                      <img src={user?.avatar} alt={user?.naam || user?.name || 'Gebruiker'} className="w-full h-full object-cover" />
-                    </div>
+                    <UserAvatar user={user} size="md" />
                     <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-[#1e293b] ${user.isPaid ? 'bg-green-500' : 'bg-red-500'}`}></div>
                   </div>
                   <div className="min-w-0">

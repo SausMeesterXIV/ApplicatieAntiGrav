@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { UserAvatar } from '../components/UserAvatar';
 
 export const TeamDrankArchiveScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -108,9 +109,7 @@ export const TeamDrankArchiveScreen: React.FC = () => {
                   return (
                     <div key={bill.id} className="bg-white dark:bg-[#1e293b] p-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                          <img src={user?.avatar} alt={user?.name} className="w-full h-full object-cover" />
-                        </div>
+                        <UserAvatar user={user || { name: 'Onbekend', avatar_url: null }} size="md" />
                         <div>
                           <h3 className="font-bold text-gray-900 dark:text-white text-sm">{user?.name}</h3>
                           <p className="text-[10px] text-gray-500 dark:text-gray-400">{bill.period}</p>

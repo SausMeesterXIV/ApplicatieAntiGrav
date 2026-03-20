@@ -3,13 +3,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { useAgenda } from '../contexts/AgendaContext';
 import { useNavigate } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
+import { UserAvatar } from '../components/UserAvatar';
 import { Notification } from '../types';
 import { SkeletonRow } from '../components/Skeleton';
 import { hapticFeedback } from '../lib/haptics';
 
 export const NotificationsScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { loading } = useAuth();
+  const { users, loading } = useAuth();
   const { notifications, handleMarkNotificationAsRead: onMarkAsRead } = useAgenda();
   const [filter, setFilter] = useState<'Alles' | 'Nudges' | 'Officieel'>('Alles');
 
@@ -93,6 +94,7 @@ export const NotificationsScreen: React.FC = () => {
                       <NotificationCard
                         key={notification.id}
                         data={notification}
+                        senderUser={users.find(u => u.id === notification.senderId)}
                         onClick={() => {
                           if (!notification.isRead) {
                             onMarkAsRead(notification.id);
@@ -119,7 +121,7 @@ export const NotificationsScreen: React.FC = () => {
   );
 };
 
-const NotificationCard: React.FC<{ data: Notification, onClick: () => void }> = ({ data, onClick }) => {
+const NotificationCard: React.FC<{ data: Notification, senderUser?: any, onClick: () => void }> = ({ data, senderUser, onClick }) => {
   const navigate = useNavigate();
 
   const parseAction = (action: string) => {
@@ -144,9 +146,7 @@ const NotificationCard: React.FC<{ data: Notification, onClick: () => void }> = 
     >
       <div className="flex items-start gap-4">
         <div className="relative shrink-0">
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${data.color}`}>
-            <span className="material-icons-round text-2xl">{data.icon}</span>
-          </div>
+          <UserAvatar user={senderUser || { naam: data.sender, avatar_url: null }} size="md" />
           {!data.isRead && <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white dark:border-[#1e293b] shadow-sm animate-pulse"></span>}
         </div>
 

@@ -10,6 +10,7 @@ import { SPECIAL_DRINKS } from '../lib/constants';
 import { updateProfile } from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
 import { hasRole } from '../lib/roleUtils';
+import { UserAvatar } from '../components/UserAvatar';
 
 export const StrepenScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -139,9 +140,7 @@ export const StrepenScreen: React.FC = () => {
           </div>
           <div className="bg-white dark:bg-[#1e2330] p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 transition-colors">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-500 font-bold">
-                {(currentUser?.nickname || currentUser?.naam || 'U')[0].toUpperCase()}
-              </div>
+              <UserAvatar user={currentUser} size="md" />
               <div>
                 <p className="font-semibold text-gray-900 dark:text-white">Jouw Totaal</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Vandaag: {totalToday} streepjes</p>
@@ -249,13 +248,7 @@ export const StrepenScreen: React.FC = () => {
                 <div key={user.id} className="bg-white dark:bg-[#1e2330] p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between transition-colors">
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${rankColor}`}>#{index + 1}</div>
-                    {user.avatar ? (
-                      <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow-sm" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-500 font-bold border-2 border-white dark:border-gray-700 shadow-sm">
-                        {(user.name || 'U')[0].toUpperCase()}
-                      </div>
-                    )}
+                    <UserAvatar user={user} size="md" className="border-2 border-white dark:border-gray-700 shadow-sm" />
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-white text-sm">{user.name}</p>
                       <p className="text-xs text-gray-400">{user.status === 'online' ? 'Online' : 'Offline'}</p>

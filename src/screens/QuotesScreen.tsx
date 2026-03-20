@@ -7,6 +7,7 @@ import { QuoteItem, User } from '../types';
 import { hasRole } from '../lib/roleUtils';
 import { hapticSuccess } from '../lib/haptics';
 import { SkeletonCard } from '../components/Skeleton';
+import { UserAvatar } from '../components/UserAvatar';
 import { Modal } from '../components/Modal';
 
 interface QuotesScreenProps {
@@ -210,11 +211,7 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
 
                   <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-4">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={author?.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'}
-                        alt="Author"
-                        className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
-                      />
+                      <UserAvatar user={author} size="md" />
                       <div>
                         {/* Use Nickname if available */}
                         <p className="text-sm font-bold text-gray-900 dark:text-white">{author?.nickname || author?.naam || quote.authorName}</p>
@@ -329,9 +326,7 @@ export const QuotesScreen: React.FC<QuotesScreenProps> = ({
                           onClick={() => handleSelectAuthor(u)}
                           className="p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer flex items-center gap-3 border-b last:border-0 border-gray-100 dark:border-gray-800"
                         >
-                          <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden shrink-0">
-                            <img src={u.avatar} alt={u.naam} className="w-full h-full object-cover" />
-                          </div>
+                          <UserAvatar user={u} size="sm" />
                           <div>
                             <span className="font-bold text-sm block text-gray-900 dark:text-white">{u.nickname || u.naam}</span>
                             {u.nickname && <span className="text-[10px] text-gray-500 block">{u.naam}</span>}

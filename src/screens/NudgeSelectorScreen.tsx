@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import * as db from '../lib/supabaseService';
 import { hapticSuccess } from '../lib/haptics';
+import { UserAvatar } from '../components/UserAvatar';
 
 export const NudgeSelectorScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -83,18 +84,7 @@ export const NudgeSelectorScreen: React.FC = () => {
             return (
               <div key={leader.id} className="flex items-center justify-between p-2">
                 <div className="flex items-center gap-4">
-                  <div className="relative">
-                    {leader.avatar ? (
-                      <img src={leader.avatar} alt={leader.name} className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-[#1e293b]" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center border-2 border-white dark:border-[#1e293b] text-gray-500 dark:text-gray-400 font-bold">
-                        {(leader.name || 'U')[0].toUpperCase()}
-                      </div>
-                    )}
-                    {leader.status === 'online' && (
-                      <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-gray-50 dark:border-[#0f172a]"></div>
-                    )}
-                  </div>
+                  <UserAvatar user={leader} size="md" className="border-2 border-white dark:border-[#1e293b]" />
                   <div>
                     <h3 className="font-bold text-gray-900 dark:text-white text-base">{leader.name}</h3>
                     <p className="text-xs text-gray-500">{leader.role}</p>

@@ -37,6 +37,7 @@ export function useRealtimeSubscriptions({
 
           const mapped: Notification = {
             ...n,
+            senderId: n.zender_id,
             id: n.id,
             type: 'official',
             sender: n.zender_naam || 'Systeem',

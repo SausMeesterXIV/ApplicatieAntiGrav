@@ -37,7 +37,8 @@ function mapProfileToUser(p: DbProfileRow): User {
   return {
     ...p,
     name: p.naam,
-    avatar: p.avatar_url || undefined, // Fallback verwijderd
+    avatar: p.avatar_url || null, // Geen pravatar fallback meer
+    avatar_url: p.avatar_url || null,
     roles: p.roles || [],
     quickDrinkId: p.quick_drink_id || undefined,
     fcm_token: p.fcm_token || null,
@@ -386,6 +387,7 @@ export async function fetchNotificaties(userId: string): Promise<Notification[]>
     
     return {
       ...n,
+      senderId: n.zender_id,
       id: n.id,
       type: type as any,
       sender: (n as any).profiles?.naam || n.zender_naam || 'Systeem',
@@ -396,11 +398,9 @@ export async function fetchNotificaties(userId: string): Promise<Notification[]>
       isRead: n.gelezen,
       action: n.action,
       icon: type === 'nudge' ? 'touch_app' : 'notifications',
-      color: type === 'nudge' 
-        ? 'bg-orange-100 text-orange-600' 
-        : 'bg-blue-100 text-blue-600',
-    };
-  }) as Notification[];
+      color: type === 'nudge' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600',
+    } as Notification;
+  });
 }
 
 export async function addNotificatie(

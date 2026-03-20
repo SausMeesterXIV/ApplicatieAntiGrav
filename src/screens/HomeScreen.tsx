@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase';
 import { SkeletonWidget, SkeletonCard, SkeletonEvent } from '../components/Skeleton';
 import { NavCard } from '../components/NavCard';
 import { showToast } from '../components/Toast';
+import { UserAvatar } from '../components/UserAvatar';
 
 export const HomeScreen: React.FC = () => {
   const { currentUser, users, loading: authLoading } = useAuth();
@@ -132,22 +133,7 @@ export const HomeScreen: React.FC = () => {
           <span className="text-sm font-bold text-primary dark:text-blue-500 uppercase tracking-wider mb-1">KSA Aalter</span>
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white leading-none">Welkom, {displayName}</h1>
         </div>
-        <div 
-          onClick={() => navigate('/settings')} 
-          className="w-10 h-10 rounded-full border-2 border-gray-100 dark:border-gray-800 overflow-hidden relative flex items-center justify-center shadow-sm cursor-pointer active:scale-95 transition-transform shrink-0"
-        >
-          {currentUser?.avatar_url ? (
-            <img 
-              src={currentUser.avatar_url} 
-              alt="Profielfoto" 
-              className="w-full h-full rounded-full object-cover" 
-            />
-          ) : (
-            <div className="w-full h-full rounded-full flex items-center justify-center font-bold text-lg bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-              {(currentUser?.nickname || currentUser?.naam || 'U')[0].toUpperCase()}
-            </div>
-          )}
-        </div>
+        <UserAvatar user={currentUser || undefined} size="md" className="ring-2 ring-white dark:ring-slate-800 shadow-sm cursor-pointer active:scale-95 transition-transform shrink-0" />
       </header>
 
       <main className="flex-1 px-4 py-6 space-y-6 pb-24">

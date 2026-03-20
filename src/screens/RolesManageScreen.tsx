@@ -7,6 +7,7 @@ import { showToast } from '../components/Toast';
 import { hasRole, isHoofdleiding as checkIsHoofdleiding } from '../lib/roleUtils';
 import { Modal, BottomSheet } from '../components/Modal';
 import { SkeletonRow } from '../components/Skeleton';
+import { UserAvatar } from '../components/UserAvatar';
 
 export const RolesManageScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -387,16 +388,11 @@ export const RolesManageScreen: React.FC = () => {
                 `}
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-50 dark:border-[#0f172a] bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0 relative">
-                    {user.avatar ? (
-                      <img src={user.avatar} alt={user.naam} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-blue-600 dark:text-blue-400 font-bold">{(user.naam || '').charAt(0)}</span>
-                    )}
-
+                  <div className="relative shrink-0">
+                    <UserAvatar user={user} size="md" className="border-2 border-gray-50 dark:border-[#0f172a] shadow-sm" />
                     {/* Checkmark overlay for active assign mode */}
                     {hasActiveRole && activeAssignRole && (
-                      <div className="absolute inset-0 bg-blue-500/80 flex items-center justify-center animate-in zoom-in duration-200">
+                      <div className="absolute inset-0 bg-blue-500/80 rounded-full flex items-center justify-center animate-in zoom-in duration-200">
                         <span className="material-icons-round text-white font-bold">check</span>
                       </div>
                     )}

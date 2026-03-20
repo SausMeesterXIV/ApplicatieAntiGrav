@@ -4,6 +4,7 @@ import { ChevronBack } from '../components/ChevronBack';
 import { User } from '../types';
 import { useAgenda } from '../contexts/AgendaContext';
 import { useAuth } from '../contexts/AuthContext';
+import { UserAvatar } from '../components/UserAvatar';
 import { showToast } from '../components/Toast';
 
 export const BierpongManageScreen: React.FC = () => {
@@ -94,13 +95,7 @@ export const BierpongManageScreen: React.FC = () => {
                                     >
                                         <span className="material-icons-round text-xs">close</span>
                                     </button>
-                                    <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-purple-300 mb-2">
-                                        {getUserAvatar(winnerId) ? (
-                                            <img src={getUserAvatar(winnerId)} alt="" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full bg-purple-300 flex items-center justify-center text-purple-700 font-bold">{getUserName(winnerId).charAt(0)}</div>
-                                        )}
-                                    </div>
+                                    <UserAvatar user={{ id: winnerId, name: getUserName(winnerId), avatar: getUserAvatar(winnerId) }} size="md" className="border-2 border-purple-300 mb-2" />
                                     <p className="text-white font-bold text-xs text-center">{getUserName(winnerId)}</p>
                                 </div>
                             );
@@ -134,15 +129,7 @@ export const BierpongManageScreen: React.FC = () => {
                                     }`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 ${isSelected ? 'ring-2 ring-purple-400 ring-offset-2 ring-offset-white dark:ring-offset-[#0f172a]' : ''}`}>
-                                        {user.avatar ? (
-                                            <img src={user.avatar} alt="" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold">
-                                                {(user.name || user.naam || '').charAt(0)}
-                                            </div>
-                                        )}
-                                    </div>
+                                    <UserAvatar user={user} size="md" className={isSelected ? 'ring-2 ring-purple-400 ring-offset-2 ring-offset-white dark:ring-offset-[#0f172a]' : ''} />
                                     <div>
                                         <p className={`font-bold text-sm ${isSelected ? 'text-purple-700 dark:text-purple-300' : 'text-gray-900 dark:text-white'}`}>
                                             {user.name || user.naam}

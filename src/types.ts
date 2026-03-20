@@ -29,7 +29,7 @@ export interface User extends Omit<DbProfileRow, 'id' | 'rol'> {
     roles: string[];
     nickname: string | null;
     avatar_url: string | null;
-    avatar?: string; // Optioneel gemaakt voor initials fallback
+    avatar: string | null; // Aangepast voor initials fallback
     status?: 'online' | 'offline';
     role?: string; // Legacy alias/display role
     quick_drink_id: string | null;
@@ -92,6 +92,7 @@ export interface Transaction {
 }
 
 export interface Notification extends DbNotificationRow {
+    senderId: string; // Map from zender_id
     id: string; // Match Database string ID
     type: 'official' | 'nudge' | 'agenda' | 'order';
     sender: string; // Alias for zender_naam
