@@ -29,7 +29,7 @@ export interface User extends Omit<DbProfileRow, 'id' | 'rol'> {
     roles: string[];
     nickname: string | null;
     avatar_url: string | null;
-    avatar: string; // Verplicht voor legacy compatibiliteit
+    avatar?: string; // Optioneel gemaakt voor initials fallback
     status?: 'online' | 'offline';
     role?: string; // Legacy alias/display role
     quick_drink_id: string | null;
@@ -84,7 +84,7 @@ export interface Transaction {
     id: string;
     userId: string;
     userName: string;
-    userAvatar: string;
+    userAvatar?: string;
     amount: number;
     type: 'drink' | 'food';
     timestamp: string;

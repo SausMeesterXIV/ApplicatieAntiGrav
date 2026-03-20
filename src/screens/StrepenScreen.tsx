@@ -189,6 +189,7 @@ export const StrepenScreen: React.FC = () => {
                   onClick={() => { 
                     const bak = drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM)!; 
                     onAddCost(currentUser?.id || '', bak.id, 1, currentUser?.naam); 
+                    hapticSuccess();
                     setTotalToday(prev => prev + 1); 
                   }} 
                   className="w-full bg-amber-50 dark:bg-amber-900/10 hover:bg-amber-100 dark:hover:bg-amber-900/20 text-amber-800 dark:text-amber-400 py-3 px-4 rounded-2xl shadow-sm flex items-center justify-between active:scale-[0.98] transition-all group border border-amber-200 dark:border-amber-800/50"
@@ -249,7 +250,13 @@ export const StrepenScreen: React.FC = () => {
                 <div key={user.id} className="bg-white dark:bg-[#1e2330] p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between transition-colors">
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${rankColor}`}>#{index + 1}</div>
-                    <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow-sm" />
+                    {user.avatar ? (
+                      <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow-sm" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-500 font-bold border-2 border-white dark:border-gray-700 shadow-sm">
+                        {(user.name || 'U')[0].toUpperCase()}
+                      </div>
+                    )}
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-white text-sm">{user.name}</p>
                       <p className="text-xs text-gray-400">{user.status === 'online' ? 'Online' : 'Offline'}</p>

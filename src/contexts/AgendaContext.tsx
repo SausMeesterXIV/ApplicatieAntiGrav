@@ -119,7 +119,9 @@ export function AgendaProvider({ children }: { children: ReactNode }) {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     try {
         await db.markNotificatieGelezen(id);
-    } catch (error) {}
+    } catch (error) {
+        console.error('Failed to mark notification as read:', error);
+    }
   };
 
   const handleSaveCountdowns = async (newCountdowns: CountdownItem[]) => {

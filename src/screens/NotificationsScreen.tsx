@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { Notification } from '../types';
 import { SkeletonRow } from '../components/Skeleton';
+import { hapticFeedback } from '../lib/haptics';
 
 export const NotificationsScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -92,7 +93,12 @@ export const NotificationsScreen: React.FC = () => {
                       <NotificationCard
                         key={notification.id}
                         data={notification}
-                        onClick={() => onMarkAsRead(notification.id)}
+                        onClick={() => {
+                          if (!notification.isRead) {
+                            onMarkAsRead(notification.id);
+                            hapticFeedback();
+                          }
+                        }}
                       />
                     ))}
                   </div>

@@ -6,7 +6,7 @@ import { User } from '../types';
 import { supabase } from '../lib/supabase';
 import * as db from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
-import { isHapticEnabled, setHapticEnabled as saveHapticPref } from '../lib/haptics';
+import { isHapticEnabled, setHapticEnabled as saveHapticPref, hapticFeedback } from '../lib/haptics';
 import { hasAccess } from '../App';
 
 export const SettingsScreen: React.FC = () => {
@@ -60,6 +60,7 @@ export const SettingsScreen: React.FC = () => {
     const newVal = !hapticOn;
     setHapticOn(newVal);
     saveHapticPref(newVal);
+    if (newVal) hapticFeedback(); // Geef feedback bij aanzetten
   };
 
   const handleSaveNickname = () => {
@@ -108,8 +109,14 @@ export const SettingsScreen: React.FC = () => {
         {/* Profile Header */}
         <section className="p-6 flex flex-col items-center border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1e2330]/30 transition-colors">
           <div className="relative mb-4 group cursor-pointer" onClick={triggerFileInput}>
-            <div className="w-24 h-24 rounded-full border-4 border-blue-100 dark:border-blue-900/50 p-1 overflow-hidden relative">
-              <img src={avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
+            <div className="w-24 h-24 rounded-full border-4 border-blue-100 dark:border-blue-900/50 p-1 overflow-hidden relative bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              {avatar ? (
+                <img src={avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                  {(currentUser?.nickname || currentUser?.naam || 'U')[0].toUpperCase()}
+                </span>
+              )}
             </div>
             {/* Hidden Input */}
             <input

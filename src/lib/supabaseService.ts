@@ -37,7 +37,7 @@ function mapProfileToUser(p: DbProfileRow): User {
   return {
     ...p,
     name: p.naam,
-    avatar: p.avatar_url || `https://i.pravatar.cc/150?u=${p.id}`,
+    avatar: p.avatar_url || undefined, // Fallback verwijderd
     roles: p.roles || [],
     quickDrinkId: p.quick_drink_id || undefined,
     fcm_token: p.fcm_token || null,

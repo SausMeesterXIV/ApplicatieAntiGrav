@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import * as db from '../lib/supabaseService';
 import { showToast } from '../components/Toast';
+import { hapticSuccess } from '../lib/haptics';
 
 export const NewMessageScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -60,6 +61,7 @@ export const NewMessageScreen: React.FC = () => {
 
       await Promise.all(promises);
 
+      hapticSuccess();
       showToast('Bericht succesvol verzonden!', 'success');
       navigate(-1);
     } catch (error: any) {
