@@ -211,6 +211,43 @@ export const HomeScreen: React.FC = () => {
             )}
 
 
+            {/* --- 3. BIERPONG KAMPIOENEN --- */}
+            {duoBierpongWinners && duoBierpongWinners.length > 0 && (
+              <section onClick={() => navigate('/bierpong')} className="mt-4 bg-gradient-to-r from-amber-50/80 to-yellow-50/80 dark:from-yellow-900/10 dark:to-amber-900/10 rounded-2xl p-4 shadow-sm border border-yellow-300/60 dark:border-yellow-700/50 relative overflow-hidden cursor-pointer active:scale-[0.98] transition-transform">
+                
+                {/* Decoratieve kroon watermerk op de achtergrond */}
+                <span className="material-icons-round absolute -right-4 -top-4 text-[80px] text-yellow-500/10 dark:text-yellow-500/5 rotate-12 pointer-events-none">workspace_premium</span>
+
+                <div className="relative z-10 flex justify-between items-center">
+                  <div className="flex flex-col flex-1 pr-2">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="material-icons-round text-yellow-600 dark:text-yellow-500 text-sm">emoji_events</span>
+                      <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-700 dark:text-yellow-500">Team to beat</h2>
+                    </div>
+                    <p className="text-lg sm:text-xl font-black text-gray-900 dark:text-white leading-tight mb-0.5 truncate">
+                      {duoBierpongWinners.map(id => users?.find(u => u.id === id)?.naam?.split(' ')[0] || 'Lid').join(' & ')}
+                    </p>
+                    <p className="text-xs text-yellow-700/80 dark:text-yellow-500/70 font-bold">Huidige Kampioenen 🍻</p>
+                  </div>
+
+                  <div className="flex -space-x-3 shrink-0">
+                    {duoBierpongWinners.slice(0, 2).map((id, index) => {
+                      const user = users?.find(u => u.id === id);
+                      return (
+                        <div key={id} className={`w-12 h-12 rounded-full border-2 border-white dark:border-[#1e2330] shadow-sm relative z-${20 - index * 10} flex items-center justify-center overflow-hidden bg-gray-100 dark:bg-gray-800`}>
+                          {user?.avatar ? (
+                            <img src={user.avatar} className="w-full h-full object-cover" alt="Champ" />
+                          ) : (
+                            <span className="text-gray-500 font-bold text-sm">{user?.naam?.charAt(0) || 'K'}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+            )}
+
             {/* LEADERBOARD KNOP */}
             <div 
               onClick={() => navigate('/bierpong')}
@@ -225,6 +262,7 @@ export const HomeScreen: React.FC = () => {
               </div>
               <span className="material-icons-round text-gray-300 dark:text-gray-600">chevron_right</span>
             </div>
+
 
             {/* QUOTE VAN DE WEEK */}
             {topQuote && (

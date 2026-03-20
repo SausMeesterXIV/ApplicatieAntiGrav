@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAgenda } from '../contexts/AgendaContext';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ChevronBack } from '../components/ChevronBack';
 import { hapticSuccess } from '../lib/haptics';
 import { SkeletonRow, SkeletonAvatar, SkeletonText } from '../components/Skeleton';
@@ -16,12 +16,13 @@ interface BierpongLeaderboardEntry {
 
 export const BierpongScreen: React.FC = () => {
   const navigate = useNavigate();
-    const { users, currentUser, loading } = useAuth();
+  const { users, currentUser, loading } = useAuth();
   const { bierpongGames, duoBierpongWinners, handleAddBierpongGame } = useAgenda();
 
+  // Weergave states
   const [showAllLeaders, setShowAllLeaders] = useState(false);
-  const [sortBy, setSortBy] = useState<'gamesPlayed' | 'winRatio' | 'score'>('gamesPlayed');
-  const leaderboardRef = useRef<HTMLElement>(null);
+  const [sortBy, setSortBy] = useState<'winRatio' | 'gamesPlayed' | 'wins'>('winRatio');
+  const [useQuota, setUseQuota] = useState(true); // NIEUW: Minimum Quota State
 
   // Score modal state
   const [showScoreModal, setShowScoreModal] = useState(false);
@@ -30,56 +31,33 @@ export const BierpongScreen: React.FC = () => {
   const [playerSearch, setPlayerSearch] = useState('');
   const [scoreSaved, setScoreSaved] = useState(false);
   const [gameMode, setGameMode] = useState<'1v1' | '2v2'>('1v1');
-  const maxPlayers = gameMode === '1v1' ? 2 : 4;
   const [team1, setTeam1] = useState<string[]>([]);
   const [team2, setTeam2] = useState<string[]>([]);
   const [winningTeam, setWinningTeam] = useState<'team1' | 'team2' | null>(null);
 
-  const scrollToLeaderboard = () => {
-    setTimeout(() => {
-      leaderboardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-  };
-
   const leaderboard = useMemo(() => {
-    // 1. Initialize stats
     const playerStats: { [key: string]: { gamesPlayed: number; wins: number } } = {};
     const getStats = (id: string) => {
-      if (!playerStats[id]) {
-        playerStats[id] = { gamesPlayed: 0, wins: 0 };
-      }
+      if (!playerStats[id]) playerStats[id] = { gamesPlayed: 0, wins: 0 };
       return playerStats[id];
     };
 
-    // 2. Sort games chronologically (oldest first)
     const sortedGames = [...bierpongGames].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    // 3. Calculate stats
     sortedGames.forEach(game => {
       const is1v1 = game.playerIds.length === 2;
       const is2v2 = game.playerIds.length === 4;
 
       if (is1v1) {
-        const p1Id = game.playerIds[0];
-        const p2Id = game.playerIds[1];
-        const p1Stats = getStats(p1Id);
-        const p2Stats = getStats(p2Id);
-
-        p1Stats.gamesPlayed++;
-        p2Stats.gamesPlayed++;
-
-        const p1Won = game.winnerIds.includes(p1Id);
-        const p2Won = game.winnerIds.includes(p2Id);
-
-        if (p1Won) p1Stats.wins++;
-        if (p2Won) p2Stats.wins++;
+        const p1Id = game.playerIds[0]; const p2Id = game.playerIds[1];
+        getStats(p1Id).gamesPlayed++; getStats(p2Id).gamesPlayed++;
+        if (game.winnerIds.includes(p1Id)) getStats(p1Id).wins++;
+        if (game.winnerIds.includes(p2Id)) getStats(p2Id).wins++;
       } else if (is2v2) {
         game.playerIds.forEach((id: string) => {
           const stats = getStats(id);
           stats.gamesPlayed++;
-          if (game.winnerIds.includes(id)) {
-            stats.wins++;
-          }
+          if (game.winnerIds.includes(id)) stats.wins++;
         });
       }
     });
@@ -90,48 +68,51 @@ export const BierpongScreen: React.FC = () => {
       return { userId, gamesPlayed: stats.gamesPlayed, wins: stats.wins, winRatio };
     });
 
-    calculatedLeaderboard.sort((a, b) => b.gamesPlayed - a.gamesPlayed || b.winRatio - a.winRatio);
-
-    const top10ByGamesPlayed = calculatedLeaderboard.slice(0, 10);
-    top10ByGamesPlayed.sort((a, b) => b.winRatio - a.winRatio || b.gamesPlayed - a.gamesPlayed);
-
-    const remainingLeaders = calculatedLeaderboard.slice(10).sort((a, b) => b.gamesPlayed - a.gamesPlayed);
-
-    return [...top10ByGamesPlayed, ...remainingLeaders];
+    // Basis sortering (standaard ongefilterd, nodig voor de rangorde berekening)
+    calculatedLeaderboard.sort((a, b) => b.winRatio - a.winRatio || b.gamesPlayed - a.gamesPlayed);
+    return calculatedLeaderboard;
   }, [bierpongGames]);
 
-  // The original ranking order — used for medals/emojis/gold styling
+  // Originele rangschikking (voor gouden styling ongeacht actieve sortering)
   const originalRankMap = useMemo(() => {
+    // We moeten de ranking bepalen mét het quota eroverheen, anders is een speler met 1 game en 100% win de "echte" nummer 1.
     const map: { [userId: string]: number } = {};
-    leaderboard.forEach((entry, i) => { map[entry.userId] = i; });
+    if (leaderboard.length === 0) return map;
+    
+    const maxGames = Math.max(...leaderboard.map(l => l.gamesPlayed));
+    const minGames = Math.ceil(maxGames / 2);
+    const eligible = leaderboard.filter(e => e.gamesPlayed >= minGames);
+    eligible.sort((a, b) => b.winRatio - a.winRatio || b.gamesPlayed - a.gamesPlayed);
+    
+    eligible.forEach((entry, i) => { map[entry.userId] = i; });
     return map;
   }, [leaderboard]);
 
-  // Podium: only players who played at least half the games of the most active player
+  // Podium voor standaard overzicht (altijd mét quota)
   const podiumLeaders = useMemo(() => {
     if (leaderboard.length === 0) return [];
-    const maxGames = leaderboard[0].gamesPlayed; // leaderboard is sorted by gamesPlayed desc
+    const maxGames = Math.max(...leaderboard.map(l => l.gamesPlayed));
     const minGames = Math.ceil(maxGames / 2);
     const eligible = leaderboard.filter(e => e.gamesPlayed >= minGames);
-    // Sort eligible by winRatio (best win% on top), then gamesPlayed as tiebreaker
     return [...eligible].sort((a, b) => b.winRatio - a.winRatio || b.gamesPlayed - a.gamesPlayed);
   }, [leaderboard]);
 
+  // Actieve sortering & filtering voor 'Alle Scores'
   const leadersToDisplay = useMemo(() => {
-    if (!showAllLeaders) return leaderboard.slice(0, 10);
-
     let list = [...leaderboard];
-
-    if (sortBy === 'score') {
-      const top10GamesPlayed = [...list].sort((a, b) => b.gamesPlayed - a.gamesPlayed).slice(0, 10);
-      return top10GamesPlayed.sort((a, b) => b.winRatio - a.winRatio || b.gamesPlayed - a.gamesPlayed);
+    
+    // Pas het minimum quota toe indien ingeschakeld
+    if (useQuota && list.length > 0) {
+      const maxGames = Math.max(...list.map(l => l.gamesPlayed));
+      const minGames = Math.ceil(maxGames / 2);
+      list = list.filter(e => e.gamesPlayed >= minGames);
     }
 
-    return list.sort((a, b) => {
-      if (sortBy === 'winRatio') return b.winRatio - a.winRatio || b.gamesPlayed - a.gamesPlayed;
-      return b.gamesPlayed - a.gamesPlayed || b.winRatio - a.winRatio;
-    });
-  }, [leaderboard, showAllLeaders, sortBy]);
+    if (sortBy === 'winRatio') return list.sort((a, b) => b.winRatio - a.winRatio || b.gamesPlayed - a.gamesPlayed);
+    if (sortBy === 'gamesPlayed') return list.sort((a, b) => b.gamesPlayed - a.gamesPlayed || b.winRatio - a.winRatio);
+    if (sortBy === 'wins') return list.sort((a, b) => b.wins - a.wins || b.gamesPlayed - a.gamesPlayed);
+    return list;
+  }, [leaderboard, sortBy, useQuota]);
 
   const getUser = (userId: string) => users.find((u: any) => u.id === userId);
   const getUserName = (userId: string) => {
@@ -139,24 +120,134 @@ export const BierpongScreen: React.FC = () => {
     return u?.nickname || u?.name || u?.naam || 'Onbekend';
   };
   const getUserAvatar = (userId: string) => getUser(userId)?.avatar;
-
   const isDuoWinner = (userId: string) => duoBierpongWinners.includes(userId);
 
-  const getMedalStyle = (index: number) => {
-    if (index === 0) return { bg: 'bg-gradient-to-r from-yellow-400 to-amber-500', text: 'text-yellow-900', icon: '👑', ring: 'ring-yellow-400' };
-    if (index === 1) return { bg: 'bg-gradient-to-r from-gray-300 to-slate-400', text: 'text-gray-800', icon: '🥈', ring: 'ring-gray-300' };
-    if (index === 2) return { bg: 'bg-gradient-to-r from-orange-400 to-amber-600', text: 'text-orange-900', icon: '🥉', ring: 'ring-orange-400' };
+  const getMedalStyle = (index: number | undefined) => {
+    if (index === 0) return { bg: 'bg-gradient-to-r from-yellow-400 to-amber-500', text: 'text-yellow-900', icon: '👑' };
+    if (index === 1) return { bg: 'bg-gradient-to-r from-gray-300 to-slate-400', text: 'text-gray-800', icon: '🥈' };
+    if (index === 2) return { bg: 'bg-gradient-to-r from-orange-400 to-amber-600', text: 'text-orange-900', icon: '🥉' };
     return null;
   };
 
+  // ============================================================================
+  // 1. NIEUWE WEERGAVE: VOLLEDIG LEADERBOARD (ALLE SCORES)
+  // ============================================================================
+  if (showAllLeaders) {
+    return (
+      <div className="flex flex-col h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white transition-colors duration-200">
+        <header className="px-4 pb-3 pt-[calc(1rem+env(safe-area-inset-top,0px))] sticky top-0 bg-gray-50 dark:bg-[#0f172a] z-20 shadow-sm border-b border-gray-200 dark:border-gray-800">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowAllLeaders(false)} className="p-2 -ml-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors">
+                <span className="material-icons-round text-2xl">arrow_back</span>
+              </button>
+              <h1 className="text-xl font-extrabold tracking-tight">Volledig Leaderboard</h1>
+            </div>
+            
+            {/* Quota Toggle */}
+            <label className="flex items-center gap-2 cursor-pointer group active:scale-95 transition-transform" onClick={(e) => e.stopPropagation()}>
+              <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-0.5 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
+                Min. Quota
+              </span>
+              <div className={`w-9 h-5 rounded-full p-0.5 transition-colors ${useQuota ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${useQuota ? 'translate-x-4' : 'translate-x-0'}`}></div>
+              </div>
+              <input type="checkbox" className="hidden" checked={useQuota} onChange={(e) => setUseQuota(e.target.checked)} />
+            </label>
+          </div>
+          
+          {/* Intuïtieve Sortering Tabs */}
+          <div className="flex bg-gray-200 dark:bg-[#1e293b] p-1 rounded-xl shadow-inner">
+            <button 
+              onClick={() => setSortBy('winRatio')} 
+              className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${sortBy === 'winRatio' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            >
+              <span className="material-icons-round text-[16px]">show_chart</span>
+              Win %
+            </button>
+            <button 
+              onClick={() => setSortBy('gamesPlayed')} 
+              className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${sortBy === 'gamesPlayed' ? 'bg-white dark:bg-gray-700 shadow-sm text-purple-600 dark:text-purple-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            >
+              <span className="material-icons-round text-[16px]">sports_esports</span>
+              Gespeeld
+            </button>
+            <button 
+              onClick={() => setSortBy('wins')} 
+              className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${sortBy === 'wins' ? 'bg-white dark:bg-gray-700 shadow-sm text-green-600 dark:text-green-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            >
+              <span className="material-icons-round text-[16px]">emoji_events</span>
+              Wins
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-safe">
+          {leadersToDisplay.map((leader, index) => {
+            const originalRank = originalRankMap[leader.userId];
+            const isGold = originalRank === 0;
+            const isDuo = isDuoWinner(leader.userId);
+
+            return (
+              <div key={leader.userId} className={`flex items-center justify-between p-3.5 rounded-2xl transition-colors border ${isGold ? 'bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/10 dark:to-amber-900/10 border-yellow-300 dark:border-yellow-700/50 shadow-md' : 'bg-white dark:bg-[#1e293b] border-gray-100 dark:border-gray-800 shadow-sm'}`}>
+                <div className="flex items-center gap-4 min-w-0">
+                  
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shrink-0 ${isGold ? 'bg-yellow-400 text-yellow-900 shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                    {isGold ? '👑' : index + 1}
+                  </div>
+                  
+                  <div className={`w-12 h-12 rounded-full overflow-hidden shrink-0 relative ${isGold ? 'border-[3px] border-yellow-400 shadow-lg' : isDuo ? 'border-[3px] border-purple-500 shadow-md' : 'border border-gray-200 dark:border-gray-700'}`}>
+                    {getUserAvatar(leader.userId) ? (
+                      <img src={getUserAvatar(leader.userId)} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 font-bold text-sm">
+                        {getUserName(leader.userId).charAt(0)}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className={`font-extrabold text-base truncate ${isGold ? 'text-yellow-700 dark:text-yellow-400' : isDuo ? 'text-purple-600 dark:text-purple-400' : 'text-gray-900 dark:text-white'}`}>
+                      {isDuo && !isGold && '🏆 '}
+                      {getUserName(leader.userId)}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">
+                      <span className="text-green-600 dark:text-green-500 font-bold">{leader.wins}W</span>
+                      <span className="mx-1">-</span>
+                      <span className="text-red-500 dark:text-red-400 font-bold">{leader.gamesPlayed - leader.wins}L</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0 ml-4">
+                  <div className={`text-xl font-black ${sortBy === 'winRatio' ? 'text-blue-600 dark:text-blue-400' : sortBy === 'gamesPlayed' ? 'text-purple-600 dark:text-purple-400' : 'text-green-600 dark:text-green-400'}`}>
+                    {sortBy === 'winRatio' ? `${leader.winRatio}%` : sortBy === 'gamesPlayed' ? leader.gamesPlayed : leader.wins}
+                  </div>
+                  <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">
+                    {sortBy === 'winRatio' ? 'Win %' : sortBy === 'gamesPlayed' ? 'Gespeeld' : 'Gewonnen'}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {leadersToDisplay.length === 0 && (
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-8">Geen spelers gevonden. Probeer het quota uit te schakelen.</p>
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  // ============================================================================
+  // 2. STANDAARD OVERZICHT SCHERM
+  // ============================================================================
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200">
-      {/* Header */}
       <header className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] flex items-center gap-4 sticky top-0 bg-gray-50/80 dark:bg-[#0f172a]/80 backdrop-blur-md z-10 transition-colors border-b border-gray-200/50 dark:border-gray-800/50">
         <ChevronBack onClick={() => navigate(-1)} />
         <div className="flex-1">
           <h1 className="text-2xl font-bold leading-tight tracking-tight">🏓 Bierpong</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Leaderboard & Kampioenen</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Dashboard</p>
         </div>
         <button
           onClick={() => { setShowScoreModal(true); setSelectedPlayers([(currentUser?.id || '')]); setSelectedWinnerIds([]); setPlayerSearch(''); setScoreSaved(false); setGameMode('1v1'); }}
@@ -169,335 +260,189 @@ export const BierpongScreen: React.FC = () => {
 
       <main className="flex-1 px-4 pb-nav-safe overflow-y-auto space-y-6 pt-2">
         {loading ? (
-          <>
-            {/* Skeleton Podium */}
-            <div className="flex items-end justify-center gap-3 pt-4 pb-2 h-48">
-              <div className="flex flex-col items-center w-24 space-y-2">
-                <SkeletonAvatar size="w-16 h-16" />
-                <SkeletonText width="w-20" height="h-3" />
-                <div className="w-full h-16 bg-gray-100 dark:bg-gray-800 rounded-t-lg" />
-              </div>
-              <div className="flex flex-col items-center w-28 space-y-2">
-                <SkeletonAvatar size="w-20 h-20" />
-                <SkeletonText width="w-24" height="h-4" />
-                <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 rounded-t-lg" />
-              </div>
-              <div className="flex flex-col items-center w-24 space-y-2">
-                <SkeletonAvatar size="w-16 h-16" />
-                <SkeletonText width="w-20" height="h-3" />
-                <div className="w-full h-12 bg-gray-100 dark:bg-gray-800 rounded-t-lg" />
-              </div>
-            </div>
-            {/* Skeleton Leaderboard */}
-            <div className="space-y-1">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <SkeletonRow key={i} />
-              ))}
-            </div>
-          </>
+          <div className="flex items-center justify-center p-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
         ) : (
           <>
             {/* ===== TOP 3 PODIUM ===== */}
             {podiumLeaders.length >= 3 && (
-          <section className="relative">
-            <div className="flex items-end justify-center gap-3 pt-4 pb-2">
-              {/* #2 - Silver */}
-              {(() => {
-                const leader = podiumLeaders[1];
-                return (
-                  <div className="flex flex-col items-center w-24">
-                    <div className="relative mb-2">
-                      <div className="w-16 h-16 rounded-full overflow-hidden border-3 border-gray-300 dark:border-gray-500 shadow-lg bg-gray-200">
-                        {getUserAvatar(leader.userId) ? (
-                          <img src={getUserAvatar(leader.userId)} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-500 font-bold text-xl">{getUserName(leader.userId).charAt(0)}</div>
-                        )}
-                      </div>
-                      <span className="absolute -top-1 -right-1 text-lg">🥈</span>
-                    </div>
-                    <p className="text-xs font-bold text-gray-600 dark:text-gray-300 text-center truncate w-full">{getUserName(leader.userId)}</p>
-                    <p className="text-[10px] text-gray-400">{leader.gamesPlayed} gespeeld</p>
-                    <div className="w-full h-16 bg-gradient-to-t from-gray-200 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-t-lg mt-1 flex items-center justify-center">
-                      <span className="text-2xl font-black text-gray-400">2</span>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* #1 - Gold */}
-              {(() => {
-                const leader = podiumLeaders[0];
-                return (
-                  <div className="flex flex-col items-center w-28 -mt-4">
-                    <div className="relative mb-2">
-                      <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-yellow-400 shadow-xl shadow-yellow-400/30 bg-yellow-100 ring-4 ring-yellow-400/20">
-                        {getUserAvatar(leader.userId) ? (
-                          <img src={getUserAvatar(leader.userId)} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-yellow-600 font-bold text-2xl">{getUserName(leader.userId).charAt(0)}</div>
-                        )}
-                      </div>
-                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-2xl">👑</span>
-                    </div>
-                    <p className="text-sm font-black text-yellow-600 dark:text-yellow-400 text-center truncate w-full">{getUserName(leader.userId)}</p>
-                    <p className="text-xs text-yellow-500 font-bold">{leader.winRatio}% Win</p>
-                    <div className="w-full h-24 bg-gradient-to-t from-yellow-400 to-yellow-300 dark:from-yellow-600 dark:to-yellow-500 rounded-t-lg mt-1 flex items-center justify-center shadow-lg shadow-yellow-400/20">
-                      <span className="text-3xl font-black text-yellow-800 dark:text-yellow-900">1</span>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* #3 - Bronze */}
-              {(() => {
-                const leader = podiumLeaders[2];
-                return (
-                  <div className="flex flex-col items-center w-24">
-                    <div className="relative mb-2">
-                      <div className="w-16 h-16 rounded-full overflow-hidden border-3 border-orange-400 dark:border-orange-500 shadow-lg bg-orange-100">
-                        {getUserAvatar(leader.userId) ? (
-                          <img src={getUserAvatar(leader.userId)} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-orange-500 font-bold text-xl">{getUserName(leader.userId).charAt(0)}</div>
-                        )}
-                      </div>
-                      <span className="absolute -top-1 -right-1 text-lg">🥉</span>
-                    </div>
-                    <p className="text-xs font-bold text-orange-600 dark:text-orange-400 text-center truncate w-full">{getUserName(leader.userId)}</p>
-                    <p className="text-[10px] text-gray-400">{leader.gamesPlayed} gespeeld</p>
-                    <div className="w-full h-12 bg-gradient-to-t from-orange-300 to-orange-200 dark:from-orange-700 dark:to-orange-600 rounded-t-lg mt-1 flex items-center justify-center">
-                      <span className="text-2xl font-black text-orange-500 dark:text-orange-300">3</span>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-            <p className="text-[10px] text-center text-gray-400 dark:text-gray-500 mt-1">Min. {Math.ceil((leaderboard[0]?.gamesPlayed || 0) / 2)} potjes nodig om op het podium te staan</p>
-          </section>
-        )}
-
-        {/* ===== LEADERBOARD LIST ===== */}
-        <section ref={leaderboardRef} style={{ scrollMarginTop: '70px' }}>
-          <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <span className="material-icons-round text-base">leaderboard</span>
-            Top {showAllLeaders ? leaderboard.length : 10}
-          </h2>
-          <div className="bg-white dark:bg-[#1e293b] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-            {leadersToDisplay.map((leader, index) => {
-              // Use ORIGINAL rank for styling, not sorted display index
-              const originalRank = originalRankMap[leader.userId] ?? index;
-              const medal = getMedalStyle(originalRank);
-              const isGold = originalRank === 0;
-              const isDuo = isDuoWinner(leader.userId);
-              const isUltimateKing = isGold && isDuo;
-
-              return (
-                <div
-                  key={leader.userId}
-                  className={`flex items-center justify-between p-4 transition-colors ${index !== leadersToDisplay.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''} ${isGold ? 'bg-yellow-50/50 dark:bg-yellow-900/5' : ''}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shrink-0 ${medal ? `${medal.bg} ${medal.text}` : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
-                      {medal ? medal.icon : index + 1}
-                    </div>
-
-                    <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 ${isUltimateKing ? 'neon-ring ring-offset-2 ring-offset-white dark:ring-offset-[#1e293b]' : isGold ? 'ring-2 ring-yellow-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1e293b]' : isDuo ? 'neon-ring ring-offset-2 ring-offset-white dark:ring-offset-[#1e293b]' : ''}`}>
-                      {getUserAvatar(leader.userId) ? (
-                        <img src={getUserAvatar(leader.userId)} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold">
-                          {getUserName(leader.userId).charAt(0)}
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        {isUltimateKing && <><span className="text-sm">👑</span><span className="text-sm">🏆</span></>}
-                        {!isUltimateKing && isGold && <span className="text-sm">👑</span>}
-                        {!isUltimateKing && isDuo && <span className="text-sm">🏆</span>}
-                        <p className={`font-extrabold text-base ${isUltimateKing ? 'text-yellow-600 dark:text-yellow-300' : isGold ? 'text-yellow-600 dark:text-yellow-300' : isDuo ? 'neon-text' : 'text-gray-900 dark:text-white'}`}>
-                          {getUserName(leader.userId)}
-                        </p>
-                      </div>
-                      <p className="text-xs text-gray-400">{leader.wins}W / {leader.gamesPlayed - leader.wins}L • {leader.gamesPlayed} gespeeld</p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <div className={`text-lg font-black ${isGold ? 'text-yellow-500' : 'text-blue-600 dark:text-blue-400'}`}>
-                      {leader.winRatio}%
-                    </div>
-                    <div className="text-[10px] text-gray-400 uppercase tracking-wide font-bold">
-                      win ratio
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {showAllLeaders && (
-            <div className="grid grid-cols-3 gap-2 mt-3">
-              <button
-                onClick={() => { setSortBy('winRatio'); scrollToLeaderboard(); }}
-                className={`py-1.5 px-2 rounded-lg text-xs font-bold flex flex-col sm:flex-row items-center justify-center gap-1 transition-colors ${sortBy === 'winRatio' ? 'bg-green-600 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
-              >
-                <span className="material-icons-round text-sm">show_chart</span>
-                <span>Win ratio</span>
-              </button>
-              <button
-                onClick={() => { setSortBy('gamesPlayed'); scrollToLeaderboard(); }}
-                className={`py-1.5 px-2 rounded-lg text-xs font-bold flex flex-col sm:flex-row items-center justify-center gap-1 transition-colors ${sortBy === 'gamesPlayed' ? 'bg-purple-600 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
-              >
-                <span className="material-icons-round text-sm">sports_esports</span>
-                <span>Gespeeld</span>
-              </button>
-              <button
-                onClick={() => { setSortBy('score'); scrollToLeaderboard(); }}
-                className={`py-1.5 px-2 rounded-lg text-xs font-bold flex flex-col sm:flex-row items-center justify-center gap-1 transition-colors ${sortBy === 'score' ? 'bg-orange-600 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}
-              >
-                <span className="material-icons-round text-sm">workspace_premium</span>
-                <span>Score</span>
-              </button>
-            </div>
-          )}
-
-          {!showAllLeaders && leaderboard.length > 0 && (
-            <div 
-              onClick={() => { setShowAllLeaders(true); scrollToLeaderboard(); }}
-              className="mt-4 mb-8 bg-white dark:bg-[#1e293b] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all"
-            >
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
-                <span className="material-icons-round text-2xl">emoji_events</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-gray-900 dark:text-white">Leaderboard</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Bekijk de stand</p>
-              </div>
-              <span className="material-icons-round text-gray-300 dark:text-gray-600">chevron_right</span>
-            </div>
-          )}
-
-          {showAllLeaders && (
-            <button
-              onClick={() => setShowAllLeaders(false)}
-              className="mt-3 mb-8 w-full bg-gray-100 dark:bg-[#1e293b] hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 font-bold py-2.5 px-4 rounded-xl transition-colors border border-gray-200 dark:border-gray-700 text-xs flex items-center justify-center gap-2"
-            >
-              <span className="material-icons-round text-sm">visibility_off</span>
-              Alleen top 10 tonen
-            </button>
-          )}
-        </section>
-
-        {/* ===== BIERPONGTOERNOOI KAMPIOENEN ===== */}
-        {duoBierpongWinners.length > 0 && (
-          <section>
-            <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <span className="material-icons-round text-base text-purple-500">emoji_events</span>
-              Bierpongtoernooi Kampioenen
-            </h2>
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 p-5 shadow-xl neon-card">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-2xl">🏆</span>
-                  <div>
-                    <h3 className="text-white font-bold text-lg">Huidige Kampioenen</h3>
-                    <p className="text-purple-200 text-xs">Bierpongtoernooi</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4 justify-center">
-                  {duoBierpongWinners.map((winnerId) => {
-                    const winnerUser = getUser(winnerId);
-                    if (!winnerUser) return null;
+              <section className="relative">
+                <div className="flex items-end justify-center gap-3 pt-4 pb-2">
+                  {/* ZILVER */}
+                  {(() => {
+                    const leader = podiumLeaders[1];
                     return (
-                      <div key={winnerId} className="flex flex-col items-center bg-white/10 backdrop-blur-sm rounded-xl p-4 flex-1">
+                      <div className="flex flex-col items-center w-24">
                         <div className="relative mb-2">
-                          <div className="w-16 h-16 rounded-full overflow-hidden neon-ring shadow-lg">
-                            {winnerUser.avatar ? (
-                              <img src={winnerUser.avatar} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full bg-purple-300 flex items-center justify-center text-purple-700 font-bold text-xl">
-                                {getUserName(winnerId).charAt(0)}
-                              </div>
-                            )}
+                          <div className="w-16 h-16 rounded-full overflow-hidden border-3 border-gray-300 dark:border-gray-500 shadow-lg bg-gray-200">
+                            {getUserAvatar(leader.userId) ? <img src={getUserAvatar(leader.userId)} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-500 font-bold text-xl">{getUserName(leader.userId).charAt(0)}</div>}
                           </div>
-                          <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-lg">👑</span>
+                          <span className="absolute -top-1 -right-1 text-lg">🥈</span>
                         </div>
-                        <p className="text-white font-bold text-sm text-center neon-text">{getUserName(winnerId)}</p>
-                        <p className="text-purple-200 text-[10px] font-medium">{winnerUser.role || winnerUser.rol}</p>
+                        <p className="text-xs font-bold text-gray-600 dark:text-gray-300 text-center truncate w-full">{getUserName(leader.userId)}</p>
+                        <div className="w-full h-16 bg-gradient-to-t from-gray-200 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-t-lg mt-1 flex items-center justify-center"><span className="text-2xl font-black text-gray-400">2</span></div>
                       </div>
                     );
-                  })}
+                  })()}
+
+                  {/* GOUD */}
+                  {(() => {
+                    const leader = podiumLeaders[0];
+                    return (
+                      <div className="flex flex-col items-center w-28 -mt-4">
+                        <div className="relative mb-2">
+                          <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-yellow-400 shadow-xl shadow-yellow-400/30 bg-yellow-100 ring-4 ring-yellow-400/20">
+                            {getUserAvatar(leader.userId) ? <img src={getUserAvatar(leader.userId)} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-yellow-600 font-bold text-2xl">{getUserName(leader.userId).charAt(0)}</div>}
+                          </div>
+                          <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-2xl">👑</span>
+                        </div>
+                        <p className="text-sm font-black text-yellow-600 dark:text-yellow-400 text-center truncate w-full">{getUserName(leader.userId)}</p>
+                        <div className="w-full h-24 bg-gradient-to-t from-yellow-400 to-yellow-300 dark:from-yellow-600 dark:to-yellow-500 rounded-t-lg mt-1 flex items-center justify-center shadow-lg shadow-yellow-400/20"><span className="text-3xl font-black text-yellow-800 dark:text-yellow-900">1</span></div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* BRONS */}
+                  {(() => {
+                    const leader = podiumLeaders[2];
+                    return (
+                      <div className="flex flex-col items-center w-24">
+                        <div className="relative mb-2">
+                          <div className="w-16 h-16 rounded-full overflow-hidden border-3 border-orange-400 dark:border-orange-500 shadow-lg bg-orange-100">
+                            {getUserAvatar(leader.userId) ? <img src={getUserAvatar(leader.userId)} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-orange-500 font-bold text-xl">{getUserName(leader.userId).charAt(0)}</div>}
+                          </div>
+                          <span className="absolute -top-1 -right-1 text-lg">🥉</span>
+                        </div>
+                        <p className="text-xs font-bold text-orange-600 dark:text-orange-400 text-center truncate w-full">{getUserName(leader.userId)}</p>
+                        <div className="w-full h-12 bg-gradient-to-t from-orange-300 to-orange-200 dark:from-orange-700 dark:to-orange-600 rounded-t-lg mt-1 flex items-center justify-center"><span className="text-2xl font-black text-orange-500 dark:text-orange-300">3</span></div>
+                      </div>
+                    );
+                  })()}
                 </div>
-              </div>
-            </div>
-          </section>
-        )}
+                <p className="text-[10px] text-center text-gray-400 dark:text-gray-500 mt-1">Min. {Math.ceil((leaderboard[0]?.gamesPlayed || 0) / 2)} potjes nodig om op het podium te staan</p>
+              </section>
+            )}
 
-        {/* ===== MATCH HISTORIEK ===== */}
-        {bierpongGames.length > 0 && (
-          <section>
-            <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <span className="material-icons-round text-base text-blue-500">history</span>
-              Match Historiek
-            </h2>
-            <div className="bg-white dark:bg-[#1e293b] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
-              {[...bierpongGames]
-                .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                .slice(0, 10)
-                .map((game, i) => {
-                  const is1v1 = game.playerIds.length === 2;
-                  if (!is1v1) return null; // Simplified history view for 1v1 for now
-                  const p1 = game.playerIds[0];
-                  const p2 = game.playerIds[1];
-                  const winner = game.winnerIds[0];
-                  const loser = p1 === winner ? p2 : p1;
-
-                  const winnerUser = getUser(winner);
-                  const loserUser = getUser(loser);
+            {/* ===== LEADERBOARD PREVIEW (TOP 3) ===== */}
+            <section>
+              <div className="bg-white dark:bg-[#1e293b] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden mb-4">
+                {podiumLeaders.slice(0, 3).map((leader, index) => {
+                  const originalRank = originalRankMap[leader.userId] ?? index;
+                  const medal = getMedalStyle(originalRank);
+                  const isGold = originalRank === 0;
+                  const isDuo = isDuoWinner(leader.userId);
 
                   return (
-                    <div key={game.id || i} className="p-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    <div key={leader.userId} className={`flex items-center justify-between p-4 ${index !== 2 ? 'border-b border-gray-100 dark:border-gray-800' : ''} ${isGold ? 'bg-yellow-50/50 dark:bg-yellow-900/5' : ''}`}>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full overflow-hidden border border-green-500 bg-green-50 shrink-0">
-                          {winnerUser?.avatar ? <img src={winnerUser.avatar} alt="Winner" className="w-full h-full object-cover" /> : <div className="w-full h-full flex flex-col items-center justify-center text-green-700 font-bold text-xs">{getUserName(winner).charAt(0)}</div>}
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shrink-0 ${medal ? `${medal.bg} ${medal.text}` : 'bg-gray-100 text-gray-500'}`}>
+                          {medal ? medal.icon : index + 1}
                         </div>
-                        <div className="text-xs font-black text-gray-400">VS</div>
-                        <div className="w-8 h-8 rounded-full overflow-hidden border border-red-300 bg-red-50 opacity-80 shrink-0">
-                          {loserUser?.avatar ? <img src={loserUser.avatar} alt="Loser" className="w-full h-full object-cover grayscale" /> : <div className="w-full h-full flex flex-col items-center justify-center text-red-700 font-bold text-xs grayscale">{getUserName(loser).charAt(0)}</div>}
+                        <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 ${isGold ? 'border-[2px] border-yellow-400' : isDuo ? 'border-[2px] border-purple-500' : ''}`}>
+                          {getUserAvatar(leader.userId) ? <img src={getUserAvatar(leader.userId)} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-blue-100 flex items-center justify-center font-bold">{getUserName(leader.userId).charAt(0)}</div>}
+                        </div>
+                        <div>
+                          <p className={`font-extrabold text-sm ${isGold ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-900 dark:text-white'}`}>{getUserName(leader.userId)}</p>
+                          <p className="text-xs text-gray-400">{leader.gamesPlayed} gespeeld</p>
                         </div>
                       </div>
-
-                      <div className="text-right flex-1 ml-3 min-w-0">
-                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                          <span className="text-green-600 dark:text-green-400">{getUserName(winner)}</span>
-                          <span className="text-gray-400 mx-1">versloeg</span>
-                          <span>{getUserName(loser)}</span>
-                        </p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">
-                          {new Date(game.timestamp).toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' })} • {new Date(game.timestamp).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
+                      <div className="text-right">
+                        <div className={`text-lg font-black ${isGold ? 'text-yellow-500' : 'text-blue-600 dark:text-blue-400'}`}>{leader.winRatio}%</div>
+                        <div className="text-[10px] text-gray-400 uppercase font-bold">Win ratio</div>
                       </div>
                     </div>
                   );
                 })}
-            </div>
-            {bierpongGames.length > 10 && (
-              <p className="text-center text-xs text-gray-400 mt-3 italic">Laatste 10 matches worden weergegeven.</p>
+              </div>
+
+              {/* BIG BUTTON TO OPEN FULL LEADERBOARD */}
+              <button 
+                onClick={() => setShowAllLeaders(true)}
+                className="w-full bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 p-4 rounded-2xl border border-blue-100 dark:border-blue-800/50 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all group"
+              >
+                <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                  <span className="material-icons-round text-2xl">format_list_numbered</span>
+                </div>
+                <div className="flex-1 text-left">
+                  <h3 className="font-extrabold text-blue-900 dark:text-blue-100 text-base">Alle Scores Bekijken</h3>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Zoek en sorteer {leaderboard.length} spelers</p>
+                </div>
+                <span className="material-icons-round text-blue-400 group-hover:translate-x-1 transition-transform">arrow_forward_ios</span>
+              </button>
+            </section>
+
+            {/* ===== BIERPONGTOERNOOI KAMPIOENEN (DUO) ===== */}
+            {duoBierpongWinners.length > 0 && (
+              <section>
+                <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <span className="material-icons-round text-base text-purple-500">emoji_events</span>
+                  Toernooi Kampioenen
+                </h2>
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#2d1b4e] to-[#150a21] dark:from-purple-950 dark:to-gray-950 border border-purple-800/30 p-5 shadow-lg">
+                  <div className="relative z-10 flex justify-between items-center">
+                    <div className="flex flex-col flex-1 pr-2">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <span className="material-icons-round text-yellow-400 text-sm">workspace_premium</span>
+                        <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Bierpong</h2>
+                      </div>
+                      <p className="text-xl font-black text-white leading-tight mb-1 truncate">
+                        {duoBierpongWinners.map(id => getUserName(id).split(' ')[0]).join(' & ')}
+                      </p>
+                      <p className="text-xs text-purple-300 font-medium">The team to beat 🍻</p>
+                    </div>
+                    <div className="flex -space-x-4 shrink-0">
+                      {duoBierpongWinners.slice(0, 2).map((id, index) => (
+                        <img key={id} src={getUserAvatar(id) || `https://ui-avatars.com/api/?name=${getUserName(id)}&background=random`} className={`w-14 h-14 rounded-full border-[3px] border-yellow-400 bg-purple-900 object-cover shadow-lg relative z-${20 - index * 10}`} alt="Champ" />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                </div>
+              </section>
             )}
-          </section>
+
+            {/* ===== MATCH HISTORIEK ===== */}
+            {bierpongGames.length > 0 && (
+              <section>
+                <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <span className="material-icons-round text-base text-blue-500">history</span>
+                  Recente Matches
+                </h2>
+                <div className="bg-white dark:bg-[#1e293b] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
+                  {[...bierpongGames].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 10).map((game, i) => {
+                    const is1v1 = game.playerIds.length === 2;
+                    if (!is1v1) return null; 
+                    const p1 = game.playerIds[0]; const p2 = game.playerIds[1];
+                    const winner = game.winnerIds[0]; const loser = p1 === winner ? p2 : p1;
+                    return (
+                      <div key={game.id || i} className="p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full overflow-hidden border border-green-500 bg-green-50 shrink-0">
+                            {getUserAvatar(winner) ? <img src={getUserAvatar(winner)} alt="Win" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-green-700 font-bold text-xs">{getUserName(winner).charAt(0)}</div>}
+                          </div>
+                          <div className="text-xs font-black text-gray-400">VS</div>
+                          <div className="w-8 h-8 rounded-full overflow-hidden border border-red-300 bg-red-50 opacity-80 shrink-0">
+                            {getUserAvatar(loser) ? <img src={getUserAvatar(loser)} alt="Lose" className="w-full h-full object-cover grayscale" /> : <div className="w-full h-full flex items-center justify-center text-red-700 font-bold text-xs grayscale">{getUserName(loser).charAt(0)}</div>}
+                          </div>
+                        </div>
+                        <div className="text-right flex-1 ml-3 min-w-0">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                            <span className="text-green-600 dark:text-green-400">{getUserName(winner)}</span>
+                            <span className="text-gray-400 mx-1">vs</span>
+                            <span>{getUserName(loser)}</span>
+                          </p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">{new Date(game.timestamp).toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' })}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+          </>
         )}
-      </>
-    )}
       </main>
 
-      {/* ===== SCORE INVULLEN MODAL ===== */}
+      {/* SCORE MODAL BLIJFT IDENTIEK, START HIERONDER */}
       {(() => {
         const allSelected = gameMode === '1v1' ? selectedPlayers.length === 2 : (team1.length === 2 && team2.length === 2);
         const hasWinner = gameMode === '1v1' ? selectedWinnerIds.length > 0 : !!winningTeam;
