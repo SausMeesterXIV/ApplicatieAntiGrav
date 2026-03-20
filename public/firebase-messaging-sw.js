@@ -7,7 +7,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/fireba
 import { getMessaging, onBackgroundMessage } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-messaging-sw.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAPGTVjdJ3ymPe7cK42HVN-397fX4fPxIM",
+  apiKey: "AIzaSyDo5F-_veVMNrgohtzvVjfMlsfM89wvkQ8", // De nieuwe, beperkte sleutel
   authDomain: "applicatieantigrav.firebaseapp.com",
   projectId: "applicatieantigrav",
   storageBucket: "applicatieantigrav.firebasestorage.app",

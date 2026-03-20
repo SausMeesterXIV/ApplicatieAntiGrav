@@ -64,7 +64,7 @@ export const StrepenScreen: React.FC = () => {
 
     const thisWeekStreaks = streaks.filter((s: any) => 
       new Date(s.timestamp) >= saturdayReset && 
-      s.drinkName === 'Freedom' // Hier tellen we enkel nog de Freedom-streepjes
+      s.drinkName === SPECIAL_DRINKS.PINT_FREEDOM // Enkel Freedom telt voor de ranking
     );
     thisWeekStreaks.forEach((s: any) => { counts[s.userId] = (counts[s.userId] || 0) + (s.amount || 1); });
 
@@ -86,10 +86,21 @@ export const StrepenScreen: React.FC = () => {
   const displayCount = getCurrentCountRaw();
 
   const validQuickDrinks = useMemo(() => {
-    return drinks.filter(d => d.name === 'Frisdrank' || d.name === 'Freedom');
+    return drinks.filter(d => 
+      d.name === 'Frisdrank' || d.name === SPECIAL_DRINKS.PINT_FREEDOM
+    );
   }, [drinks]);
   
   const activeQuickDrinkId = String(currentUser?.quickDrinkId || (validQuickDrinks.length > 0 ? validQuickDrinks[0].id : ''));
+
+  const isStillValid = (validUntil?: string) => {
+    if (!validUntil) return true;
+    try {
+      return new Date(validUntil) >= new Date(new Date().setHours(0,0,0,0));
+    } catch (e) {
+      return true;
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
@@ -153,7 +164,10 @@ export const StrepenScreen: React.FC = () => {
             <div className="mb-6">
               <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2.5">Kies Drank</p>
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                {drinks.filter(d => d.name === 'Frisdrank' || d.name === 'Freedom').map(drink => (
+                {drinks.filter(d => 
+                  (d.name === 'Frisdrank' || d.name === SPECIAL_DRINKS.PINT_FREEDOM || (d.isTemporary && isStillValid(d.validUntil || undefined))) && 
+                  d.name !== SPECIAL_DRINKS.BAK_FREEDOM
+                ).map(drink => (
                   <button key={drink.id} onClick={() => setSelectedDrink(drink)} className={`px-4 py-2.5 text-sm font-medium rounded-xl whitespace-nowrap shadow-sm transition-all flex items-center gap-2 ${selectedDrink?.id === drink.id ? 'bg-blue-600 text-white ring-2 ring-blue-600 ring-offset-2 dark:ring-offset-[#1e2330]' : 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 hover:bg-gray-100'}`}>
                     {drink.name}
                     {drink.isTemporary && <span className="material-icons-round text-[10px] opacity-70">timer</span>}

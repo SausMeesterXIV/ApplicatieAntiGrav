@@ -4,7 +4,7 @@ import { getMessaging, isSupported as isMessagingSupported } from "firebase/mess
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAPGTVjdJ3ymPe7cK42HVN-397fX4fPxIM",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY, 
   authDomain: "applicatieantigrav.firebaseapp.com",
   projectId: "applicatieantigrav",
   storageBucket: "applicatieantigrav.firebasestorage.app",

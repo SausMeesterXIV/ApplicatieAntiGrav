@@ -21,11 +21,19 @@ CREATE POLICY "frituur_vrij_bestellen" ON public.frituur_bestellingen FOR ALL US
 CREATE POLICY "profiles_vrij_lezen" ON public.profiles FOR SELECT USING (auth.role() = 'authenticated');
 
 -- 4. Activeer Realtime voor alle relevante tabellen
--- Tip: Run deze alleen als ze nog niet toegevoegd waren.
--- Als je een fout krijgt dat ze al bestaan, kun je dat negeren.
-ALTER PUBLICATION supabase_realtime ADD TABLE public.frituur_bestellingen;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.notificaties;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.bierpong_games;
+-- We gebruiken een DO block om fouten te voorkomen als ze al lid zijn
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'frituur_bestellingen') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.frituur_bestellingen;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'notificaties') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.notificaties;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'bierpong_games') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.bierpong_games;
+    END IF;
+END $$;
 
 -- 5. BRICK 2: Enum opschonen & Trigger herstellen
 -- Idealiter drop en recreate je de type als je database nog leeg is.
@@ -50,3 +58,22 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 6. BRICK 3: Profiles Schema Update (FCM Support)
 -- Voeg de ontbrekende kolom toe voor push-notificaties
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS fcm_token TEXT;
+
+-- 7. SMART VIEW: Active Dranken Filter
+-- We maken een View die enkel de dranken toont die 'nu' geldig zijn
+CREATE OR REPLACE VIEW public.v_active_dranken AS
+SELECT *
+FROM public.dranken
+WHERE 
+  -- 1. Altijd de vaste dranken tonen
+  is_temporary = false 
+  OR (
+    -- 2. Tijdelijke dranken enkel tonen als de datum nog niet verstreken is
+    is_temporary = true 
+    AND (
+      valid_until IS NULL 
+      OR valid_until = '' 
+      -- Gebruik NULLIF om lege strings te filteren voor we naar date casten
+      OR (valid_until <> '' AND valid_until::date >= CURRENT_DATE)
+    )
+  );

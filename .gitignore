@@ -1,3 +1,8 @@
+# Geheime omgevingsvariabelen
+.env
+.env.local
+.env.production
+
 # Logs
 logs
 *.log

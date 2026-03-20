@@ -77,11 +77,11 @@ export async function uploadAvatar(userId: string, file: File): Promise<string> 
 
 export async function fetchDranken(): Promise<Drink[]> {
   const { data, error } = await supabase
-    .from('dranken')
+    .from('v_active_dranken')
     .select('*')
     .order('naam');
   if (error) throw error;
-  return (data || []).map(mapDrank);
+  return (data as any[] || []).map(mapDrank);
 }
 
 function mapDrank(d: DbDrankRow): Drink {
