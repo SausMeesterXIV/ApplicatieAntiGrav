@@ -50,7 +50,7 @@ export const RolesManageScreen: React.FC = () => {
   const [pendingDeactivationUser, setPendingDeactivationUser] = useState<User | null>(null);
   const [newRoleCategory, setNewRoleCategory] = useState<'Team' | 'Groep'>('Team');
   const [isNewYearModalOpen, setIsNewYearModalOpen] = useState(false);
-  const [newHeads, setNewHeads] = useState<string[]>([]); // IDs van de 2 nieuwe hoofdleidingen
+  const [selectedHeads, setSelectedHeads] = useState<string[]>([]); // IDs van de 2 nieuwe hoofdleidingen
 
   const handleCreateRole = () => {
     if (!newRoleLabel) return;
@@ -174,35 +174,33 @@ export const RolesManageScreen: React.FC = () => {
   };
 
   const handleNewYearReset = async () => {
-    if (newHeads.length !== 2) {
+    if (selectedHeads.length !== 2) {
       showToast('Selecteer precies 2 nieuwe hoofdleidingen', 'error');
       return;
     }
 
-    if (!window.confirm('WAARSCHUWING: Dit wist ALLE rollen van iedereen en stelt de 2 geselecteerde personen in als de nieuwe hoofdleiding. Dit kan niet ongedaan worden gemaakt. Doorgaan?')) return;
+    if (!window.confirm('WAARSCHUWING: Dit wist ALLE rollen van alle leiding en stelt de 2 gekozen personen in als nieuwe hoofdleiding. Doorgaan?')) return;
 
     setLoading(true);
     try {
-      const promises = localUsers.map(user => {
-        // Als de gebruiker een van de geselecteerde hoofdleidingen is, krijgt hij de rol.
-        // Anders wordt de array leeg.
-        const newRoles = newHeads.includes(user.id) ? ['Hoofdleiding'] : [];
-        return db.updateProfile(user.id, { roles: newRoles });
+      const promises = localUsers.map(u => {
+        // Wis alle rollen, behalve voor de 2 nieuwe hoofdleidingen
+        const newRoles = selectedHeads.includes(u.id) ? ['Hoofdleiding'] : [];
+        return db.updateProfile(u.id, { roles: newRoles });
       });
 
       await Promise.all(promises);
-
-      // Update lokale state en context
+      
+      // Update lokale data
       const updatedUsers = localUsers.map(u => ({
         ...u,
-        roles: newHeads.includes(u.id) ? ['Hoofdleiding'] : []
+        roles: selectedHeads.includes(u.id) ? ['Hoofdleiding'] : []
       }));
-      
       setLocalUsers(updatedUsers);
       setUsersContext(updatedUsers);
       
       setIsNewYearModalOpen(false);
-      setNewHeads([]);
+      setSelectedHeads([]);
       showToast('Nieuw jaar succesvol gestart!', 'success');
     } catch (error) {
       showToast('Fout bij het resetten van het jaar', 'error');
@@ -323,7 +321,7 @@ export const RolesManageScreen: React.FC = () => {
               </button>
               <button
                 onClick={() => setIsNewYearModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-amber-400 text-amber-600 text-sm font-bold transition-all whitespace-nowrap hover:bg-amber-50 dark:hover:bg-amber-900/10"
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-amber-400 text-amber-600 text-sm font-bold transition-all whitespace-nowrap hover:bg-amber-50"
               >
                 <span className="material-icons-round text-lg">autorenew</span>
                 Nieuw Jaar
@@ -466,9 +464,9 @@ export const RolesManageScreen: React.FC = () => {
 
             <div className="space-y-3">
               {availableRoles.map(role => {
-                // Kijk in localUsers voor de meest actuele status van deze specifieke gebruiker
-                const currentUserState = localUsers.find(u => u.id === selectedUser.id);
-                const isToggled = (currentUserState?.roles || []).includes(role.label);
+                // Haal de actuele status van de gebruiker direct uit de lijst
+                const userState = localUsers.find(u => u.id === selectedUser.id);
+                const isToggled = (userState?.roles || []).includes(role.label);
                 const colorClasses = role.color.split(' ').slice(0,3).join(' ');
 
                 return (
@@ -673,52 +671,34 @@ export const RolesManageScreen: React.FC = () => {
         title="Nieuw Jaar Starten"
       >
         <div className="space-y-4">
-          <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-100 dark:border-amber-800">
-            <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
-              Bij het starten van een nieuw jaar worden <strong>alle rollen van elke gebruiker gewist</strong>. 
-              Selecteer hieronder de 2 personen die het stokje overnemen als hoofdleiding.
-            </p>
-          </div>
-
+          <p className="text-sm text-gray-500">Selecteer de 2 personen die het nieuwe jaar als hoofdleiding starten.</p>
+          
           <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
             {localUsers.filter(u => u.actief).map(user => {
-              const isSelected = newHeads.includes(user.id);
+              const isSelected = selectedHeads.includes(user.id);
               return (
                 <button
                   key={user.id}
                   onClick={() => {
-                    if (isSelected) setNewHeads(newHeads.filter(id => id !== user.id));
-                    else if (newHeads.length < 2) setNewHeads([...newHeads, user.id]);
+                    if (isSelected) setSelectedHeads(selectedHeads.filter(id => id !== user.id));
+                    else if (selectedHeads.length < 2) setSelectedHeads([...selectedHeads, user.id]);
                   }}
-                  className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
-                    isSelected 
-                      ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800' 
-                      : 'bg-gray-50 border-gray-100 dark:bg-[#0f172a] dark:border-gray-800'
-                  }`}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${isSelected ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-100'}`}
                 >
-                  <span className="font-bold text-sm text-gray-900 dark:text-white">{user.naam}</span>
-                  {isSelected ? (
-                    <span className="material-icons-round text-blue-600">check_circle</span>
-                  ) : (
-                    <div className="w-6 h-6 rounded-full border-2 border-gray-300"></div>
-                  )}
+                  <span className="font-bold text-sm">{user.naam}</span>
+                  {isSelected && <span className="material-icons-round text-blue-600">check_circle</span>}
                 </button>
               );
             })}
           </div>
 
-          <div className="flex flex-col gap-2 pt-2">
-            <div className="text-[10px] text-center text-gray-500 uppercase font-bold tracking-widest">
-              {newHeads.length}/2 Geselecteerd
-            </div>
-            <button
-              disabled={newHeads.length !== 2 || loading}
-              onClick={handleNewYearReset}
-              className="w-full bg-amber-600 disabled:opacity-30 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
-            >
-              Reset & Start Nieuw Jaar
-            </button>
-          </div>
+          <button
+            disabled={selectedHeads.length !== 2 || loading}
+            onClick={handleNewYearReset}
+            className="w-full bg-amber-600 disabled:opacity-30 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
+          >
+            Bevestig & Wis alle rollen
+          </button>
         </div>
       </Modal>
 
