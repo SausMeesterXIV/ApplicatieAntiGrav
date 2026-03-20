@@ -353,52 +353,64 @@ export const BierpongScreen: React.FC = () => {
                   );
                 })}
               </div>
-
-              {/* BIG BUTTON TO OPEN FULL LEADERBOARD */}
-              <button 
-                onClick={() => setShowAllLeaders(true)}
-                className="w-full bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 p-4 rounded-2xl border border-blue-100 dark:border-blue-800/50 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all group"
-              >
-                <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-md group-hover:scale-105 transition-transform">
-                  <span className="material-icons-round text-2xl">format_list_numbered</span>
-                </div>
-                <div className="flex-1 text-left">
-                  <h3 className="font-extrabold text-blue-900 dark:text-blue-100 text-base">Alle Scores Bekijken</h3>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Zoek en sorteer {leaderboard.length} spelers</p>
-                </div>
-                <span className="material-icons-round text-blue-400 group-hover:translate-x-1 transition-transform">arrow_forward_ios</span>
-              </button>
             </section>
 
             {/* ===== BIERPONGTOERNOOI KAMPIOENEN (DUO) ===== */}
             {duoBierpongWinners.length > 0 && (
               <section>
                 <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                  <span className="material-icons-round text-base text-purple-500">emoji_events</span>
+                  <span className="material-icons-round text-base text-yellow-500">workspace_premium</span>
                   Toernooi Kampioenen
                 </h2>
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#2d1b4e] to-[#150a21] dark:from-purple-950 dark:to-gray-950 border border-purple-800/30 p-5 shadow-lg">
+                <div className="bg-gradient-to-r from-amber-50/80 to-yellow-50/80 dark:from-yellow-900/10 dark:to-amber-900/10 rounded-2xl p-4 shadow-sm border border-yellow-300/60 dark:border-yellow-700/50 relative overflow-hidden">
+                  
+                  {/* Decoratieve kroon watermerk op de achtergrond */}
+                  <span className="material-icons-round absolute -right-4 -top-4 text-[80px] text-yellow-500/10 dark:text-yellow-500/5 rotate-12 pointer-events-none">workspace_premium</span>
+
                   <div className="relative z-10 flex justify-between items-center">
                     <div className="flex flex-col flex-1 pr-2">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <span className="material-icons-round text-yellow-400 text-sm">workspace_premium</span>
-                        <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Bierpong</h2>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <span className="material-icons-round text-yellow-600 dark:text-yellow-500 text-sm">emoji_events</span>
+                        <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-700 dark:text-yellow-500">Team to beat</h2>
                       </div>
-                      <p className="text-xl font-black text-white leading-tight mb-1 truncate">
+                      <p className="text-lg sm:text-xl font-black text-gray-900 dark:text-white leading-tight mb-0.5 truncate">
                         {duoBierpongWinners.map(id => getUserName(id).split(' ')[0]).join(' & ')}
                       </p>
-                      <p className="text-xs text-purple-300 font-medium">The team to beat 🍻</p>
+                      <p className="text-xs text-yellow-700/80 dark:text-yellow-500/70 font-bold">Huidige Kampioenen 🍻</p>
                     </div>
-                    <div className="flex -space-x-4 shrink-0">
+
+                    <div className="flex -space-x-3 shrink-0">
                       {duoBierpongWinners.slice(0, 2).map((id, index) => (
-                        <img key={id} src={getUserAvatar(id) || `https://ui-avatars.com/api/?name=${getUserName(id)}&background=random`} className={`w-14 h-14 rounded-full border-[3px] border-yellow-400 bg-purple-900 object-cover shadow-lg relative z-${20 - index * 10}`} alt="Champ" />
+                        <div key={id} className={`w-12 h-12 rounded-full border-2 border-white dark:border-[#1e2330] shadow-sm relative z-${20 - index * 10} flex items-center justify-center overflow-hidden bg-gray-100 dark:bg-gray-800`}>
+                          {getUserAvatar(id) ? (
+                            <img src={getUserAvatar(id)} className="w-full h-full object-cover" alt="Champ" />
+                          ) : (
+                            <span className="text-gray-500 font-bold text-sm">{getUserName(id).charAt(0)}</span>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
                 </div>
               </section>
             )}
+
+            {/* BIG BUTTON TO OPEN FULL LEADERBOARD */}
+            <button 
+              onClick={() => setShowAllLeaders(true)}
+              className="w-full bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 p-4 rounded-2xl border border-blue-100 dark:border-blue-800/50 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all group"
+            >
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                <span className="material-icons-round text-2xl">format_list_numbered</span>
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="font-extrabold text-blue-900 dark:text-blue-100 text-base">Alle Scores Bekijken</h3>
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Zoek en sorteer {leaderboard.length} spelers</p>
+              </div>
+              <span className="material-icons-round text-blue-400 group-hover:translate-x-1 transition-transform">arrow_forward_ios</span>
+            </button>
+
+
 
             {/* ===== MATCH HISTORIEK ===== */}
             {bierpongGames.length > 0 && (

@@ -166,16 +166,26 @@ export const HomeScreen: React.FC = () => {
                     
                     if (daysLeft < 0) return null;
                     
+                    const isToday = daysLeft === 0;
+
                     return (
-                      <div key={item.id} className={`rounded-2xl p-4 text-white shadow-lg ${daysLeft === 0 ? 'bg-gradient-to-r from-rose-500 to-pink-500 animate-pulse' : 'bg-gradient-to-br from-blue-600 to-indigo-700'}`}>
-                        <h2 className="text-[10px] font-black uppercase tracking-wider opacity-80 mb-1">{item.title}</h2>
-                        <p className="text-lg font-black leading-none">{daysLeft === 0 ? 'Is vandaag! 🎉' : `Nog ${daysLeft} nachten!`}</p>
+                      <div key={item.id} className={`bg-white dark:bg-[#1e2330] p-3.5 rounded-2xl shadow-sm border ${isToday ? 'border-rose-200 dark:border-rose-900/50' : 'border-gray-100 dark:border-gray-800'} flex items-center gap-3 transition-colors`}>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isToday ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-500' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'}`}>
+                          <span className={`material-icons-round text-xl ${isToday ? 'animate-pulse' : ''}`}>{isToday ? 'celebration' : 'hourglass_empty'}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-sm truncate text-gray-900 dark:text-white mb-0.5">{item.title}</h3>
+                          <p className={`text-xs font-medium truncate ${isToday ? 'text-rose-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                            {isToday ? 'Is vandaag! 🎉' : `Nog ${daysLeft} nacht${daysLeft === 1 ? '' : 'en'}`}
+                          </p>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
               </section>
             )}
+
 
             {/* --- 2. AGENDA / AANKOMENDE EVENTS --- */}
             {upcomingEvents && upcomingEvents.length > 0 && (
@@ -210,58 +220,6 @@ export const HomeScreen: React.FC = () => {
               </section>
             )}
 
-
-            {/* --- 3. BIERPONG KAMPIOENEN --- */}
-            {duoBierpongWinners && duoBierpongWinners.length > 0 && (
-              <section onClick={() => navigate('/bierpong')} className="mt-4 bg-gradient-to-r from-amber-50/80 to-yellow-50/80 dark:from-yellow-900/10 dark:to-amber-900/10 rounded-2xl p-4 shadow-sm border border-yellow-300/60 dark:border-yellow-700/50 relative overflow-hidden cursor-pointer active:scale-[0.98] transition-transform">
-                
-                {/* Decoratieve kroon watermerk op de achtergrond */}
-                <span className="material-icons-round absolute -right-4 -top-4 text-[80px] text-yellow-500/10 dark:text-yellow-500/5 rotate-12 pointer-events-none">workspace_premium</span>
-
-                <div className="relative z-10 flex justify-between items-center">
-                  <div className="flex flex-col flex-1 pr-2">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <span className="material-icons-round text-yellow-600 dark:text-yellow-500 text-sm">emoji_events</span>
-                      <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-700 dark:text-yellow-500">Team to beat</h2>
-                    </div>
-                    <p className="text-lg sm:text-xl font-black text-gray-900 dark:text-white leading-tight mb-0.5 truncate">
-                      {duoBierpongWinners.map(id => users?.find(u => u.id === id)?.naam?.split(' ')[0] || 'Lid').join(' & ')}
-                    </p>
-                    <p className="text-xs text-yellow-700/80 dark:text-yellow-500/70 font-bold">Huidige Kampioenen 🍻</p>
-                  </div>
-
-                  <div className="flex -space-x-3 shrink-0">
-                    {duoBierpongWinners.slice(0, 2).map((id, index) => {
-                      const user = users?.find(u => u.id === id);
-                      return (
-                        <div key={id} className={`w-12 h-12 rounded-full border-2 border-white dark:border-[#1e2330] shadow-sm relative z-${20 - index * 10} flex items-center justify-center overflow-hidden bg-gray-100 dark:bg-gray-800`}>
-                          {user?.avatar ? (
-                            <img src={user.avatar} className="w-full h-full object-cover" alt="Champ" />
-                          ) : (
-                            <span className="text-gray-500 font-bold text-sm">{user?.naam?.charAt(0) || 'K'}</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* LEADERBOARD KNOP */}
-            <div 
-              onClick={() => navigate('/bierpong')}
-              className="mt-6 bg-white dark:bg-[#1e293b] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all"
-            >
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
-                <span className="material-icons-round text-2xl">emoji_events</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-gray-900 dark:text-white">Leaderboard</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Bekijk de stand</p>
-              </div>
-              <span className="material-icons-round text-gray-300 dark:text-gray-600">chevron_right</span>
-            </div>
 
 
             {/* QUOTE VAN DE WEEK */}
@@ -302,6 +260,22 @@ export const HomeScreen: React.FC = () => {
                 <div className="text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded-lg flex justify-between dark:text-gray-300">Bestelling plaatsen <span className="material-icons-round text-xs">arrow_forward_ios</span></div>
               </div>
             </div>
+
+            {/* LEADERBOARD KNOP */}
+            <div 
+              onClick={() => navigate('/bierpong')}
+              className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all"
+            >
+              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+                <span className="material-icons-round text-2xl">emoji_events</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900 dark:text-white">Leaderboard</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Bekijk de stand</p>
+              </div>
+              <span className="material-icons-round text-gray-300 dark:text-gray-600">chevron_right</span>
+            </div>
+
 
             {/* --- 2. JOUW PERSOONLIJKE TO-DO (GODMODE ONLY) --- */}
             {currentUser?.rol === 'godmode' && (
