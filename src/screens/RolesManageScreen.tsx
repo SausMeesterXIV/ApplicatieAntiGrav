@@ -41,8 +41,6 @@ export const RolesManageScreen: React.FC = () => {
     return (u.naam || '').toLowerCase().includes(search.toLowerCase());
   });
 
-  // Role toggles state (for the modal)
-  const [toggles, setToggles] = useState<Record<string, boolean>>({});
 
   const [isAddingRole, setIsAddingRole] = useState(false);
   const [newRoleLabel, setNewRoleLabel] = useState('');
@@ -51,6 +49,8 @@ export const RolesManageScreen: React.FC = () => {
   const [isDeletingRoles, setIsDeletingRoles] = useState(false);
   const [pendingDeactivationUser, setPendingDeactivationUser] = useState<User | null>(null);
   const [newRoleCategory, setNewRoleCategory] = useState<'Team' | 'Groep'>('Team');
+  const [isNewYearModalOpen, setIsNewYearModalOpen] = useState(false);
+  const [newHeads, setNewHeads] = useState<string[]>([]); // IDs van de 2 nieuwe hoofdleidingen
 
   const handleCreateRole = () => {
     if (!newRoleLabel) return;
@@ -121,11 +121,6 @@ export const RolesManageScreen: React.FC = () => {
 
   const handleOpenUser = (user: User) => {
     setSelectedUser(user);
-    const newToggles: Record<string, boolean> = {};
-    availableRoles.forEach(r => {
-      newToggles[r.label] = (user.roles || []).includes(r.label);
-    });
-    setToggles(newToggles);
   };
 
   const toggleRoleForUser = (userId: string, role: string) => {
@@ -178,6 +173,44 @@ export const RolesManageScreen: React.FC = () => {
     });
   };
 
+  const handleNewYearReset = async () => {
+    if (newHeads.length !== 2) {
+      showToast('Selecteer precies 2 nieuwe hoofdleidingen', 'error');
+      return;
+    }
+
+    if (!window.confirm('WAARSCHUWING: Dit wist ALLE rollen van iedereen en stelt de 2 geselecteerde personen in als de nieuwe hoofdleiding. Dit kan niet ongedaan worden gemaakt. Doorgaan?')) return;
+
+    setLoading(true);
+    try {
+      const promises = localUsers.map(user => {
+        // Als de gebruiker een van de geselecteerde hoofdleidingen is, krijgt hij de rol.
+        // Anders wordt de array leeg.
+        const newRoles = newHeads.includes(user.id) ? ['Hoofdleiding'] : [];
+        return db.updateProfile(user.id, { roles: newRoles });
+      });
+
+      await Promise.all(promises);
+
+      // Update lokale state en context
+      const updatedUsers = localUsers.map(u => ({
+        ...u,
+        roles: newHeads.includes(u.id) ? ['Hoofdleiding'] : []
+      }));
+      
+      setLocalUsers(updatedUsers);
+      setUsersContext(updatedUsers);
+      
+      setIsNewYearModalOpen(false);
+      setNewHeads([]);
+      showToast('Nieuw jaar succesvol gestart!', 'success');
+    } catch (error) {
+      showToast('Fout bij het resetten van het jaar', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleResetNickname = (userId: string) => {
     if (!window.confirm('Weet je zeker dat je de bijnaam van deze persoon wilt resetten?')) return;
 
@@ -191,50 +224,6 @@ export const RolesManageScreen: React.FC = () => {
     }
   };
 
-  // Handle saving from the modal
-  const saveFromModal = async () => {
-    if (!selectedUser) return;
-
-    // Construct new roles based on toggles
-    const HOOFDLEIDING_LABEL = 'Hoofdleiding';
-    const newRoles = availableRoles.filter(r => toggles[r.label]).map(r => r.label);
-
-    // Business Logic for Hoofdleiding
-    const hadHoofdleiding = (selectedUser.roles || []).includes(HOOFDLEIDING_LABEL);
-    const willHaveHoofdleiding = newRoles.includes(HOOFDLEIDING_LABEL);
-
-    if (hadHoofdleiding && !willHaveHoofdleiding) {
-      const hoofdleidingCount = localUsers.filter(u => (u.roles || []).includes(HOOFDLEIDING_LABEL)).length;
-      if (hoofdleidingCount <= 1) {
-        showToast('Er moet altijd minstens Ã©Ã©n hoofdleiding blijven', 'error');
-        return;
-      }
-    }
-
-    if (!hadHoofdleiding && willHaveHoofdleiding && selectedUser.id === currentUser?.id) {
-      showToast('Je kunt jezelf niet tot hoofdleiding maken', 'error');
-      // Reset toggle for UI consistency if we don't close modal (but we do close it below, so it's fine)
-      return;
-    }
-
-    const otherRoles = (selectedUser.roles || []).filter((r: string) => !availableRoles.find(ar => ar.label === r));
-    const finalRoles = [...newRoles, ...otherRoles];
-
-    const updatedUser = { ...selectedUser, roles: finalRoles };
-
-    // Optimistic update
-    setLocalUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
-    setSelectedUser(null);
-
-    try {
-      await db.updateProfile(selectedUser.id, { roles: finalRoles });
-      // Sync to global context
-      setUsersContext(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
-      showToast('Rollen opgeslagen!', 'success');
-    } catch (error) {
-      showToast('Fout bij het opslaan van de rollen', 'error');
-    }
-  };
 
   const toggleUserActief = async (user: User) => {
     // If currently active, we need confirmation before deactivating
@@ -331,6 +320,13 @@ export const RolesManageScreen: React.FC = () => {
               >
                 <span className="material-icons-round text-lg">delete_sweep</span>
                 Beheer
+              </button>
+              <button
+                onClick={() => setIsNewYearModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-amber-400 text-amber-600 text-sm font-bold transition-all whitespace-nowrap hover:bg-amber-50 dark:hover:bg-amber-900/10"
+              >
+                <span className="material-icons-round text-lg">autorenew</span>
+                Nieuw Jaar
               </button>
             </div>
           )}
@@ -470,19 +466,21 @@ export const RolesManageScreen: React.FC = () => {
 
             <div className="space-y-3">
               {availableRoles.map(role => {
-                const isToggled = toggles[role.label] || false;
+                // Kijk in localUsers voor de meest actuele status van deze specifieke gebruiker
+                const currentUserState = localUsers.find(u => u.id === selectedUser.id);
+                const isToggled = (currentUserState?.roles || []).includes(role.label);
                 const colorClasses = role.color.split(' ').slice(0,3).join(' ');
 
                 return (
                   <div key={role.id} className="bg-gray-50 dark:bg-[#1e293b] rounded-2xl p-4 flex items-center justify-between border border-gray-100 dark:border-gray-800">
                     <div className="flex items-center gap-3">
                       <div className={`p-2.5 rounded-xl ${colorClasses}`}>
-                        <span className="material-icons-round text-xl">{role.icon}</span>
+                        <span className="material-icons-round text-xl" style={{ pointerEvents: 'none' }}>{role.icon}</span>
                       </div>
                       <span className="font-bold text-gray-700 dark:text-gray-200">{role.label}</span>
                     </div>
                     <button
-                      onClick={() => setToggles({ ...toggles, [role.label]: !isToggled })}
+                      onClick={() => toggleRoleForUser(selectedUser.id, role.label)}
                       className={`w-14 h-7 rounded-full relative transition-all duration-300 ${isToggled ? 'bg-blue-600 shadow-inner' : 'bg-gray-300 dark:bg-gray-700'}`}
                     >
                       <div className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300 flex items-center justify-center ${isToggled ? 'translate-x-7' : 'translate-x-0'}`}>
@@ -519,13 +517,6 @@ export const RolesManageScreen: React.FC = () => {
                 </button>
               </div>
             </div>
-
-            <button
-              onClick={saveFromModal}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
-            >
-              Wijzigingen Opslaan
-            </button>
           </div>
         )}
       </BottomSheet>
@@ -673,6 +664,61 @@ export const RolesManageScreen: React.FC = () => {
           >
             Klaar
           </button>
+        </div>
+      </Modal>
+
+      <Modal 
+        isOpen={isNewYearModalOpen} 
+        onClose={() => setIsNewYearModalOpen(false)} 
+        title="Nieuw Jaar Starten"
+      >
+        <div className="space-y-4">
+          <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-100 dark:border-amber-800">
+            <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+              Bij het starten van een nieuw jaar worden <strong>alle rollen van elke gebruiker gewist</strong>. 
+              Selecteer hieronder de 2 personen die het stokje overnemen als hoofdleiding.
+            </p>
+          </div>
+
+          <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+            {localUsers.filter(u => u.actief).map(user => {
+              const isSelected = newHeads.includes(user.id);
+              return (
+                <button
+                  key={user.id}
+                  onClick={() => {
+                    if (isSelected) setNewHeads(newHeads.filter(id => id !== user.id));
+                    else if (newHeads.length < 2) setNewHeads([...newHeads, user.id]);
+                  }}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
+                    isSelected 
+                      ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800' 
+                      : 'bg-gray-50 border-gray-100 dark:bg-[#0f172a] dark:border-gray-800'
+                  }`}
+                >
+                  <span className="font-bold text-sm text-gray-900 dark:text-white">{user.naam}</span>
+                  {isSelected ? (
+                    <span className="material-icons-round text-blue-600">check_circle</span>
+                  ) : (
+                    <div className="w-6 h-6 rounded-full border-2 border-gray-300"></div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-col gap-2 pt-2">
+            <div className="text-[10px] text-center text-gray-500 uppercase font-bold tracking-widest">
+              {newHeads.length}/2 Geselecteerd
+            </div>
+            <button
+              disabled={newHeads.length !== 2 || loading}
+              onClick={handleNewYearReset}
+              className="w-full bg-amber-600 disabled:opacity-30 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
+            >
+              Reset & Start Nieuw Jaar
+            </button>
+          </div>
         </div>
       </Modal>
 
