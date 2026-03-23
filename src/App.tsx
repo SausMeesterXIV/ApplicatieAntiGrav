@@ -696,21 +696,22 @@ function App() {
     };
 
     const handleMarkNotificationAsRead = async (id: string) => {
+        const strId = String(id);
         // 1. Update direct de lijst in de app (voor het rode bolletje)
-        setNotifications(prev => prev.map(n => String(n.id) === id ? { ...n, isRead: true } : n));
+        setNotifications(prev => prev.map(n => String(n.id) === strId ? { ...n, isRead: true } : n));
 
         // 2. Sla de ID op in localStorage zodat het bij een refresh/navigatie onthouden blijft
         const seenIds = JSON.parse(localStorage.getItem('antigrav_seen_notifs') || '[]');
-        if (!seenIds.includes(String(id))) {
-            seenIds.push(String(id));
+        if (!seenIds.includes(strId)) {
+            seenIds.push(strId);
             localStorage.setItem('antigrav_seen_notifs', JSON.stringify(seenIds));
         }
 
         try {
-            const notif = notifications.find(n => String(n.id) === id);
+            const notif = notifications.find(n => String(n.id) === strId);
             // Alleen naar de database schrijven als het een persoonlijke melding is
             if (notif && notif.ontvanger_id !== 'all') {
-                await db.markNotificatieGelezen(id);
+                await db.markNotificatieGelezen(strId);
             }
         } catch (error) {
             console.error('Mark read error:', error);

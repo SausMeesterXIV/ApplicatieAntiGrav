@@ -394,7 +394,7 @@ export async function fetchNotificaties(userId: string): Promise<Notification[]>
     return {
       ...n,
       senderId: n.zender_id,
-      id: n.id,
+      id: String(n.id),
       type: type as any,
       sender: (n as any).profiles?.naam || n.zender_naam || 'Systeem',
       role: zenderRol === 'hoofdleiding' ? 'Hoofdleiding' : '',
