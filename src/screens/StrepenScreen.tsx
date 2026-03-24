@@ -22,6 +22,7 @@ export const StrepenScreen: React.FC = () => {
   const [selectedDrink, setSelectedDrink] = useState<Drink | null>(drinks.length > 0 ? drinks[0] : null);
   const [totalToday, setTotalToday] = useState(0); 
   const [isManageMode, setIsManageMode] = useState(false);
+  const [showFloatingPlus, setShowFloatingPlus] = useState(false);
 
   const isTeamDrank = hasRole(currentUser, 'drank') || hasRole(currentUser, 'hoofdleiding');
 
@@ -73,14 +74,24 @@ export const StrepenScreen: React.FC = () => {
     })).filter(item => item.beerCount > 0).sort((a, b) => b.beerCount - a.beerCount).slice(0, 10);
   }, [users, streaks]);
 
-  const handleAddStripe = () => {
+  const handleAddStripe = async () => {
     if (!selectedDrink) return;
+
+    // Visuele feedback trigger
+    setShowFloatingPlus(true);
+
     const raw = getCurrentCountRaw();
     const countToAdd = raw === 0 ? 1 : raw;
     onAddCost(currentUser?.id || '', selectedDrink.id, countToAdd, currentUser?.naam);
-    hapticSuccess();
+    
+    // De verbeterde haptics aanroepen
+    await hapticSuccess(); 
+
     setTotalToday(prev => prev + countToAdd);
     updateCurrentCount(1);
+
+    // Reset animatie na korte tijd
+    setTimeout(() => setShowFloatingPlus(false), 800);
   };
 
   const displayCount = getCurrentCountRaw();
@@ -152,7 +163,16 @@ export const StrepenScreen: React.FC = () => {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><span className="material-icons-round text-blue-600 dark:text-blue-500">add_circle</span>Strepen zetten</h2>
           </div>
-          <div className="bg-white dark:bg-[#1e2330] p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 transition-colors">
+          <div className="bg-white dark:bg-[#1e2330] p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 transition-colors relative">
+            {/* Zwevende +1 Animatie */}
+            {showFloatingPlus && (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
+                <span className="text-4xl font-black text-blue-600 dark:text-blue-400 animate-bounce-up">
+                  +{displayCount === 0 ? 1 : displayCount}
+                </span>
+              </div>
+            )}
+
             <div className="flex items-center gap-3 mb-6">
               <UserAvatar user={currentUser} size="md" />
               <div>
@@ -187,7 +207,10 @@ export const StrepenScreen: React.FC = () => {
               </div>
             </div>
 
-            <button onClick={handleAddStripe} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-blue-500/30 flex items-center justify-between group active:scale-[0.98] transition-all">
+            <button 
+              onClick={handleAddStripe} 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-blue-500/30 flex items-center justify-between group active:scale-[0.98] transition-all"
+            >
               <div className="flex flex-col items-start">
                 <span className="text-xs font-medium text-blue-200 uppercase">Toevoegen</span>
                 <span className="text-lg">{displayCount === 0 ? 1 : displayCount}x {selectedDrink ? selectedDrink.name : 'Selecteer'}</span>
@@ -201,11 +224,13 @@ export const StrepenScreen: React.FC = () => {
             {drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM) && (
               <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <button 
-                  onClick={() => { 
+                  onClick={async () => { 
                     const bak = drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM)!; 
+                    setShowFloatingPlus(true);
                     onAddCost(currentUser?.id || '', bak.id, 1, currentUser?.naam); 
-                    hapticSuccess();
+                    await hapticSuccess();
                     setTotalToday(prev => prev + 1); 
+                    setTimeout(() => setShowFloatingPlus(false), 800);
                   }} 
                   className="w-full bg-amber-50 dark:bg-amber-900/10 hover:bg-amber-100 dark:hover:bg-amber-900/20 text-amber-800 dark:text-amber-400 py-3 px-4 rounded-2xl shadow-sm flex items-center justify-between active:scale-[0.98] transition-all group border border-amber-200 dark:border-amber-800/50"
                 >

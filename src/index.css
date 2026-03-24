@@ -212,3 +212,13 @@
   pointer-events: none;
   user-select: none;
 }
+
+@keyframes bounce-up {
+  0% { transform: translate(-50%, -50%) translateY(0) scale(0.5); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translate(-50%, -50%) translateY(-100px) scale(1.5); opacity: 0; }
+}
+
+.animate-bounce-up {
+  animation: bounce-up 0.8s ease-out forwards;
+}
