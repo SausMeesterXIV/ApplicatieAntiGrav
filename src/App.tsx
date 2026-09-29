@@ -4,7 +4,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { supabase } from './lib/supabase';
 import { Session } from '@supabase/supabase-js';
-import { User, Drink, Streak, StockItem, FryItem, Order, CountdownItem, BierpongGame, QuoteItem, Notification, Event, BillingPeriod } from './types';
+import { User, Drink, Streak, StockItem, FryItem, Order, CountdownItem, Notification, Event, BillingPeriod } from './types';
 import * as db from './lib/supabaseService';
 import { showToast, ToastContainer } from './components/Toast';
 import { Analytics } from '@vercel/analytics/react';
@@ -38,9 +38,6 @@ import { TeamDrankExcelBeheerScreen } from './screens/TeamDrankExcelBeheerScreen
 import { ConsumptionOverviewScreen } from './screens/ConsumptionOverviewScreen';
 import { StrepenHistoryScreen } from './screens/StrepenHistoryScreen';
 import { MyInvoiceScreen } from './screens/MyInvoiceScreen';
-import { BierpongScreen } from './screens/BierpongScreen';
-import { BierpongManageScreen } from './screens/BierpongManageScreen';
-import { QuotesScreen } from './screens/QuotesScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { RolesManageScreen } from './screens/RolesManageScreen';
 import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
@@ -86,13 +83,6 @@ export type AppContextType = {
     countdowns: CountdownItem[];
     setCountdowns: React.Dispatch<React.SetStateAction<CountdownItem[]>>;
     handleSaveCountdowns: (countdowns: CountdownItem[]) => void;
-    bierpongGames: BierpongGame[];
-    setBierpongGames: React.Dispatch<React.SetStateAction<BierpongGame[]>>;
-    handleAddBierpongGame: (playerIds: string[], winnerIds: string[]) => void;
-    duoBierpongWinners: string[];
-    setDuoBierpongWinners: React.Dispatch<React.SetStateAction<string[]>>;
-    quotes: QuoteItem[];
-    setQuotes: React.Dispatch<React.SetStateAction<QuoteItem[]>>;
     events: Event[];
     setEvents: React.Dispatch<React.SetStateAction<Event[]>>;
     notifications: Notification[];
@@ -104,9 +94,6 @@ export type AppContextType = {
     handleRemoveFryOrder: (orderId: string) => void;
     handleArchiveFriesSession: () => Promise<void>;
     handleCompleteFriesPayment: (actualAmount: number, receiptFile?: File) => Promise<void>;
-    handleVoteQuote: (id: string, type: 'like' | 'dislike') => Promise<void>;
-    handleAddQuote: (text: string, context: string, authorId: string) => void;
-    handleDeleteQuote: (id: string) => void;
     handleSaveEvent: (event: Event) => void;
     handleDeleteEvent: (id: string) => void;
     handleAddNotification: (notification: Omit<Notification, 'id'>) => void;
@@ -177,9 +164,6 @@ function App() {
     const [friesPickupTime, setFriesPickupTime] = useState<string | null>(null);
     const [frituurSessieId, setFrituurSessieId] = useState<string | null>(null);
     const [countdowns, setCountdowns] = useState<CountdownItem[]>([]);
-    const [bierpongGames, setBierpongGames] = useState<BierpongGame[]>([]);
-    const [duoBierpongWinners, setDuoBierpongWinners] = useState<string[]>([]);
-    const [quotes, setQuotes] = useState<QuoteItem[]>([]);
     const [events, setEvents] = useState<Event[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [activePeriod, setActivePeriod] = useState<BillingPeriod | null>(null);
@@ -188,7 +172,6 @@ function App() {
     useRealtimeSubscriptions({
         userId: session?.user?.id || null,
         setNotifications,
-        setBierpongGames,
         setFriesOrders,
         frituurSessieId
     });
@@ -324,13 +307,13 @@ function App() {
     async function loadAllData(userId: string) {
         try {
             const [
-                profilesData, drinksData, consumptiesData, balanceData, eventsData, quotesData, notificatiesData,
-                bierpongData, kampioenenData, stockData, frituurSessieData, countdownsData, activeBillingPeriod,
+                profilesData, drinksData, consumptiesData, balanceData, eventsData, notificatiesData,
+                stockData, frituurSessieData, countdownsData, activeBillingPeriod,
                 allBillingPeriods, gsheetIdSetting, gsheetSharingEmailSetting, loadedRoles, fryItemsData, frituurOrdersData,
             ] = await Promise.all([
                 db.fetchProfiles(), db.fetchDranken(), db.fetchConsumpties(), db.fetchBalanceForUser(userId),
-                db.fetchEvents(), db.fetchQuotes(), db.fetchNotificaties(userId), db.fetchBierpongGames(),
-                db.fetchBierpongKampioenen(), db.fetchStockItems(), db.fetchActiveFrituurSessie(), db.fetchCountdowns(),
+                db.fetchEvents(), db.fetchNotificaties(userId),
+                db.fetchStockItems(), db.fetchActiveFrituurSessie(), db.fetchCountdowns(),
                 db.fetchActiveBillingPeriod(), db.fetchBillingPeriods(), db.fetchSetting('gsheet_id'),
                 db.fetchSetting('gsheet_sharing_email'), db.fetchAvailableRoles(), db.fetchFryItems(), db.fetchFrituurBestellingen(),
             ]);
@@ -345,8 +328,8 @@ function App() {
             }
 
             setUsers(profilesData); setDrinks(drinksData); setStreaks(consumptiesData); setBalance(balanceData);
-            setEvents(eventsData); setQuotes(quotesData); setNotifications(notificatiesData); setBierpongGames(bierpongData);
-            setDuoBierpongWinners(kampioenenData); setStockItems(stockData); setCountdowns(countdownsData);
+            setEvents(eventsData); setNotifications(notificatiesData);
+            setStockItems(stockData); setCountdowns(countdownsData);
             setActivePeriod(activeBillingPeriod); setBillingPeriods(allBillingPeriods);
 
             if (frituurSessieData) {
@@ -606,61 +589,6 @@ function App() {
         }
     };
 
-    const handleVoteQuote = async (id: string, type: 'like' | 'dislike') => {
-        setQuotes(prev => prev.map(q => {
-            if (q.id === id) {
-                let newLikes = [...q.likes]; let newDislikes = [...q.dislikes];
-                if (type === 'like') {
-                    if (newLikes.includes(currentUser.id)) newLikes = newLikes.filter(u => u !== currentUser.id);
-                    else { newLikes.push(currentUser.id); newDislikes = newDislikes.filter(u => u !== currentUser.id); }
-                } else {
-                    if (newDislikes.includes(currentUser.id)) newDislikes = newDislikes.filter(u => u !== currentUser.id);
-                    else { newDislikes.push(currentUser.id); newLikes = newLikes.filter(u => u !== currentUser.id); }
-                }
-                return { ...q, likes: newLikes, dislikes: newDislikes };
-            }
-            return q;
-        }));
-
-        try {
-            await db.voteQuote(id, currentUser.id, type, currentUser.naam);
-        } catch (error) {
-            showToast('Fout bij het stemmen', 'error');
-            const freshQuotes = await db.fetchQuotes();
-            setQuotes(freshQuotes);
-        }
-    };
-
-    const handleAddQuote = async (text: string, context: string, authorId: string) => {
-        const author = users.find(u => u.id === authorId);
-        // Gebruik de nickname als die bestaat, anders de echte naam
-        const authorName = author ? (author.nickname || author.naam || author.name || 'Onbekend') : authorId;
-        const tempId = Date.now().toString();
-        const newQuote: QuoteItem = { id: tempId, text, authorId, authorName, context, date: new Date(), likes: [], dislikes: [], addedBy: currentUser.id, tekst: text, auteur: authorName, datum: new Date().toISOString(), upvotes: 0, toegevoegd_door: currentUser.id, created_at: new Date().toISOString() };
-        setQuotes(prev => [newQuote, ...prev]);
-
-        try {
-            const realQuote = await db.addQuote(text, authorName, context, currentUser.id);
-            setQuotes(prev => prev.map(q => q.id === tempId ? realQuote : q));
-            showToast('Quote toegevoegd! 💬', 'success');
-        } catch (error) {
-            setQuotes(prev => prev.filter(q => q.id !== tempId));
-            showToast('Fout bij het toevoegen van de quote', 'error');
-        }
-    };
-
-    const handleDeleteQuote = async (id: string) => {
-        const quote = quotes.find(q => q.id === id);
-        setQuotes(prev => prev.filter(q => q.id !== id));
-        try {
-            await db.deleteQuote(id);
-            showToast('Quote verwijderd', 'info');
-        } catch (error) {
-            if (quote) setQuotes(prev => [...prev, quote]);
-            showToast('Fout bij het verwijderen. Alleen admins kunnen quotes verwijderen.', 'error');
-        }
-    };
-
     const handleSaveEvent = async (event: Event) => {
         setEvents(prev => { const exists = prev.find(e => e.id === event.id); return exists ? prev.map(e => e.id === event.id ? event : e) : [...prev, event]; });
         try {
@@ -723,10 +651,6 @@ function App() {
         try { await db.saveCountdowns(newCountdowns); } catch (error) { showToast('Fout bij opslaan klokken', 'error'); const fresh = await db.fetchCountdowns(); setCountdowns(fresh); }
     };
 
-    const handleAddBierpongGame = async (playerIds: string[], winnerIds: string[]) => {
-        try { const newGame = await db.addBierpongGame(playerIds, winnerIds); setBierpongGames(prev => [...prev, newGame]); } catch (error) { console.error('Failed to add bierpong game:', error); showToast('Fout bij opslaan bierpong match', 'error'); const fresh = await db.fetchBierpongGames(); setBierpongGames(fresh); }
-    };
-
     if (loading) { 
         return (
             <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] items-center justify-center transition-colors">
@@ -738,8 +662,8 @@ function App() {
     const contextValue: AppContextType = {
         currentUser, setCurrentUser, users, setUsers, drinks, setDrinks, streaks, setStreaks, stockItems, setStockItems, balance, setBalance, availableRoles, setAvailableRoles,
         handleSaveRoles: async (roles) => { try { setAvailableRoles(roles); await db.saveAvailableRoles(roles); showToast('Rollen succesvol opgeslagen', 'success'); } catch (error) { console.error('Failed to save roles:', error); showToast('Fout bij opslaan rollen', 'error'); } },
-        friesOrders, setFriesOrders, friesSessionStatus, setFriesSessionStatus, friesPickupTime, setFriesPickupTime, countdowns, setCountdowns, bierpongGames, setBierpongGames, duoBierpongWinners, setDuoBierpongWinners, quotes, setQuotes, events, setEvents, fryItems, setFryItems, notifications, setNotifications,
-        handleAddCost, handleDeleteStreak, handleQuickStreep, handlePlaceFryOrder, handleRemoveFryOrder, handleArchiveFriesSession, handleCompleteFriesPayment, handleVoteQuote, handleAddQuote, handleDeleteQuote, handleSaveEvent, handleDeleteEvent, handleAddNotification, handleMarkNotificationAsRead, handleSaveCountdowns, handleAddBierpongGame,
+        friesOrders, setFriesOrders, friesSessionStatus, setFriesSessionStatus, friesPickupTime, setFriesPickupTime, countdowns, setCountdowns, events, setEvents, fryItems, setFryItems, notifications, setNotifications,
+        handleAddCost, handleDeleteStreak, handleQuickStreep, handlePlaceFryOrder, handleRemoveFryOrder, handleArchiveFriesSession, handleCompleteFriesPayment, handleSaveEvent, handleDeleteEvent, handleAddNotification, handleMarkNotificationAsRead, handleSaveCountdowns,
         frituurSessieId, setFrituurSessieId, activePeriod, setActivePeriod, billingPeriods, setBillingPeriods, gsheetId, setGsheetId, gsheetSharingEmail, setGsheetSharingEmail, loading,
         handleAddFryItem: async (item) => { try { const id = await db.addFryItem(item); setFryItems(prev => [...prev, { ...item, id }]); showToast('Item toegevoegd', 'success'); } catch (error) { console.error('Failed to add fry item:', error); showToast('Fout bij toevoegen item', 'error'); } },
         handleUpdateFryItem: async (id, updates) => { try { await db.updateFryItem(id, updates); setFryItems(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i)); showToast('Item bijgewerkt', 'success'); } catch (error) { console.error('Failed to update fry item:', error); showToast('Fout bij bijwerken item', 'error'); } },
@@ -835,12 +759,6 @@ function App() {
                                         <Route path="strepen/overzicht" element={<RoleRoute role="drank"><ConsumptionOverviewScreen users={users} drinks={drinks} streaks={streaks} /></RoleRoute>} />
 
                                         <Route path="mijn-factuur" element={<MyInvoiceScreen balance={balance} currentUser={currentUser} streaks={streaks} friesOrders={friesOrders} />} />
-                                        
-                                        <Route path="bierpong" element={<BierpongScreen />} />
-                                        <Route path="bierpong/beheer" element={<BierpongManageScreen />} />
-                                        
-                                        <Route path="quotes" element={<QuotesScreen />} />
-                                        <Route path="quotes/beheer" element={<QuotesScreen enableManagement={true} />} />
 
                                         <Route path="winkeltje/dashboard" element={<RoleRoute role="winkeltje"><ShopDashboardScreen /></RoleRoute>} />
                                         <Route path="winkeltje/category/:categoryId" element={<ShopCategoryScreen />} />

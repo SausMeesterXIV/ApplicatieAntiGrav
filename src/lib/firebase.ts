@@ -13,11 +13,11 @@ const firebaseConfig = {
   measurementId: "G-S0ZKXHQJF7"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Zonder VITE_FIREBASE_API_KEY (bv. lokaal) slaan we Firebase over: geen push/analytics, geen console-fouten
+const app = firebaseConfig.apiKey ? initializeApp(firebaseConfig) : null;
 
 // Initialize Analytics & Messaging conditionally for SSR/Environment compatibility
-export const analytics = isAnalyticsSupported().then(yes => yes ? getAnalytics(app) : null);
-export const messaging = isMessagingSupported().then(yes => yes ? getMessaging(app) : null);
+export const analytics = app ? isAnalyticsSupported().then(yes => yes ? getAnalytics(app) : null) : Promise.resolve(null);
+export const messaging = app ? isMessagingSupported().then(yes => yes ? getMessaging(app) : null) : Promise.resolve(null);
 
 export default app;

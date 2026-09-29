@@ -189,14 +189,6 @@ export const AgendaScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="px-6 pb-2 shrink-0 overflow-x-auto no-scrollbar">
-        <div className="flex gap-3">
-          <button className="px-4 py-1.5 rounded-full bg-blue-600 text-white text-sm font-medium shadow-sm whitespace-nowrap">Alle events</button>
-          <button className="px-4 py-1.5 rounded-full bg-white dark:bg-[#1e2330] border border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-300 text-sm font-medium whitespace-nowrap">Mijn taken</button>
-        </div>
-      </div>
-
       {/* Event List */}
       <div className="px-4 pb-nav-safe pt-2 space-y-6">
         {loading ? (

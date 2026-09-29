@@ -14,8 +14,8 @@ import { UserAvatar } from '../components/UserAvatar';
 
 export const StrepenScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, setCurrentUser: onUpdateUser, users } = useAuth();
-  const { balances, handleAddCost: onAddCost, dranken: drinks, streaks, activePeriod } = useDrink();
+  const { currentUser, setCurrentUser: onUpdateUser } = useAuth();
+  const { balances, handleAddCost: onAddCost, dranken: drinks, activePeriod } = useDrink();
   const currentBalance = balances && currentUser ? balances[(currentUser?.id || '')] || 0 : 0;
   
   const [drinkCounts, setDrinkCounts] = useState<Record<string, number>>({});
@@ -40,39 +40,6 @@ export const StrepenScreen: React.FC = () => {
     if (!selectedDrink) return;
     setDrinkCounts(prev => ({ ...prev, [String(selectedDrink.id)]: Math.max(0, val) }));
   };
-
-  const getResetDateString = () => {
-    const now = new Date();
-    const day = now.getDay();
-    const hour = now.getHours();
-    const lastSaturday = new Date(now);
-    let daysToSubtract = (day === 6 && hour >= 8) ? 0 : day + 1;
-    lastSaturday.setDate(now.getDate() - daysToSubtract);
-    lastSaturday.setHours(8, 0, 0, 0);
-    return lastSaturday.toLocaleDateString('nl-BE', { weekday: 'short', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
-  };
-  const resetDateStr = getResetDateString();
-
-  const leaderboard = useMemo(() => {
-    const counts: { [userId: string]: number } = {};
-    const now = new Date();
-    const saturdayReset = new Date(now);
-    const day = now.getDay();
-    const hour = now.getHours();
-    let daysToSubtract = (day === 6 && hour >= 8) ? 0 : day + 1;
-    saturdayReset.setDate(now.getDate() - daysToSubtract);
-    saturdayReset.setHours(8, 0, 0, 0);
-
-    const thisWeekStreaks = streaks.filter((s: any) => 
-      new Date(s.timestamp) >= saturdayReset && 
-      s.drinkName === SPECIAL_DRINKS.PINT_FREEDOM // Enkel Freedom telt voor de ranking
-    );
-    thisWeekStreaks.forEach((s: any) => { counts[s.userId] = (counts[s.userId] || 0) + (s.amount || 1); });
-
-    return users.map((user: User) => ({
-      id: user.id, name: user.nickname || user.name, avatar: user.avatar, status: user.status, beerCount: counts[user.id] || 0
-    })).filter(item => item.beerCount > 0).sort((a, b) => b.beerCount - a.beerCount).slice(0, 10);
-  }, [users, streaks]);
 
   const handleAddStripe = async () => {
     if (!selectedDrink) return;
@@ -272,39 +239,6 @@ export const StrepenScreen: React.FC = () => {
           </div>
           <span className="material-icons-round text-white/70">chevron_right</span>
         </div>
-
-        <section>
-          <div className="flex items-center justify-between mb-3 mt-2">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><span className="material-icons-round text-amber-500">emoji_events</span>Top 10 Bier van deze week</h2>
-              <p className="text-[10px] text-gray-400 font-medium ml-8 mt-0.5">Sinds {resetDateStr}</p>
-            </div>
-          </div>
-          <div className="space-y-3">
-            {leaderboard.map((user, index) => {
-              let rankColor = "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400";
-              if (index === 0) rankColor = "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 border border-yellow-200";
-              if (index === 1) rankColor = "bg-gray-200 dark:bg-gray-700 text-gray-700 border border-gray-300";
-              if (index === 2) rankColor = "bg-orange-100 dark:bg-orange-900/40 text-orange-800 border border-orange-200";
-              return (
-                <div key={user.id} className="bg-white dark:bg-[#1e2330] p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${rankColor}`}>#{index + 1}</div>
-                    <UserAvatar user={user} size="md" className="border-2 border-white dark:border-gray-700 shadow-sm" />
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white text-sm">{user.name}</p>
-                      <p className="text-xs text-gray-400">{user.status === 'online' ? 'Online' : 'Offline'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-100 dark:border-gray-700">
-                    <span className="material-icons-round text-amber-500 text-xs">sports_bar</span>
-                    <span className="font-bold text-gray-700 dark:text-gray-200">{user.beerCount}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
 
         <section>
           <div className="flex items-center gap-2 mb-3">

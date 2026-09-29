@@ -1,13 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from './supabase';
-import { Notification, BierpongGame, Order } from '../types';
+import { Notification, Order } from '../types';
 import { showToast } from '../components/Toast';
 import { formatTimeAgo } from './utils';
 
 interface UseRealtimeOptions {
   userId: string | null;
   setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
-  setBierpongGames: React.Dispatch<React.SetStateAction<BierpongGame[]>>;
   setFriesOrders?: React.Dispatch<React.SetStateAction<Order[]>>;
   frituurSessieId?: string | null;
 }
@@ -15,7 +14,6 @@ interface UseRealtimeOptions {
 export function useRealtimeSubscriptions({ 
   userId, 
   setNotifications, 
-  setBierpongGames,
   setFriesOrders,
   frituurSessieId
 }: UseRealtimeOptions) {
@@ -55,22 +53,7 @@ export function useRealtimeSubscriptions({
           showToast(`📬 ${n.titel}`, 'info');
         }
       )
-      // B. LIVE BIERPONG UPDATES
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'bierpong_games' },
-        (payload) => {
-          const g = payload.new as any;
-          const mapped: BierpongGame = {
-            ...g,
-            playerIds: g.player_ids || [],
-            winnerIds: g.winner_ids || [],
-            timestamp: new Date(g.created_at),
-          } as BierpongGame;
-          setBierpongGames(prev => [...prev, mapped]);
-        }
-      )
-      // C. LIVE FRIET BESTELLINGEN
+      // B. LIVE FRIET BESTELLINGEN
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'frituur_bestellingen' },

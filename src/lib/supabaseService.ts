@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { formatTimeAgo } from './utils';
-import { User, Drink, Streak, StockItem, Order, QuoteItem, Notification, Event, BierpongGame, CountdownItem, BillingPeriod, BillingCorrection, DbDrankRow, DbProfileRow, DbEventRow, DbQuoteRow, DbBierpongGameRow, DbShopProductRow, DbShopVariantRow } from '../types';
+import { User, Drink, Streak, StockItem, Order, Notification, Event, CountdownItem, BillingPeriod, BillingCorrection, DbDrankRow, DbProfileRow, DbEventRow, DbShopProductRow, DbShopVariantRow } from '../types';
 
 // ==================== PROFILES ====================
 
@@ -77,11 +77,18 @@ export async function uploadAvatar(userId: string, file: File): Promise<string> 
 
 export async function fetchDranken(): Promise<Drink[]> {
   const { data, error } = await supabase
-    .from('v_active_dranken')
+    .from('dranken')
     .select('*')
     .order('naam');
   if (error) throw error;
-  return (data as any[] || []).map(mapDrank);
+  return (data || []).filter(isActiveDrank).map(mapDrank);
+}
+
+// Vaste dranken altijd; tijdelijke dranken enkel tot en met hun valid_until-datum
+function isActiveDrank(d: DbDrankRow): boolean {
+  if (!d.is_temporary || !d.valid_until) return true;
+  const today = new Date().toISOString().slice(0, 10);
+  return d.valid_until.slice(0, 10) >= today;
 }
 
 function mapDrank(d: DbDrankRow): Drink {
@@ -292,81 +299,6 @@ function mapEvent(e: DbEventRow): Event {
 export async function deleteEvent(id: string): Promise<void> {
   const { error } = await supabase.from('events').delete().eq('id', id);
   if (error) throw error;
-}
-
-// ==================== QUOTES ====================
-
-export async function fetchQuotes(): Promise<QuoteItem[]> {
-  const { data: quotesData, error: quotesError } = await supabase
-    .from('quotes')
-    .select('*')
-    .order('datum', { ascending: false });
-
-  if (quotesError) throw quotesError;
-
-  const { data: votesData, error: votesError } = await supabase
-    .from('quote_votes')
-    .select('*');
-
-  if (votesError) throw votesError;
-
-  return (quotesData || []).map(q => {
-    const votes = (votesData || []).filter(v => v.quote_id === q.id);
-    return mapQuote(q, votes);
-  });
-}
-
-function mapQuote(q: DbQuoteRow, votes: any[] = []): QuoteItem {
-  return {
-    ...q,
-    text: q.tekst,
-    authorName: q.auteur,
-    authorId: q.toegevoegd_door || '', 
-    date: new Date(q.datum),
-    likes: votes.filter(v => v.vote_type === 'like').map(v => v.user_id),
-    dislikes: votes.filter(v => v.vote_type === 'dislike').map(v => v.user_id),
-  };
-}
-
-export async function addQuote(tekst: string, auteur: string, context: string, toegevoegdDoor: string): Promise<QuoteItem> {
-  const { data, error } = await supabase
-    .from('quotes')
-    .insert([{ tekst, auteur, context, toegevoegd_door: toegevoegdDoor, datum: new Date().toISOString() }])
-    .select()
-    .single();
-  if (error) throw error;
-  return mapQuote(data);
-}
-
-export async function deleteQuote(id: string): Promise<void> {
-  const { error } = await supabase.from('quotes').delete().eq('id', id);
-  if (error) throw error;
-}
-
-export async function voteQuote(quoteId: string, userId: string, voteType: 'like' | 'dislike', userNaam?: string): Promise<void> {
-  // Check existing vote
-  const { data: existing } = await supabase
-    .from('quote_votes')
-    .select('*')
-    .eq('quote_id', quoteId)
-    .eq('user_id', userId)
-    .single();
-
-  if (existing) {
-    if (existing.vote_type === voteType) {
-      // Same vote = toggle off (delete)
-      await supabase.from('quote_votes').delete().eq('id', existing.id);
-    } else {
-      // Different vote = update
-      await supabase.from('quote_votes').update({ vote_type: voteType }).eq('id', existing.id);
-    }
-  } else {
-    // New vote
-    const { error } = await supabase
-      .from('quote_votes')
-      .insert([{ quote_id: quoteId, user_id: userId, vote_type: voteType, user_naam: userNaam || null }]);
-    if (error) throw error;
-  }
 }
 
 // ==================== NOTIFICATIES ====================
@@ -615,7 +547,7 @@ export async function finalizeFrituurSessie(sessieId: string, actualAmount: numb
   return data as unknown as { expected_amount: number; actual_amount: number };
 }
 
-// ==================== BIERPONG ====================
+// ==================== PUSH (FCM) ====================
 
 export async function updateUserFcmToken(userId: string, token: string | null) {
   const { error } = await supabase
@@ -623,55 +555,6 @@ export async function updateUserFcmToken(userId: string, token: string | null) {
     .update({ fcm_token: token } as any)
     .eq('id', userId);
   
-  if (error) throw error;
-}
-
-export async function fetchBierpongGames(): Promise<BierpongGame[]> {
-  const { data, error } = await supabase
-    .from('bierpong_games')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  return (data || []).map(g => ({
-    ...g,
-    playerIds: g.player_ids || [],
-    winnerIds: g.winner_ids || (g.winner_id ? [g.winner_id] : []), // Fallback just in case
-    timestamp: new Date(g.created_at),
-  }));
-}
-
-export async function addBierpongGame(playerIds: string[], winnerIds: string[]): Promise<BierpongGame> {
-  const { data, error } = await supabase
-    .from('bierpong_games')
-    .insert([{ player_ids: playerIds, winner_ids: winnerIds, winner_id: winnerIds[0] }])
-    .select()
-    .single();
-  if (error) throw error;
-  return {
-    ...data,
-    playerIds: data.player_ids,
-    winnerIds: data.winner_ids || [data.winner_id],
-    timestamp: new Date(data.created_at),
-  };
-}
-
-export async function fetchBierpongKampioenen(): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('bierpong_kampioenen')
-    .select('player_ids')
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  if (error) throw error;
-  return data && data.length > 0 ? data[0].player_ids : [];
-}
-
-
-export async function setBierpongKampioenen(playerIds: string[]): Promise<void> {
-  const { error } = await supabase
-    .from('bierpong_kampioenen')
-    .insert([{ player_ids: playerIds }]);
   if (error) throw error;
 }
 
@@ -1113,41 +996,5 @@ export async function savePushToken(userId: string, token: string, platform: str
   const { error } = await supabase
     .from('user_push_tokens')
     .upsert({ user_id: userId, token, device_type: platform }, { onConflict: 'token' });
-  if (error) throw error;
-}
-
-// ==================== PERSONAL TODOS ====================
-export async function fetchPersonalTodos(): Promise<import('../types').Todo[]> {
-  const { data, error } = await (supabase
-    .from('personal_todos' as any) as any)
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
-}
-
-export async function addPersonalTodo(task: string, userId: string): Promise<import('../types').Todo> {
-  const { data, error } = await (supabase
-    .from('personal_todos' as any) as any)
-    .insert([{ task, user_id: userId }])
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
-}
-
-export async function togglePersonalTodo(id: string, completed: boolean): Promise<void> {
-  const { error } = await (supabase
-    .from('personal_todos' as any) as any)
-    .update({ completed })
-    .eq('id', id);
-  if (error) throw error;
-}
-
-export async function deletePersonalTodo(id: string): Promise<void> {
-  const { error } = await (supabase
-    .from('personal_todos' as any) as any)
-    .delete()
-    .eq('id', id);
   if (error) throw error;
 }

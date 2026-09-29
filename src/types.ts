@@ -10,12 +10,10 @@ export type DbInkoopFactuurRow = Database['public']['Tables']['inkoop_facturen']
 export type DbBillingCorrectionRow = Database['public']['Tables']['billing_corrections']['Row'];
 export type DbConsumptieRow = Database['public']['Tables']['consumpties']['Row'];
 export type DbEventRow = Database['public']['Tables']['events']['Row'];
-export type DbQuoteRow = Database['public']['Tables']['quotes']['Row'];
 export type DbCountdownRow = Database['public']['Tables']['countdowns']['Row'];
 export type DbStockItemRow = Database['public']['Tables']['stock_items']['Row'];
 export type DbShopProductRow = Database['public']['Tables']['shop_products']['Row'];
 export type DbShopVariantRow = Database['public']['Tables']['shop_variants']['Row'];
-export type DbBierpongGameRow = Database['public']['Tables']['bierpong_games']['Row'];
 export type DbNotificationRow = Database['public']['Tables']['notificaties']['Row'];
 
 // 2. Koppel ze aan je frontend interfaces
@@ -106,16 +104,6 @@ export interface Notification extends DbNotificationRow {
     color?: string | null;
 }
 
-export interface QuoteItem extends DbQuoteRow {
-    text: string;
-    authorName: string;
-    authorId: string; // Toegevoegd om TS2353 op te lossen
-    date: Date;
-    likes: string[];
-    dislikes: string[];
-    addedBy?: string | null;
-}
-
 export interface CountdownItem extends DbCountdownRow {
     title: string;
     targetDate: Date;
@@ -130,14 +118,6 @@ export interface StockItem extends DbStockItemRow {
     color: string | null;
 }
 
-export interface Todo {
-    id: string;
-    user_id: string;
-    task: string;
-    completed: boolean;
-    created_at: string;
-}
-
 export interface Streak {
     id: string;
     userId: string;
@@ -148,12 +128,6 @@ export interface Streak {
     amount: number;
     timestamp: Date;
     period_id?: string;
-}
-
-export interface BierpongGame extends DbBierpongGameRow {
-    playerIds: string[]; // Alias for player_ids
-    winnerIds: string[]; // Alias for winner_ids
-    timestamp: Date;
 }
 
 export interface RoleDefinition {
