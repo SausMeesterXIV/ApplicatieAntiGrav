@@ -1,6 +1,13 @@
 import { supabase } from './supabase';
 import { formatTimeAgo } from './utils';
 
+// Eén rij verwijderen en nagaan dat het echt gebeurde: zonder recht verwijdert RLS stil niets (geen fout).
+async function verwijderRij(tabel, id, geenRechtMelding) {
+  const { data, error } = await supabase.from(tabel).delete().eq('id', id).select('id');
+  if (error) throw error;
+  if (!data?.length) throw new Error(geenRechtMelding);
+}
+
 // ==================== PROFILES ====================
 
 export async function fetchAllProfiles() {
@@ -137,10 +144,8 @@ export async function addConsumptie(userId, drankId, aantal = 1, periodId, userN
 }
 
 export async function deleteConsumptie(id) {
-  // Zonder recht (bv. eigen streep ouder dan 1 uur of al gefactureerd) verwijdert RLS stil niets
-  const { data, error } = await supabase.from('consumpties').delete().eq('id', id).select('id');
-  if (error) throw error;
-  if (!data?.length) throw new Error('Deze streep kan je niet (meer) verwijderen');
+  // Eigen streep: enkel binnen 1 uur en niet gefactureerd; Drankteam: altijd
+  await verwijderRij('consumpties', id, 'Deze streep kan je niet (meer) verwijderen');
 }
 
 async function fetchAllBalancesOud() {
@@ -304,12 +309,9 @@ function mapEvent(e) {
 }
 
 export async function deleteEvent(id) {
-  await verwijderMetBijlagen({ eventId: id }, async () => {
-    // Zonder recht verwijdert RLS stil niets: controleer dat de rij echt weg is
-    const { data, error } = await supabase.from('events').delete().eq('id', id).select('id');
-    if (error) throw error;
-    if (!data?.length) throw new Error('Je kan enkel je eigen agenda-items verwijderen');
-  });
+  await verwijderMetBijlagen({ eventId: id }, () =>
+    verwijderRij('events', id, 'Je kan enkel je eigen agenda-items verwijderen'),
+  );
 }
 
 // ==================== BIJLAGEN (agenda en verslagen) ====================
@@ -358,8 +360,7 @@ export async function uploadBijlage({ eventId, verslagId }, file) {
 }
 
 export async function verwijderBijlage(bijlage) {
-  const { error } = await supabase.from('bijlagen').delete().eq('id', bijlage.id);
-  if (error) throw error;
+  await verwijderRij('bijlagen', bijlage.id, 'Je kan deze bijlage niet verwijderen');
   await supabase.storage.from('bijlagen').remove([bijlage.pad]);
 }
 
@@ -408,11 +409,9 @@ export async function saveVerslag({ id, titel, datum, inhoud, eventId }) {
 }
 
 export async function deleteVerslag(id) {
-  await verwijderMetBijlagen({ verslagId: id }, async () => {
-    const { data, error } = await supabase.from('verslagen').delete().eq('id', id).select('id');
-    if (error) throw error;
-    if (!data?.length) throw new Error('Je kan enkel je eigen verslagen verwijderen');
-  });
+  await verwijderMetBijlagen({ verslagId: id }, () =>
+    verwijderRij('verslagen', id, 'Je kan enkel je eigen verslagen verwijderen'),
+  );
 }
 
 // ==================== NOTIFICATIES ====================
@@ -622,8 +621,7 @@ export async function addFrituurBestelling(userId, userName, sessieId, items, to
 }
 
 export async function deleteFrituurBestelling(id) {
-  const { error } = await supabase.from('frituur_bestellingen').delete().eq('id', id);
-  if (error) throw error;
+  await verwijderRij('frituur_bestellingen', id, 'Je kan deze bestelling niet (meer) annuleren');
 }
 
 export async function finalizeFrituurSessie(sessieId, actualAmount) {
@@ -1140,6 +1138,5 @@ export async function stemOpPoll(pollId, userId, optieId) {
 }
 
 export async function deletePoll(pollId) {
-  const { error } = await supabase.from('polls').delete().eq('id', pollId);
-  if (error) throw error;
+  await verwijderRij('polls', pollId, 'Enkel de maker of hoofdleiding kan deze poll verwijderen');
 }

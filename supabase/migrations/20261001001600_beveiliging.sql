@@ -8,7 +8,8 @@
 -- 3. Strepen: gewone leiding strept enkel via streep_drank() (die controleert alles). Rechtstreeks
 --    inserten kon met een eigen prijs (bv. 0) of een negatief aantal.
 -- 4. Frietbestellingen: gewone leiding kon een bestelling op iemand anders zetten (user_id aanpassen),
---    of ze aan een factuur koppelen zodat ze nooit gefactureerd werd.
+--    of ze aan een factuur koppelen zodat ze nooit gefactureerd werd. Een eigen bestelling kon ook na
+--    het afsluiten of factureren nog verwijderd worden.
 -- 5. Meldingen: de afzendernaam van een melding kon vrij gekozen worden (bv. "Hoofdleiding").
 -- 6. Polls: de maker kon gemaakt_door van een poll veranderen.
 -- Vereist: alle vorige migraties.
@@ -90,6 +91,14 @@ drop trigger if exists bescherm_frietbestelling on public.frituur_bestellingen;
 create trigger bescherm_frietbestelling
   before insert or update on public.frituur_bestellingen
   for each row execute function public.bescherm_frietbestelling();
+
+-- Eigen bestelling annuleren kan enkel zolang ze open is (ronde loopt) en niet gefactureerd
+drop policy if exists "eigen bestelling of drankteam verwijdert" on public.frituur_bestellingen;
+create policy "eigen open bestelling of drankteam verwijdert" on public.frituur_bestellingen for delete
+  using (
+    (user_id = auth.uid() and factuur_id is null and status = 'open')
+    or public.heeft_recht('drank_beheren')
+  );
 
 -- ---------------------------------------------------------------------
 -- 5. Meldingen: bij een rechtstreekse insert vanuit de app is de afzendernaam altijd je eigen naam.

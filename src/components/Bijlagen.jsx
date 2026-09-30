@@ -105,8 +105,8 @@ export const Bijlagen = ({ item, magBeheren = false }) => {
     try {
       await db.verwijderBijlage(bijlage);
       setBijlagen(prev => prev.filter(b => b.id !== bijlage.id));
-    } catch {
-      showToast('Verwijderen mislukt', 'error');
+    } catch (e) {
+      showToast(e.message || 'Verwijderen mislukt', 'error');
     }
   };
 

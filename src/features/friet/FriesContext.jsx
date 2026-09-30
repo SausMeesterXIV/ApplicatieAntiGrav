@@ -135,7 +135,7 @@ export const FriesProvider = ({ children }) => {
       showToast('Bestelling geannuleerd', 'info');
     } catch (error) {
       setFriesOrders(prev => [orderToRemove, ...prev]);
-      showToast('Fout bij het annuleren', 'error');
+      showToast(error.message || 'Fout bij het annuleren', 'error');
     }
   };
 

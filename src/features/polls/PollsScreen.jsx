@@ -56,7 +56,7 @@ export const PollsScreen = () => {
       await db.deletePoll(poll.id);
       setPolls(prev => prev.filter(p => p.id !== poll.id));
     } catch (e) {
-      showToast('Verwijderen mislukt', 'error');
+      showToast(e.message || 'Verwijderen mislukt', 'error');
     }
   };
 
