@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useDrink } from '../drank/DrinkContext';
 import { useAgenda } from '../agenda/AgendaContext';
 import { Event, CountdownItem, User, Drink } from '../../types';
-import { hasAccess } from '../../App';
+import { hasAccess } from '../../lib/roleUtils';
 import { SPECIAL_DRINKS } from '../../lib/constants';
 
 import { SkeletonWidget, SkeletonCard, SkeletonEvent } from '../../components/Skeleton';

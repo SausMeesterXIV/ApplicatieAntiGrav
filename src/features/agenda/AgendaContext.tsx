@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Event, CountdownItem, Notification } from '../../types';
 import * as db from '../../lib/supabaseService';
 import { useAuth } from '../auth/AuthContext';
-import { useRealtimeSubscriptions } from '../../lib/useRealtime';
+import { useNotificationsRealtime } from '../../lib/useRealtime';
 import { showToast } from '../../components/Toast';
 
 interface AgendaContextType {
@@ -28,10 +28,7 @@ export function AgendaProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useRealtimeSubscriptions({
-    userId: session?.user?.id || null,
-    setNotifications,
-  });
+  useNotificationsRealtime(session?.user?.id || null, setNotifications);
 
   useEffect(() => {
     if (session?.user?.id) {

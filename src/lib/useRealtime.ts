@@ -1,30 +1,21 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { supabase } from './supabase';
 import { Notification, Order } from '../types';
 import { showToast } from '../components/Toast';
 import { formatTimeAgo } from './utils';
 
-interface UseRealtimeOptions {
-  userId: string | null;
-  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
-  setFriesOrders?: React.Dispatch<React.SetStateAction<Order[]>>;
-  frituurSessieId?: string | null;
-}
+// Elk hook heeft een eigen kanaalnaam, zodat twee providers elkaars kanaal niet overschrijven.
 
-export function useRealtimeSubscriptions({ 
-  userId, 
-  setNotifications, 
-  setFriesOrders,
-  frituurSessieId
-}: UseRealtimeOptions) {
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-
+/** Live notificaties (bv. "Iemand heeft voor jou besteld"). Gebruikt door AgendaProvider. */
+export function useNotificationsRealtime(
+  userId: string | null,
+  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>
+) {
   useEffect(() => {
     if (!userId) return;
 
     const channel = supabase
-      .channel('realtime-updates')
-      // A. LIVE NOTIFICATIES (Bijv: "Iemand heeft voor jou besteld")
+      .channel('realtime-notificaties')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notificaties' },
@@ -49,17 +40,31 @@ export function useRealtimeSubscriptions({
             color: 'bg-blue-100 text-blue-600',
           } as Notification;
 
-          setNotifications(prev => [mapped, ...prev]);
+          setNotifications(prev => prev.some(p => String(p.id) === String(mapped.id)) ? prev : [mapped, ...prev]);
           showToast(`📬 ${n.titel}`, 'info');
         }
       )
-      // B. LIVE FRIET BESTELLINGEN
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [userId]);
+}
+
+/** Live friet-bestellingen van de actieve sessie. Gebruikt door FriesProvider. */
+export function useFriesRealtime(
+  userId: string | null,
+  frituurSessieId: string | null,
+  setFriesOrders: React.Dispatch<React.SetStateAction<Order[]>>
+) {
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel('realtime-frituur')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'frituur_bestellingen' },
         (payload) => {
-          if (!setFriesOrders) return;
-
           if (payload.eventType === 'INSERT') {
             const n = payload.new as any;
             // Filter op de huidige sessie
@@ -76,8 +81,9 @@ export function useRealtimeSubscriptions({
               periodId: n.period_id
             };
 
-            setFriesOrders(prev => [mapped, ...prev]);
-            
+            // Eigen bestellingen staan er al (optimistisch toegevoegd); niet dubbel toevoegen
+            setFriesOrders(prev => prev.some(o => o.id === mapped.id) ? prev : [mapped, ...prev]);
+
             // Toon melding bij een nieuwe bestelling (handig voor de frituur-verantwoordelijke!)
             if (n.user_id !== userId) {
                 showToast(`🍟 Nieuwe bestelling van ${n.user_name}!`, 'success');
@@ -98,12 +104,6 @@ export function useRealtimeSubscriptions({
       )
       .subscribe();
 
-    channelRef.current = channel;
-
-    return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-      }
-    };
-  }, [userId, frituurSessieId]); // Nu luistert de effect ook naar sessie-wissels!
+    return () => { supabase.removeChannel(channel); };
+  }, [userId, frituurSessieId]);
 }

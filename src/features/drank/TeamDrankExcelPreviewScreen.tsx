@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDrink } from './DrinkContext';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 
 export const TeamDrankExcelPreviewScreen: React.FC = () => {

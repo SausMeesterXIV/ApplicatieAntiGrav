@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ChevronBack } from '../../components/ChevronBack';
 import { User } from '../../types';
 import { supabase } from '../../lib/supabase';
@@ -8,7 +8,7 @@ import * as db from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
 import { isHapticEnabled, setHapticEnabled as saveHapticPref, hapticFeedback } from '../../lib/haptics';
 import { UserAvatar } from '../../components/UserAvatar';
-import { hasAccess } from '../../App';
+import { hasAccess } from '../../lib/roleUtils';
 
 export const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();

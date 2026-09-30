@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { useOutletContext, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAgenda } from '../agenda/AgendaContext';
 import { ChevronBack } from '../../components/ChevronBack';
 import { UserAvatar } from '../../components/UserAvatar';
 import { Notification } from '../../types';
 import { SkeletonRow } from '../../components/Skeleton';
 import { hapticFeedback } from '../../lib/haptics';
-import type { AppContextType } from '../../App';
 
 export const NotificationsScreen: React.FC = () => {
   const navigate = useNavigate();
   const { users, loading } = useAuth();
-  const { notifications, handleMarkNotificationAsRead: onMarkAsRead } = useOutletContext<AppContextType>();
+  const { notifications, handleMarkNotificationAsRead: onMarkAsRead } = useAgenda();
   const [filter, setFilter] = useState<'Alles' | 'Nudges' | 'Officieel'>('Alles');
 
   // Hulpprogramma voor exacte datum-groepering

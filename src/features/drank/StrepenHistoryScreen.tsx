@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 import { ChevronBack } from '../../components/ChevronBack';
-import { AppContextType } from '../../App';
 import { Streak } from '../../types';
 import { useDrink } from './DrinkContext';
 import { UserAvatar } from '../../components/UserAvatar';
@@ -12,7 +12,7 @@ interface Props {
 
 export const StrepenHistoryScreen: React.FC<Props> = ({ adminMode = false }) => {
     const navigate = useNavigate();
-    const { users, currentUser } = useOutletContext<AppContextType>();
+    const { users, currentUser } = useAuth();
     const { streaks, handleRemoveCost } = useDrink(); // Haal ALTIJD de meest up-to-date streaks uit DrinkContext
 
     const isTeamDrank = currentUser?.rol === 'hoofdleiding' || 

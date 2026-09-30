@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useDrink } from './DrinkContext';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { BillingPeriod, BillingCorrection } from '../../types';
 import * as db from '../../lib/supabaseService';
 import { archiveConsumptiesPeriod, fetchBillingPeriods, fetchOpenBillingPeriod, updateBillingPeriod } from '../../lib/supabaseService';

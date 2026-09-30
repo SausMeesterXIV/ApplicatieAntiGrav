@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import * as db from '../../lib/supabaseService';
 import { hapticSuccess } from '../../lib/haptics';
 import { UserAvatar } from '../../components/UserAvatar';

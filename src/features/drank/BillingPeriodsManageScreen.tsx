@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
-import { AppContextType } from '../../App';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
+import { useDrink } from './DrinkContext';
 import { BillingPeriod } from '../../types';
 import * as db from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
@@ -9,7 +10,8 @@ import { SkeletonRow } from '../../components/Skeleton';
 
 export const BillingPeriodsManageScreen: React.FC = () => {
     const navigate = useNavigate();
-    const { currentUser, billingPeriods, setBillingPeriods, setActivePeriod } = useOutletContext<AppContextType>();
+    const { currentUser } = useAuth();
+    const { billingPeriods, setBillingPeriods, setActivePeriod } = useDrink();
     const [loading, setLoading] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [newName, setNewName] = useState('');
@@ -88,7 +90,7 @@ export const BillingPeriodsManageScreen: React.FC = () => {
                         <span className="material-icons-round">arrow_back</span>
                     </button>
                     <h1 className="text-xl font-bold flex-1">Periodebeheer</h1>
-                    {(currentUser.rol === 'hoofdleiding' || currentUser.rol === 'team_drank' || currentUser.rol === 'godmode') && (
+                    {(currentUser?.rol === 'hoofdleiding' || currentUser?.rol === 'team_drank' || currentUser?.rol === 'godmode') && (
                         <button
                             onClick={() => setShowAddModal(true)}
                             className="bg-blue-600 text-white p-2 rounded-xl shadow-lg shadow-blue-500/20"

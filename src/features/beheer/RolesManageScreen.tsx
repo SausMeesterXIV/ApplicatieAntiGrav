@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { User } from '../../types';
 import * as db from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';

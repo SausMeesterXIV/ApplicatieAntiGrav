@@ -37,3 +37,18 @@ export const hasRole = (user: User | null | undefined, roleName: string): boolea
 export const isHoofdleiding = (user: User | null | undefined): boolean => {
   return hasRole(user, 'hoofdleiding');
 };
+
+// Helper om te checken of een user rechten heeft (hoofdleiding en godmode hebben altijd true)
+export const hasAccess = (user: User | null | undefined, requiredRole: string) => {
+  if (!user) return false;
+  const mainRol = String(user.rol || '').toLowerCase();
+  if (mainRol === 'hoofdleiding' || mainRol === 'godmode') return true;
+
+  const req = requiredRole.toLowerCase();
+  if (mainRol.includes(req)) return true;
+
+  // Check ook in de array van extra rollen
+  if (user.roles && user.roles.some(r => String(r).toLowerCase().includes(req))) return true;
+
+  return false;
+};

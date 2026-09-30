@@ -1,17 +1,19 @@
 import React from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
+import { useFries } from './FriesContext';
 import { ChevronBack } from '../../components/ChevronBack';
-import { AppContextType } from '../../App';
 import { Order } from '../../types';
 
 export const FriesHistoryScreen: React.FC = () => {
     const navigate = useNavigate();
-    const { friesOrders, users, currentUser } = useOutletContext<AppContextType>();
+    const { users, currentUser } = useAuth();
+    const { friesOrders } = useFries();
 
     // Group completed orders by date (day)
     const groupedByDate = (() => {
         // Toon uitsluitend bestellingen die effectief zijn afgerond
-        const completed = friesOrders.filter(o => o.userId === currentUser.id && o.status === 'geleverd');
+        const completed = friesOrders.filter(o => o.userId === currentUser?.id && o.status === 'geleverd');
         const groups = new Map<string, { date: Date; orders: Order[]; total: number }>();
 
         completed.forEach(order => {

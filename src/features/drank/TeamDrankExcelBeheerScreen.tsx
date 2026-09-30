@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
-import { AppContextType } from '../../App';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
+import { useDrink } from './DrinkContext';
 import * as db from '../../lib/supabaseService';
 import { supabase } from '../../lib/supabase';
 import { showToast } from '../../components/Toast';
@@ -12,10 +13,8 @@ const COL_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 export const TeamDrankExcelBeheerScreen: React.FC = () => {
     const navigate = useNavigate();
-    const {
-        streaks, setStreaks, users, setUsers, drinks, setDrinks,
-        activePeriod, billingPeriods
-    } = useOutletContext<AppContextType>();
+    const { users, setUsers } = useAuth();
+    const { streaks, setStreaks, dranken: drinks, setDrinks, activePeriod, billingPeriods } = useDrink();
     const [activeSheet, setActiveSheet] = useState<SheetTab>('consumpties');
     const [selectedCell, setSelectedCell] = useState<CellKey | null>(null);
     const [editingCell, setEditingCell] = useState<CellKey | null>(null);

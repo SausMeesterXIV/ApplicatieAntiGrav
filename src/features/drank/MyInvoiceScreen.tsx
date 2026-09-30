@@ -24,7 +24,7 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
 }) => {
   const navigate = useNavigate();
   const { currentUser: authUser } = useAuth();
-  const { streaks, activePeriod } = useDrink();
+  const { streaks, activePeriod, balances } = useDrink();
   const { friesOrders } = useFries();
 
   // Use props if provided, otherwise context
@@ -89,7 +89,9 @@ export const MyInvoiceScreen: React.FC<MyInvoiceScreenProps> = ({
 
   // Total balance = dynamic drink cost + fries cost
   const dynamicBalance = Number((totalConsumptions + totalFries).toFixed(2));
-  const displayBalance = propBalance ?? dynamicBalance;
+  // Saldo uit de database (zelfde berekening als voorheen in App.tsx), anders de schatting
+  const serverBalance = currentUser ? (balances[currentUser.id] ?? 0) : undefined;
+  const displayBalance = propBalance ?? serverBalance ?? dynamicBalance;
 
   const handleBack = () => {
     if (propOnBack) propOnBack();
