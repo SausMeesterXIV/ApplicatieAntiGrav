@@ -230,14 +230,8 @@ const AppRoutes = () => {
                 </RoleRoute>
               }
             />
-            <Route
-              path="billing-dashboard"
-              element={
-                <RoleRoute role="drank">
-                  <TeamDrankDashboardScreen />
-                </RoleRoute>
-              }
-            />
+            {/* Oud adres van het Drankteam-dashboard (bladwijzers) */}
+            <Route path="billing-dashboard" element={<Navigate to="/strepen/dashboard" replace />} />
 
             <Route path="strepen" element={<StrepenScreen />} />
             <Route path="strepen/ranking" element={<RankingScreen />} />
