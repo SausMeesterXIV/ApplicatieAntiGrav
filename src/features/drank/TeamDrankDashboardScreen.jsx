@@ -27,9 +27,6 @@ export const TeamDrankDashboardScreen = () => {
     // 3. Vergeet loading niet in de dependency array
   }, [canAccess, navigate, loading]);
 
-  // 4. Render niets zolang we nog aan het laden zijn, of als er geen toegang is
-  if (loading || !canAccess) return null;
-
   const [activeView, setActiveView] = useState(() => {
     return sessionStorage.getItem('teamDrankActiveView') || 'dashboard';
   });
@@ -142,6 +139,10 @@ export const TeamDrankDashboardScreen = () => {
       navigate(-1);
     }
   };
+
+  // Niets tonen zolang we laden of zonder toegang. Pas NA alle hooks: een vroege return ervoor
+  // verandert het aantal hooks tussen renders en laat React crashen.
+  if (loading || !canAccess) return null;
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
