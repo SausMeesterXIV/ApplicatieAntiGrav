@@ -17,27 +17,37 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 | Functie | Wie |
 |---|---|
 | Agenda bekijken | Alle leiding |
-| Agenda-items maken/aanpassen | Hoofdleiding + werkgroep Sfeerbeheer |
-| Zelf strepen zetten | Alle leiding (voor zichzelf) |
-| Strepen zetten voor anderen | Drankteam |
+| Agenda-items maken | Alle leiding |
+| Agenda-items aanpassen | Wie het item maakte + hoofdleiding + werkgroep Sfeerbeheer |
+| Agenda-items verwijderen | Wie het item maakte + hoofdleiding (alles) |
+| Aftelklokken beheren | Hoofdleiding + werkgroep Sfeerbeheer |
+| Verslagen lezen en toevoegen | Alle leiding |
+| Verslagen aanpassen/verwijderen | Auteur + hoofdleiding |
+| Zelf strepen zetten | Alle leiding (voor zichzelf); eigen streep verwijderen tot 1 uur na het zetten |
+| Strepen zetten en verwijderen voor anderen | Drankteam (op elk moment, via hun dashboard) |
 | Dranken, prijzen, voorraad, facturatie, archief | Drankteam |
 | Frietbestelronde openen/afsluiten | Alle leiding |
 | Friet bestellen voor een ander | Alle leiding (die persoon krijgt een melding) |
 | Friet-menu en -prijzen beheren | Hoofdleiding + Drankteam |
 | Berichten sturen | Hoofdleiding + rollen die de hoofdleiding daarvoor aanduidt |
 | Nudges sturen | Alle leiding |
-| Polls maken | Hoofdleiding + rollen die de hoofdleiding aanduidt (aanname) |
-| Rollen beheren | Hoofdleiding |
+| Polls maken | Hoofdleiding + rollen die de hoofdleiding aanduidt |
+| Rollen beheren | Hoofdleiding (er is altijd minstens één actieve hoofdleiding) |
 
 ## Functies
 
 ### Agenda — behouden
 - Inhoud: **grote evenementen** (kamp, weekends, fuiven, eetfestijn) en **leidingsvergaderingen**. Geen wekelijkse activiteiten per groep.
 - **Aanwezigheid**: leiding duidt aan of ze komt (komt / komt niet / misschien).
-- **Meldingen**: pushmelding bij een nieuw item en een herinnering vooraf.
+- **Meldingen**: pushmelding bij een nieuw item en een herinnering de dag vooraf om 18u (Belgische tijd).
+- **Bijlagen**: bij een agenda-item kan je bestanden zetten, bv. de intro voor de groepsraad (privé-opslag, max 10 MB per bestand, enkel leiding kan ze openen).
+
+### Verslagen — nieuw
+- Verslagen van groepsraden: titel, datum, tekst en bijlagen, optioneel gekoppeld aan een agenda-item.
+- Alle leiding leest en voegt toe; de auteur en hoofdleiding passen aan of verwijderen. Melding naar alle leiding bij een nieuw verslag.
 
 ### Drank en strepen — behouden
-- Leiding zet **zelf** strepen. **Drankteam** kan ook strepen zetten voor iedereen, bv. bij correcties.
+- Leiding zet **zelf** strepen en kan een eigen streep verwijderen tot 1 uur na het zetten (zolang ze niet gefactureerd is). **Drankteam** kan strepen van iedereen toevoegen en verwijderen, op elk moment, bv. bij correcties.
 - **Dranken en prijzen** beheert Drankteam in de app.
 - **Voorraad**: elke streep trekt automatisch af van de voorraad. Drankteam kan corrigeren na een manuele telling.
 - **Facturatie**: Drankteam **sluit zelf een periode af**. Daarbij wordt per leider een factuur gemaakt, met **Excel-export**.
@@ -66,7 +76,7 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - Iedereen stemt één keer en kan zijn stem aanpassen tot de deadline.
 
 ### Beheer
-- **Rollen beheren**: hoofdleiding kent groepen en werkgroepen toe, en maakt werkgroepen aan of verwijdert ze.
+- **Rollen beheren**: hoofdleiding kent groepen en werkgroepen toe, en maakt werkgroepen aan of verwijdert ze. De laatste actieve hoofdleiding kan de rol niet verliezen, niet op inactief gezet en niet verwijderd worden (server-side afgedwongen), zodat er altijd iemand rollen kan uitdelen.
 - **Instellingen**: profiel, wachtwoord wijzigen, meldingen aan of uit.
 
 ### Verwijderen
