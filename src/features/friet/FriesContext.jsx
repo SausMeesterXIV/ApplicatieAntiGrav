@@ -115,19 +115,8 @@ export const FriesProvider = ({ children }) => {
       if (isOwnOrder) {
         showToast('Bestelling geplaatst! 🍟', 'success');
       } else {
+        // De melding naar die persoon stuurt de database zelf (trigger melding_friet_voor_ander)
         showToast(`Bestelling voor ${orderForUser.naam} geplaatst! 🍟`, 'success');
-
-        // Notificatie naar de andere persoon
-        const notifTitle = '🍟 Frietjes voor jou!';
-        const notifContent = `${currentUser.naam || 'Iemand'} heeft zojuist een bestelling voor je geplaatst (€${totalCost.toFixed(2).replace('.', ',')}).`;
-        db.addNotificatie(
-          currentUser.id,
-          orderForUser.id,
-          notifTitle,
-          notifContent,
-          currentUser.naam || 'Systeem',
-          ''
-        ).catch(console.error);
       }
     } catch (error) {
       setFriesOrders(prev => prev.filter(o => o.id !== tempId));
