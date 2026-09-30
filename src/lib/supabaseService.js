@@ -1053,7 +1053,8 @@ export async function stuurBericht({ doel, doelId, personen, titel, bericht, afz
 export async function fetchPolls() {
   const { data, error } = await supabase
     .from('polls')
-    .select('*, poll_opties(*), poll_stemmen(user_id, optie_id)')
+    // Relaties expliciet benoemd: poll_stemmen verwijst naar polls én poll_opties
+    .select('*, poll_opties!poll_opties_poll_id_fkey(*), poll_stemmen!poll_stemmen_poll_id_fkey(user_id, optie_id)')
     .order('deadline', { ascending: false });
   if (error) {
     console.warn('Polls niet beschikbaar (migratie nog niet uitgevoerd?)', error.message);
