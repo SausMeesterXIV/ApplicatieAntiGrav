@@ -38,22 +38,10 @@ export default defineConfig({
         ]
       },
       workbox: {
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'supabase-api-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 7 // 1 week
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          }
-        ]
+        // Pushmeldingen tonen en openen (public/push-sw.js)
+        importScripts: ['push-sw.js'],
+        // Supabase-data wordt bewust NIET gecachet: strepen, saldo en facturen moeten altijd actueel zijn.
+        // (Vroeger stond hier StaleWhileRevalidate, waardoor de app eerst verouderde gegevens toonde.)
       }
     })
   ],

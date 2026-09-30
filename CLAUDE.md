@@ -116,3 +116,5 @@ src/
 - `npm install`: dependencies installeren
 - `npm run dev`: app lokaal starten (http://localhost:5173)
 - `npm run build`: productieversie bouwen
+- `npm run preview`: gebouwde versie lokaal draaien (nodig om pushmeldingen en de PWA te testen)
+- Database: migraties en instellen van push staan in `supabase/README.md`

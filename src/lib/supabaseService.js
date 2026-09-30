@@ -553,14 +553,6 @@ export async function finalizeFrituurSessie(sessieId, actualAmount) {
   return data;
 }
 
-// ==================== PUSH (FCM) ====================
-
-export async function updateUserFcmToken(userId, token) {
-  const { error } = await supabase.from('profiles').update({ fcm_token: token }).eq('id', userId);
-
-  if (error) throw error;
-}
-
 // ==================== STOCK ITEMS ====================
 
 export async function fetchStockItems() {
@@ -1036,13 +1028,6 @@ export async function updateFrituurBestelling(id, totaalPrijs, items) {
     .update({ totaal_prijs: totaalPrijs, items: items })
     .eq('id', id);
 
-  if (error) throw error;
-}
-
-export async function savePushToken(userId, token, platform) {
-  const { error } = await supabase
-    .from('user_push_tokens')
-    .upsert({ user_id: userId, token, device_type: platform }, { onConflict: 'token' });
   if (error) throw error;
 }
 

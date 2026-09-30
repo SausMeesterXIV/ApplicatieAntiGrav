@@ -9,6 +9,7 @@ import { showToast } from '../../components/Toast';
 import { isHapticEnabled, setHapticEnabled as saveHapticPref, hapticFeedback } from '../../lib/haptics';
 import { UserAvatar } from '../../components/UserAvatar';
 import { WachtwoordWijzigen } from './WachtwoordWijzigen';
+import { PushInstelling } from './PushInstelling';
 
 export const SettingsScreen = () => {
   const navigate = useNavigate();
@@ -228,6 +229,9 @@ export const SettingsScreen = () => {
                   />
                 </button>
               </div>
+
+              {/* Pushmeldingen aan/uit */}
+              <PushInstelling />
 
               {/* Notifications */}
               <button
