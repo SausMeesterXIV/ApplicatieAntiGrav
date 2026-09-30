@@ -1,0 +1,135 @@
+import React, { useState } from 'react';
+import { useAuth } from '../auth/AuthContext';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import * as db from '../../lib/supabaseService';
+import { hapticSuccess } from '../../lib/haptics';
+import { UserAvatar } from '../../components/UserAvatar';
+
+export const NudgeSelectorScreen: React.FC = () => {
+  const navigate = useNavigate();
+    const { users, currentUser } = useAuth();
+  const [search, setSearch] = useState('');
+  const [nudgedIds, setNudgedIds] = useState<string[]>([]); // Start empty instead of assuming '3'
+  const [showToast, setShowToast] = useState(false);
+
+  // Users from Supabase via context
+  const leaders = users;
+
+  const handleNudge = async (id: string) => {
+    if (nudgedIds.includes(id)) return;
+
+    setNudgedIds([...nudgedIds, id]);
+    setShowToast(true);
+
+    try {
+      const senderName = currentUser?.nickname || currentUser?.name || 'Iemand';
+      await db.addNotificatie(
+        (currentUser?.id || ''), 
+        id, 
+        'Nudge ontvangen! 👀', 
+        `${senderName} herinnert je eraan om je streepjes aan te vullen!`, 
+        senderName
+      );
+      hapticSuccess();
+    } catch (e) {
+      console.error('Failed to save nudge:', e);
+    }
+
+    // Hide toast after 3 seconds
+    setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
+  };
+
+  const filteredLeaders = leaders.filter(l =>
+    (l.name || l.naam || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans relative transition-colors duration-200">
+      {/* Header */}
+      <header className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] sticky top-0 bg-gray-50 dark:bg-[#0f172a] z-10 transition-colors">
+        <div className="flex items-center gap-4 mb-4">
+          <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+            <span className="material-icons-round text-2xl">arrow_back</span>
+          </button>
+          <div>
+            <h1 className="text-xl font-bold leading-tight">Verstuur een Nudge</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Herinner leiding aan hun streepjes</p>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <span className="material-icons-round absolute left-3 top-3.5 text-gray-400">search</span>
+          <input
+            type="text"
+            placeholder="Zoek leiding..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
+          />
+        </div>
+      </header>
+
+      <main className="flex-1 px-4 pb-nav-safe overflow-y-auto">
+        <div className="flex justify-between items-center mb-4 mt-2">
+          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Alle Leiding</h2>
+          <span className="text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900/50">{leaders.length} Actief</span>
+        </div>
+
+        <div className="space-y-3">
+          {filteredLeaders.map((leader) => {
+            const isNudged = nudgedIds.includes(leader.id);
+            return (
+              <div key={leader.id} className="flex items-center justify-between p-2">
+                <div className="flex items-center gap-4">
+                  <UserAvatar user={leader} size="md" className="border-2 border-white dark:border-[#1e293b]" />
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white text-base">{leader.name}</h3>
+                    <p className="text-xs text-gray-500">{leader.rol}</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleNudge(leader.id)}
+                  disabled={isNudged}
+                  className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-all ${isNudged
+                    ? 'bg-gray-200 dark:bg-[#1e293b] text-gray-500 cursor-default'
+                    : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 active:scale-95'
+                    }`}
+                >
+                  {isNudged ? (
+                    <>
+                      <span>Gestuurd</span>
+                      <span className="material-icons-round text-sm">check</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Nudge</span>
+                      <span className="material-icons-round text-sm">back_hand</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </main>
+
+      {/* Success Toast */}
+      {showToast && (
+        <div className="fixed left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300" style={{ bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
+          <div className="bg-white text-gray-900 px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 min-w-[300px] border border-gray-100">
+            <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+              <span className="material-icons-round text-white text-lg">check</span>
+            </div>
+            <div>
+              <p className="font-bold text-sm">Nudge succesvol verstuurd!</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
