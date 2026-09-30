@@ -142,9 +142,8 @@ export function DrinkProvider({ children }) {
     }
   };
 
-  const handleDeleteStreak = async streakId => {
-    // Stub for now
-  };
+  // Drankteam: strepen van iedereen verwijderen, op elk moment (geen 1-uurlimiet; RLS controleert het recht)
+  const handleDeleteStreak = streakId => handleRemoveCost(streakId, true);
 
   const handleQuickStreep = () => {
     if (!currentUser) return;

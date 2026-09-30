@@ -13,7 +13,7 @@ export const TeamDrankDashboardScreen = () => {
   const navigate = useNavigate();
   // 1. Haal 'loading' mee uit de useAuth hook
   const { users, currentUser, loading } = useAuth();
-  const { streaks, activePeriod, handleRemoveCost: handleDeleteStreak } = useDrink();
+  const { streaks, activePeriod, handleDeleteStreak } = useDrink();
   const { friesOrders } = useFries();
 
   const canAccess = hasRole(currentUser, 'drank');
