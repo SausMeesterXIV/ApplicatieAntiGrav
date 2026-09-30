@@ -191,6 +191,17 @@ export const TeamDrankFriesHistoryScreen = () => {
                       </button>
                     )}
 
+                    {/* Friet-vergelijking: verwacht (menu) tegenover betaald (kasticket), per item */}
+                    {isPaid && (
+                      <button
+                        onClick={() => navigate(`/fries-comparison?sessionId=${session.id}`)}
+                        className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <span className="material-icons-round text-sm">compare_arrows</span>
+                        Vergelijking bekijken
+                      </button>
+                    )}
+
                     {/* Kasticket Foto */}
                     {session.receipt_url && (
                       <div>
