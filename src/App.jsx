@@ -5,6 +5,7 @@ import { ToastContainer } from './components/Toast';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { hasAccess } from './lib/roleUtils';
+import { herlaadNaUpdate, vergeetHerladen } from './lib/herladen';
 
 import { BottomNav } from './components/BottomNav';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -15,8 +16,21 @@ import { DrinkProvider } from './features/drank/DrinkContext';
 import { AgendaProvider, useAgenda } from './features/agenda/AgendaContext';
 import { FriesProvider } from './features/friet/FriesContext';
 
-// Schermen worden pas geladen wanneer je ze opent (kleinere eerste download op gsm)
-const scherm = (laad, naam) => lazy(() => laad().then(m => ({ default: m[naam] })));
+// Schermen worden pas geladen wanneer je ze opent (kleinere eerste download op gsm).
+// Lukt dat niet omdat er intussen een nieuwe versie online staat, dan herladen we de app één keer.
+const scherm = (laad, naam) =>
+  lazy(() =>
+    laad().then(
+      m => {
+        vergeetHerladen();
+        return { default: m[naam] };
+      },
+      fout => {
+        if (herlaadNaUpdate()) return new Promise(() => {}); // pagina herlaadt, niets tonen
+        throw fout;
+      },
+    ),
+  );
 const AgendaManageScreen = scherm(() => import('./features/agenda/AgendaManageScreen'), 'AgendaManageScreen');
 const AgendaScreen = scherm(() => import('./features/agenda/AgendaScreen'), 'AgendaScreen');
 const BillingPeriodsManageScreen = scherm(
