@@ -22,7 +22,8 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 | Strepen zetten voor anderen | Drankteam |
 | Dranken, prijzen, voorraad, facturatie, archief | Drankteam |
 | Frietbestelronde openen/afsluiten | Alle leiding |
-| Friet-menu en -prijzen beheren | Drankteam (aanname, aan te passen) |
+| Friet bestellen voor een ander | Alle leiding (die persoon krijgt een melding) |
+| Friet-menu en -prijzen beheren | Hoofdleiding + Drankteam |
 | Berichten sturen | Hoofdleiding + rollen die de hoofdleiding daarvoor aanduidt |
 | Nudges sturen | Alle leiding |
 | Polls maken | Hoofdleiding + rollen die de hoofdleiding aanduidt (aanname) |
@@ -48,7 +49,10 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 ### Friet — behouden
 - Werkt met **bestelrondes**: iedereen kan een ronde openen, leiding voegt bestellingen toe, en iedereen kan de ronde afsluiten.
 - Je bestelt uit een **menu met prijzen**, dat in de app beheerd wordt.
+- **Prijzen**: de prijs van een bestelling komt altijd uit het menu (server-side afgedwongen). Enkel hoofdleiding en Drankteam passen prijzen aan, ook van bestellingen achteraf.
+- **Bestellen voor een ander**: elke leider mag voor een ander bestellen. Die persoon krijgt altijd een melding (en push) met wie besteld heeft, wat en voor welk bedrag.
 - Het bedrag komt **op de drankfactuur** van de leider.
+- **Kasticket**: foto bij het afsluiten; enkel zichtbaar voor leiding (privé-opslag, tijdelijke links).
 - Na het afsluiten volgt een overzicht per item (totalen voor de frituur) en per persoon.
 
 ### Berichten — behouden
@@ -66,10 +70,8 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - **Instellingen**: profiel, wachtwoord wijzigen, meldingen aan of uit.
 
 ### Verwijderen
-Verwijder deze volledig, inclusief scherm, componenten, data en navigatie:
-- `BierpongScreen`
-- `QuotesScreen`
-- `CredentialsScreen`: kijk eerst wat dit scherm doet. Is het nodig voor login of registratie, meld dat dan voor je het verwijdert.
+- `BierpongScreen` en `QuotesScreen`: verwijderd.
+- `CredentialsScreen`: **blijft**. Het is het login- en registratiescherm.
 
 ## Beslissingen
 - **Registratie-uitzondering**: naast `@ksa-aalter.be` mag enkel het testaccount `it.takes.jaguarke@gmail.com` registreren (ook server-side zo afdwingen).
@@ -79,10 +81,13 @@ Verwijder deze volledig, inclusief scherm, componenten, data en navigatie:
 - **Behouden**: Friet-vergelijking en `CreditsScreen`.
 - **Weggelaten**: Google Sheets-sync (Excel-export volstaat).
 - **Alles gratis**: geen betaalde diensten. Pushmeldingen via standaard Web Push (VAPID) en de gratis tier van Supabase, zonder Firebase.
+- **Enkel een webapp (PWA)**: geen native app, geen Capacitor. Trillen gebeurt via de Vibration API van de browser.
+- **Hosting**: Vercel. Vercel Analytics en Speed Insights blijven.
+- **Opslag**: kastickets (`receipts`) zijn privé; profielfoto's (`avatars`) zijn publiek, maar enkel door jezelf aan te passen.
 
 ## Tech stack
 - React + Vite
-- **JavaScript (JSX), geen TypeScript.** Het project wordt omgezet.
+- **JavaScript (JSX), geen TypeScript.**
 - Tailwind CSS
 - Supabase (auth, database, RLS)
 - PWA: installeerbaar, met web-push
