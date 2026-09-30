@@ -9,19 +9,15 @@ import { hapticSuccess } from '../../lib/haptics';
 import { showToast } from '../../components/Toast';
 
 // Het grote vierkant op het startscherm, veegbaar zoals een Instagram-post met meerdere foto's.
-// Volgorde: ranking eerst, dan strepen. De frietkaart staat vooraan als er frieten worden opgenomen,
-// als ze besteld zijn (afhaaluur in het groot) en tot een halfuur na het afhaaluur ("Smakelijk").
-// Daarna verdwijnt ze. Terwijl de bestelling wordt doorgegeven, staat ze na de ranking.
+// Volgorde: ranking eerst, dan strepen. Zolang er een frietronde loopt (open, wordt besteld, afhalen,
+// en tot een halfuur na het afhaaluur "Smakelijk") staat de frietkaart helemaal vooraan; daarna verdwijnt ze.
 
 export const HomeCarrousel = () => {
-  const { rondeLoopt, frietFase } = useFries();
-  const frietOpen = rondeLoopt && frietFase !== 'bestellen';
+  const { rondeLoopt } = useFries();
 
-  const friet = { id: 'friet', Kaart: FrietKaart };
   const kaarten = [
-    ...(frietOpen ? [friet] : []),
+    ...(rondeLoopt ? [{ id: 'friet', Kaart: FrietKaart }] : []),
     { id: 'ranking', Kaart: RankingKaart },
-    ...(rondeLoopt && !frietOpen ? [friet] : []),
     { id: 'strepen', Kaart: StrepenKaart },
   ];
 
