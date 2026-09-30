@@ -419,39 +419,41 @@ export async function deleteVerslag(id) {
 export async function fetchNotificaties(userId) {
   const { data, error } = await supabase
     .from('notificaties')
-    .select('*, profiles!notificaties_zender_id_fkey(naam, rol)')
+    .select('*, profiles!notificaties_zender_id_fkey(naam, is_hoofdleiding)')
     .or(`ontvanger_id.eq.all,ontvanger_id.eq.${userId}`)
     .order('datum', { ascending: false });
 
   if (error) throw error;
 
-  // Haal lokaal geheugen op van gelezen meldingen
-  const seenIds = JSON.parse(localStorage.getItem('antigrav_seen_notifs') || '[]');
+  return (data || []).map(n => mapNotificatie(n, n.profiles));
+}
 
-  return (data || []).map(n => {
-    // Haal de rol op uit de gekoppelde profiel-data
-    const zenderRol = n.profiles?.rol;
-    const type = n.type || 'official';
+// Eén vertaling voor geladen én live (realtime) meldingen. zender = { naam, is_hoofdleiding } indien bekend.
+export function mapNotificatie(n, zender) {
+  // Lokaal onthouden gelezen meldingen (voor meldingen aan 'all', die geen eigen gelezen-vlag hebben)
+  let seenIds = [];
+  try {
+    seenIds = JSON.parse(localStorage.getItem('antigrav_seen_notifs') || '[]');
+  } catch {
+    // geen of kapotte localStorage: niets onthouden
+  }
+  const type = n.type || 'official';
 
-    // Een melding is gelezen als de DB dat zegt OF als wij het lokaal hebben onthouden
-    const isGelezen = n.gelezen || seenIds.includes(String(n.id));
-
-    return {
-      ...n,
-      senderId: n.zender_id,
-      id: String(n.id),
-      type: type,
-      sender: n.profiles?.naam || n.zender_naam || 'Systeem',
-      role: zenderRol === 'hoofdleiding' ? 'Hoofdleiding' : '',
-      title: n.titel,
-      content: n.bericht || '',
-      time: formatTimeAgo(new Date(n.datum)),
-      isRead: isGelezen,
-      action: n.action,
-      icon: type === 'nudge' ? 'touch_app' : 'notifications',
-      color: type === 'nudge' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600',
-    };
-  });
+  return {
+    ...n,
+    senderId: n.zender_id,
+    id: String(n.id),
+    type,
+    sender: zender?.naam || n.zender_naam || 'Systeem',
+    role: zender?.is_hoofdleiding ? 'Hoofdleiding' : '',
+    title: n.titel,
+    content: n.bericht || '',
+    time: formatTimeAgo(new Date(n.datum)),
+    isRead: !!n.gelezen || seenIds.includes(String(n.id)),
+    action: n.action,
+    icon: type === 'nudge' ? 'touch_app' : 'notifications',
+    color: type === 'nudge' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600',
+  };
 }
 
 export async function addNotificatie(zenderId, ontvangerId, titel, bericht, zenderNaam, action, type = 'official') {

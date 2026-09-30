@@ -208,7 +208,7 @@ export const FriesScreen = () => {
               <UserAvatar user={user} size="md" />
               <div>
                 <p className="font-bold text-gray-900 dark:text-white">{user.naam}</p>
-                <p className="text-xs text-gray-500">{user.rol}</p>
+                <p className="text-xs text-gray-500">{(user.roles || []).join(' · ')}</p>
               </div>
             </div>
           ))}

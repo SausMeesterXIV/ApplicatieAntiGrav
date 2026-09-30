@@ -90,7 +90,7 @@ export const NudgeSelectorScreen = () => {
                   <UserAvatar user={leader} size="md" className="border-2 border-white dark:border-[#1e293b]" />
                   <div>
                     <h3 className="font-bold text-gray-900 dark:text-white text-base">{leader.name}</h3>
-                    <p className="text-xs text-gray-500">{leader.rol}</p>
+                    <p className="text-xs text-gray-500">{(leader.roles || []).join(' · ')}</p>
                   </div>
                 </div>
 

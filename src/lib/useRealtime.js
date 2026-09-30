@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { supabase } from './supabase';
 
 import { showToast } from '../components/Toast';
-import { formatTimeAgo } from './utils';
+import { mapNotificatie } from './supabaseService';
 
 // Elk hook heeft een eigen kanaalnaam, zodat twee providers elkaars kanaal niet overschrijven.
 
@@ -18,21 +18,7 @@ export function useNotificationsRealtime(userId, setNotifications) {
         if (n.ontvanger_id !== userId && n.ontvanger_id !== 'all') return;
         if (n.zender_id === userId) return;
 
-        const mapped = {
-          ...n,
-          senderId: n.zender_id,
-          id: n.id,
-          type: 'official',
-          sender: n.zender_naam || 'Systeem',
-          role: 'Lid',
-          title: n.titel,
-          content: n.bericht || '',
-          time: formatTimeAgo(new Date(n.datum)),
-          isRead: n.gelezen,
-          action: n.action,
-          icon: 'notifications',
-          color: 'bg-blue-100 text-blue-600',
-        };
+        const mapped = mapNotificatie(n, null);
 
         setNotifications(prev => (prev.some(p => String(p.id) === String(mapped.id)) ? prev : [mapped, ...prev]));
         showToast(`📬 ${n.titel}`, 'info');

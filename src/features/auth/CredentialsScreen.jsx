@@ -119,27 +119,12 @@ export const CredentialsScreen = () => {
       });
       if (error) throw error;
 
-      if (data.user) {
-        const { error: profileError } = await supabase.from('profiles').upsert(
-          [
-            {
-              id: data.user.id,
-              naam: naam.trim(),
-              name: naam.trim(),
-              email: email,
-              rol: 'standaard',
-              actief: true,
-            },
-          ],
-          { onConflict: 'id' }
-        );
-
-        if (profileError) {
-          console.error('Profile creation/update error:', profileError);
-        }
+      // Het profiel maakt de database zelf aan (trigger handle_new_user, met de naam uit full_name)
+      if (data.session) {
+        showToast('Account aangemaakt! Je bent nu ingelogd.', 'success');
+      } else {
+        showToast('Account aangemaakt! Bevestig je e-mailadres via de link in je mailbox (kijk ook in spam).', 'success');
       }
-
-      showToast('Account aangemaakt! Je bent nu ingelogd.', 'success');
     } catch (error) {
       showToast(error.message || 'Fout bij het registreren', 'error');
     } finally {
