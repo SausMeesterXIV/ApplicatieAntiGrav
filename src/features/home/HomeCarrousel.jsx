@@ -49,21 +49,47 @@ export const HomeCarrousel = () => {
 
   return (
     <section aria-roledescription="carrousel" aria-label="Snel strepen en friet" className="space-y-3">
-      <div
-        ref={baan}
-        onScroll={opScroll}
-        className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar scroll-px-4"
-      >
-        {kaarten.map(({ id, Kaart }, i) => (
-          <div
-            key={id}
-            className="snap-start shrink-0 w-[calc(100%-20px)] aspect-square max-h-[440px]"
-            aria-roledescription="kaart"
-            aria-label={`${i + 1} van ${kaarten.length}`}
-          >
-            <Kaart positie={`${i + 1}/${kaarten.length}`} />
-          </div>
-        ))}
+      <div className="relative group/carrousel">
+        <div
+          ref={baan}
+          onScroll={opScroll}
+          className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar scroll-px-4"
+        >
+          {kaarten.map(({ id, Kaart }, i) => (
+            <div
+              key={id}
+              className="snap-start shrink-0 w-[calc(100%-20px)] aspect-square max-h-[440px] lg:max-h-[520px]"
+              aria-roledescription="kaart"
+              aria-label={`${i + 1} van ${kaarten.length}`}
+            >
+              <Kaart positie={`${i + 1}/${kaarten.length}`} />
+            </div>
+          ))}
+        </div>
+
+        {/* Pijlen voor muis en toetsenbord (op een computer kan je niet vegen) */}
+        {[
+          { richting: -1, icoon: 'chevron_left', label: 'Vorige kaart', plaats: 'left-2', zichtbaar: actief > 0 },
+          {
+            richting: 1,
+            icoon: 'chevron_right',
+            label: 'Volgende kaart',
+            plaats: 'right-2',
+            zichtbaar: actief < kaarten.length - 1,
+          },
+        ].map(p =>
+          p.zichtbaar ? (
+            <button
+              key={p.richting}
+              type="button"
+              onClick={() => gaNaar(actief + p.richting)}
+              aria-label={p.label}
+              className={`hidden lg:flex absolute top-1/2 -translate-y-1/2 ${p.plaats} w-10 h-10 items-center justify-center rounded-full bg-white/95 dark:bg-inkt/90 text-inkt dark:text-white shadow-lg opacity-0 group-hover/carrousel:opacity-100 focus-visible:opacity-100 transition-opacity`}
+            >
+              <span className="material-icons-round">{p.icoon}</span>
+            </button>
+          ) : null,
+        )}
       </div>
       <div className="flex justify-center gap-1.5" role="tablist" aria-label="Kaarten">
         {kaarten.map(({ id }, i) => (

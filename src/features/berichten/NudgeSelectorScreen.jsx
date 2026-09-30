@@ -124,7 +124,7 @@ export const NudgeSelectorScreen = () => {
       {/* Success Toast */}
       {showToast && (
         <div
-          className="fixed left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300"
+          className="fixed left-1/2 lg:left-[calc(50%+7.5rem)] -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300"
           style={{ bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}
         >
           <div className="bg-white text-gray-900 px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 min-w-[300px] border border-gray-100">

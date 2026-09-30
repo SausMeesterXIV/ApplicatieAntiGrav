@@ -322,7 +322,7 @@ export const FriesOverviewScreen = () => {
         )}
       </main>
 
-      <div className="fixed bottom-[85px] left-0 right-0 px-4 z-40 flex justify-center pointer-events-none">
+      <div className="fixed bottom-[85px] left-0 right-0 lg:left-60 lg:bottom-6 px-4 z-40 flex justify-center pointer-events-none">
         <div className="w-full max-w-lg bg-white/95 backdrop-blur-md dark:bg-[#1e2330]/95 p-4 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-gray-200/80 dark:border-gray-700/80 pointer-events-auto transition-all duration-300">
           {sessionStatus === FRITUUR_STATUS.ORDERED && (
             <div className="space-y-3 animate-in slide-in-from-bottom-2">

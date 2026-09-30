@@ -41,6 +41,13 @@
     display: flex;
     flex-direction: column;
   }
+
+  /* Computer (en tablet liggend): de volle breedte, met zijbalk in plaats van een gsm-kolom */
+  @media (min-width: 1024px) {
+    #root {
+      max-width: none;
+    }
+  }
 }
 
 .pt-safe { padding-top: env(safe-area-inset-top, 16px); }
@@ -166,6 +173,16 @@
 /* Content padding: ensures content doesn't hide behind BottomNav + safe area */
 .pb-nav-safe {
   padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Op een computer is er geen menubalk onderaan: vaste balken en ruimte onderaan mogen lager */
+@media (min-width: 1024px) {
+  .bottom-nav-offset {
+    bottom: 1.5rem;
+  }
+  .pb-nav-safe {
+    padding-bottom: 2rem;
+  }
 }
 
 /* Scrollen zonder zichtbare schuifbalk (bollenrij, carrousel, hoofdinhoud) */

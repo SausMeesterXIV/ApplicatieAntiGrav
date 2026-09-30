@@ -405,7 +405,7 @@ export const TeamDrankStockScreen = () => {
       </main>
       {/* Footer Button (Only for Voorraad) */}
       {activeMainTab === 'voorraad' && (
-        <footer className="fixed bottom-nav-offset left-0 right-0 p-4 bg-gray-50/90 dark:bg-[#0f172a]/90 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 z-20 flex gap-3 transition-colors">
+        <footer className="fixed bottom-nav-offset left-0 right-0 lg:left-60 lg:mx-auto lg:max-w-3xl lg:rounded-2xl lg:border p-4 bg-gray-50/90 dark:bg-[#0f172a]/90 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 z-20 flex gap-3 transition-colors">
           <button
             onClick={() => handleOpenModal()}
             className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"

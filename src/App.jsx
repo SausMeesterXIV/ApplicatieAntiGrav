@@ -7,7 +7,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { hasAccess } from './lib/roleUtils';
 import { herlaadNaUpdate, vergeetHerladen } from './lib/herladen';
 
-import { BottomNav } from './components/BottomNav';
+import { BottomNav, Zijbalk } from './components/BottomNav';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CredentialsScreen } from './features/auth/CredentialsScreen';
 import { HomeScreen } from './features/home/HomeScreen';
@@ -135,22 +135,33 @@ const ScrollToTop = () => {
   return null;
 };
 
+// Gsm: inhoud met menubalk onderaan. Computer (vanaf 1024px): zijbalk links, inhoud met leesbreedte
+// (het startscherm breder, in twee kolommen).
 const MainLayout = () => {
   const { notifications } = useAgenda();
+  const { pathname } = useLocation();
+  const breed = pathname === '/';
+
   return (
     <div
-      className="text-base w-full flex flex-col overflow-hidden bg-gray-50 dark:bg-[#0f172a]"
+      className="text-base w-full flex flex-col lg:flex-row overflow-hidden bg-gray-50 dark:bg-[#0f172a]"
       style={{ height: '100vh' }}
     >
-      <div id="main-scroll-container" className="flex-1 w-full overflow-y-auto no-scrollbar">
-        <ErrorBoundary>
-          <Suspense fallback={<Laden />}>
-            <Outlet />
-          </Suspense>
-        </ErrorBoundary>
+      <aside className="hidden lg:block w-60 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0f172a]">
+        <Zijbalk notifications={notifications} />
+      </aside>
+
+      <div id="main-scroll-container" className="flex-1 min-w-0 w-full overflow-y-auto no-scrollbar">
+        <div className={`w-full mx-auto lg:px-6 lg:py-4 ${breed ? 'lg:max-w-6xl' : 'lg:max-w-3xl'}`}>
+          <ErrorBoundary>
+            <Suspense fallback={<Laden />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
+        </div>
       </div>
 
-      <div className="w-full z-50 shrink-0">
+      <div className="w-full z-50 shrink-0 lg:hidden">
         <BottomNav notifications={notifications} />
       </div>
     </div>

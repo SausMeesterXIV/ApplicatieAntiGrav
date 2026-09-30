@@ -42,6 +42,7 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - Daaronder de **twee eerstvolgende agenda-items** en onderaan de **aftelklok** (bv. kamp).
 - **Instellingen**: gegroepeerde lijst; "Volgorde bollen" (per leider, bewaard op het profiel) en "Snelle drank".
 - Stijl: lettertype Plus Jakarta Sans, pastels per bol en donkere knoppen (`inkt`), tokens in `tailwind.config.js`.
+- **Computer** (vanaf 1024px, Tailwind `lg:`): zijbalk links i.p.v. menubalk onderaan, inhoud met leesbreedte (`max-w-3xl`), startscherm breder in twee kolommen, pop-ups als gecentreerd venster. Vaste balken onderaan krijgen `lg:left-60` zodat ze naast de zijbalk staan. Op gsm verandert er niets.
 
 ### Agenda — behouden
 - Inhoud: **grote evenementen** (kamp, weekends, fuiven, eetfestijn) en **leidingsvergaderingen**. Geen wekelijkse activiteiten per groep.

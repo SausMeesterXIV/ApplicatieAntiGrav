@@ -66,19 +66,19 @@ export const BottomSheet = ({ isOpen, onClose, children, title, subtitle }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center lg:items-center lg:p-6">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
         onClick={onClose}
       />
-      {/* Sheet */}
+      {/* Sheet (op een computer: gecentreerd venster) */}
       <div
-        className="relative bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-t-[2.5rem] shadow-2xl z-10 animate-in slide-in-from-bottom duration-300 ease-out flex flex-col pt-4"
+        className="relative bg-white dark:bg-[#1e293b] w-full max-w-lg rounded-t-[2.5rem] lg:rounded-3xl shadow-2xl z-10 animate-in slide-in-from-bottom duration-300 ease-out flex flex-col pt-4 lg:pt-6"
         style={{ maxHeight: '92vh' }}
       >
-        {/* Handle */}
-        <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-6 shrink-0" />
+        {/* Handle (enkel op gsm: om te vegen) */}
+        <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-6 shrink-0 lg:hidden" />
 
         <div className="px-6 flex flex-col flex-1 min-h-0">
           <div className="flex items-center justify-between mb-6 shrink-0">

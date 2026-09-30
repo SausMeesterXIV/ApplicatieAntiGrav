@@ -657,7 +657,7 @@ export const FriesScreen = () => {
 
       {/* 7. BEVESTIGEN WINKELMANDJE FOOTER */}
       {cart.length > 0 && !isAdmin && isOrderingOpen && (
-        <footer className="fixed bottom-24 left-4 right-4 z-50 animate-in slide-in-from-bottom-4 transition-all">
+        <footer className="fixed bottom-24 left-4 right-4 lg:left-60 lg:right-0 lg:bottom-6 lg:mx-auto lg:max-w-3xl lg:px-6 z-50 animate-in slide-in-from-bottom-4 transition-all">
           <div
             className={`p-4 rounded-2xl shadow-2xl transition-colors border ${orderingFor ? 'bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800' : 'bg-white dark:bg-[#1e2330] border-gray-200 dark:border-gray-800'}`}
           >
