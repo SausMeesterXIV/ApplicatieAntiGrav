@@ -103,11 +103,6 @@ export type AppContextType = {
     handleDeleteFryItem: (id: string) => Promise<void>;
     frituurSessieId: string | null;
     setFrituurSessieId: React.Dispatch<React.SetStateAction<string | null>>;
-    gsheetId: string | null;
-    setGsheetId: React.Dispatch<React.SetStateAction<string | null>>;
-    gsheetSharingEmail: string | null;
-    setGsheetSharingEmail: React.Dispatch<React.SetStateAction<string | null>>;
-    syncToGoogleSheets: (command: string, payload: any) => Promise<any>;
     loading: boolean;
 };
 
@@ -144,8 +139,6 @@ const DEFAULT_USER: User = {
 };
 
 function App() {
-    const [gsheetId, setGsheetId] = useState<string | null>(null);
-    const [gsheetSharingEmail, setGsheetSharingEmail] = useState<string | null>(null);
 
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
@@ -309,13 +302,13 @@ function App() {
             const [
                 profilesData, drinksData, consumptiesData, balanceData, eventsData, notificatiesData,
                 stockData, frituurSessieData, countdownsData, activeBillingPeriod,
-                allBillingPeriods, gsheetIdSetting, gsheetSharingEmailSetting, loadedRoles, fryItemsData, frituurOrdersData,
+                allBillingPeriods, loadedRoles, fryItemsData, frituurOrdersData,
             ] = await Promise.all([
                 db.fetchProfiles(), db.fetchDranken(), db.fetchConsumpties(), db.fetchBalanceForUser(userId),
                 db.fetchEvents(), db.fetchNotificaties(userId),
                 db.fetchStockItems(), db.fetchActiveFrituurSessie(), db.fetchCountdowns(),
-                db.fetchActiveBillingPeriod(), db.fetchBillingPeriods(), db.fetchSetting('gsheet_id'),
-                db.fetchSetting('gsheet_sharing_email'), db.fetchAvailableRoles(), db.fetchFryItems(), db.fetchFrituurBestellingen(),
+                db.fetchActiveBillingPeriod(), db.fetchBillingPeriods(),
+                db.fetchAvailableRoles(), db.fetchFryItems(), db.fetchFrituurBestellingen(),
             ]);
 
             const me = profilesData.find(p => p.id === userId);
@@ -338,7 +331,6 @@ function App() {
                 setFriesPickupTime(frituurSessieData.pickupTime);
             }
             setFriesOrders(frituurOrdersData || []); setFryItems(fryItemsData || []);
-            setGsheetId(gsheetIdSetting); setGsheetSharingEmail(gsheetSharingEmailSetting);
 
             if (!loadedRoles || loadedRoles.length === 0) {
                 const defaultRoles = [
@@ -664,11 +656,10 @@ function App() {
         handleSaveRoles: async (roles) => { try { setAvailableRoles(roles); await db.saveAvailableRoles(roles); showToast('Rollen succesvol opgeslagen', 'success'); } catch (error) { console.error('Failed to save roles:', error); showToast('Fout bij opslaan rollen', 'error'); } },
         friesOrders, setFriesOrders, friesSessionStatus, setFriesSessionStatus, friesPickupTime, setFriesPickupTime, countdowns, setCountdowns, events, setEvents, fryItems, setFryItems, notifications, setNotifications,
         handleAddCost, handleDeleteStreak, handleQuickStreep, handlePlaceFryOrder, handleRemoveFryOrder, handleArchiveFriesSession, handleCompleteFriesPayment, handleSaveEvent, handleDeleteEvent, handleAddNotification, handleMarkNotificationAsRead, handleSaveCountdowns,
-        frituurSessieId, setFrituurSessieId, activePeriod, setActivePeriod, billingPeriods, setBillingPeriods, gsheetId, setGsheetId, gsheetSharingEmail, setGsheetSharingEmail, loading,
+        frituurSessieId, setFrituurSessieId, activePeriod, setActivePeriod, billingPeriods, setBillingPeriods, loading,
         handleAddFryItem: async (item) => { try { const id = await db.addFryItem(item); setFryItems(prev => [...prev, { ...item, id }]); showToast('Item toegevoegd', 'success'); } catch (error) { console.error('Failed to add fry item:', error); showToast('Fout bij toevoegen item', 'error'); } },
         handleUpdateFryItem: async (id, updates) => { try { await db.updateFryItem(id, updates); setFryItems(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i)); showToast('Item bijgewerkt', 'success'); } catch (error) { console.error('Failed to update fry item:', error); showToast('Fout bij bijwerken item', 'error'); } },
         handleDeleteFryItem: async (id) => { try { await db.deleteFryItem(id); setFryItems(prev => prev.filter(i => i.id !== id)); showToast('Item verwijderd', 'success'); } catch (error) { console.error('Failed to delete fry item:', error); showToast('Fout bij verwijderen item', 'error'); } },
-        syncToGoogleSheets: async (command: string, payload: any) => { const { data, error } = await supabase.functions.invoke('google-sheets-sync', { body: { command, payload } }); if (error) throw error; return data; }
     };
 
     const RoleRoute = ({ children, role }: { children: React.ReactNode, role: string }) => {

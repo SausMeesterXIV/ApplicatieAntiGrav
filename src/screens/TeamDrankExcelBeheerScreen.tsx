@@ -14,7 +14,7 @@ export const TeamDrankExcelBeheerScreen: React.FC = () => {
     const navigate = useNavigate();
     const {
         streaks, setStreaks, users, setUsers, drinks, setDrinks,
-        activePeriod, setActivePeriod, billingPeriods, gsheetId, syncToGoogleSheets
+        activePeriod, billingPeriods
     } = useOutletContext<AppContextType>();
     const [activeSheet, setActiveSheet] = useState<SheetTab>('consumpties');
     const [selectedCell, setSelectedCell] = useState<CellKey | null>(null);
@@ -258,11 +258,6 @@ export const TeamDrankExcelBeheerScreen: React.FC = () => {
                     showToast('Nickname aangepast', 'success');
                 }
             }
-
-            // AFTER SUCCESSFUL DB SAVE: Sync to Google Sheets if configured
-            if (gsheetId && activePeriod && activeSheet === 'consumpties') {
-                await syncActiveTabToGoogleSheets();
-            }
         } catch (error) {
             console.error(error);
             showToast('Fout bij opslaan', 'error');
@@ -270,96 +265,7 @@ export const TeamDrankExcelBeheerScreen: React.FC = () => {
             setIsSaving(false);
             setEditingCell(null);
         }
-    }, [editingCell, editValue, activeSheet, consumptiesData, drankenData, ledenData, gsheetId, activePeriod]);
-
-    const syncActiveTabToGoogleSheets = async () => {
-        if (!gsheetId || !activePeriod) return;
-
-        setIsSaving(true);
-        try {
-            let currentSheetId = activePeriod.gsheet_sheet_id;
-
-            // 1. Ensure the sheet exists (named after the period)
-            try {
-                const res = await syncToGoogleSheets('add_sheet', {
-                    spreadsheetId: gsheetId,
-                    title: activePeriod.naam
-                });
-                
-                // If it returned a sheetId, store it if we didn't have it
-                if (res.sheetId && !currentSheetId) {
-                    currentSheetId = String(res.sheetId);
-                    await db.updateBillingPeriod(activePeriod.id, { gsheet_sheet_id: currentSheetId } as any);
-                    // Update local state
-                    setActivePeriod({ ...activePeriod, gsheet_sheet_id: currentSheetId });
-                }
-            } catch (err: any) {
-                console.log('Sheet existence check/creation note:', err);
-            }
-
-            // 2. Prepare data for the current active sheet
-            const values: string[][] = [];
-
-            if (activeSheet === 'consumpties') {
-                // FETCH FRESH FROM DATABASE VIA JOIN INSTEAD OF LOCAL TABLE STATE
-                const { data: rawData, error } = await supabase
-                    .from('consumpties')
-                    .select(`
-                        aantal,
-                        datum,
-                        dranken ( naam, prijs ),
-                        profiles ( naam ) 
-                    `)
-                    .eq('period_id', activePeriod.id)
-                    .order('datum', { ascending: false });
-
-                if (error) throw error;
-
-                // Headers without delete bin
-                values.push(['Datum', 'Tijd', 'Persoon', 'Drank', 'Aantal', 'Prijs (€)']);
-                
-                // Rows
-                for (const row of (rawData || [])) {
-                    const d = new Date(row.datum);
-                    values.push([
-                        d.toLocaleDateString('nl-BE'),
-                        d.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' }),
-                        (row.profiles as any)?.naam || 'Onbekend',
-                        (row.dranken as any)?.naam || 'Onbekend',
-                        String(row.aantal),
-                        Number((row.dranken as any)?.prijs || 0).toFixed(2).replace('.', ',')
-                    ]);
-                }
-            } else {
-                // Dranken & Leden: from local table
-                const cols = getColumns();
-                values.push(cols);
-                const rowsCount = getRowCount();
-
-                for (let i = 0; i < rowsCount; i++) {
-                    const row: string[] = [];
-                    for (let j = 0; j < cols.length; j++) {
-                        row.push(getCellValue(i, j));
-                    }
-                    values.push(row);
-                }
-            }
-
-            // 3. Sync to the tab (using sheetId if available to handle renames)
-            await syncToGoogleSheets('update_values', {
-                spreadsheetId: gsheetId,
-                sheetId: currentSheetId, // This allows the backend to find the sheet even if renamed
-                range: currentSheetId ? 'A1' : `'${activePeriod.naam}'!A1`, // Fallback to name if ID unknown
-                values
-            });
-            showToast('Google Sheet gesynchroniseerd!', 'success');
-        } catch (err: any) {
-            console.error('Sync error:', err);
-            showToast('Google Sheet sync mislukt', 'warning');
-        } finally {
-            setIsSaving(false);
-        }
-    };
+    }, [editingCell, editValue, activeSheet, consumptiesData, drankenData, ledenData, activePeriod]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
@@ -396,16 +302,6 @@ export const TeamDrankExcelBeheerScreen: React.FC = () => {
                     <span className="material-icons-round text-lg">grid_on</span>
                     <span className="font-semibold text-sm truncate">KSA Drankbeheer — Excel Modus</span>
                 </div>
-                {gsheetId && (
-                    <button
-                        onClick={syncActiveTabToGoogleSheets}
-                        disabled={isSaving}
-                        className="bg-white/10 hover:bg-white/20 p-1 px-2 rounded text-[10px] font-bold border border-white/20 flex items-center gap-1 transition-all"
-                    >
-                        <span className="material-icons-round text-sm">sync</span>
-                        SYNC NU
-                    </button>
-                )}
                 {isSaving && (
                     <div className="flex items-center gap-1 text-green-200 text-[10px] animate-pulse">
                         <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>

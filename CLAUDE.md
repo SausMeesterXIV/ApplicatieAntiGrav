@@ -1,0 +1,118 @@
+# KSA-app (KSA Aalter)
+
+## Wat is deze app?
+Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter. Leiding gebruikt ze om drank te strepen en af te rekenen, friet te bestellen, de agenda van grote evenementen en leidingsvergaderingen te volgen, berichten te ontvangen en te stemmen in polls.
+
+## Gebruikers, groepen en rollen
+- Alleen leiding heeft een account.
+- **Registratie**: iedereen met de link kan registreren met e-mail + wachtwoord, maar **alleen met een e-mailadres dat eindigt op `@ksa-aalter.be`**. Controleer dit **server-side** (Supabase auth hook of database-trigger), niet enkel in de frontend.
+- Iemand kan **meerdere rollen tegelijk** hebben.
+- **Groepen** (vaste lijst, van jong naar oud): Pagadders, Kabouters, Sloebers, Tieners, Jim, Sim, Kim.
+- **Werkgroepen**: vrij in te stellen door de hoofdleiding in de app, bv. Drankteam of Sfeerbeheer.
+- **Hoofdleiding** is ook admin.
+- **Alleen hoofdleiding** kent groepen en werkgroepen toe aan leiding.
+- Rollen **bepalen wat je ziet en mag doen**. Dwing rechten af met **Supabase Row Level Security (RLS)**, niet alleen door knoppen te verbergen.
+
+## Rechten per functie
+| Functie | Wie |
+|---|---|
+| Agenda bekijken | Alle leiding |
+| Agenda-items maken/aanpassen | Hoofdleiding + werkgroep Sfeerbeheer |
+| Zelf strepen zetten | Alle leiding (voor zichzelf) |
+| Strepen zetten voor anderen | Drankteam |
+| Dranken, prijzen, voorraad, facturatie, archief | Drankteam |
+| Frietbestelronde openen/afsluiten | Alle leiding |
+| Friet-menu en -prijzen beheren | Drankteam (aanname, aan te passen) |
+| Berichten sturen | Hoofdleiding + rollen die de hoofdleiding daarvoor aanduidt |
+| Nudges sturen | Alle leiding |
+| Polls maken | Hoofdleiding + rollen die de hoofdleiding aanduidt (aanname) |
+| Rollen beheren | Hoofdleiding |
+
+## Functies
+
+### Agenda — behouden
+- Inhoud: **grote evenementen** (kamp, weekends, fuiven, eetfestijn) en **leidingsvergaderingen**. Geen wekelijkse activiteiten per groep.
+- **Aanwezigheid**: leiding duidt aan of ze komt (komt / komt niet / misschien).
+- **Meldingen**: pushmelding bij een nieuw item en een herinnering vooraf.
+
+### Drank en strepen — behouden
+- Leiding zet **zelf** strepen. **Drankteam** kan ook strepen zetten voor iedereen, bv. bij correcties.
+- **Dranken en prijzen** beheert Drankteam in de app.
+- **Voorraad**: elke streep trekt automatisch af van de voorraad. Drankteam kan corrigeren na een manuele telling.
+- **Facturatie**: Drankteam **sluit zelf een periode af**. Daarbij wordt per leider een factuur gemaakt, met **Excel-export**.
+- **Archief**: afgesloten periodes terugbekijken.
+- **Streaks**: een **ranking** van wie het meest streepte in de huidige periode.
+- **Gewone leiding ziet**: eigen verbruik, eigen openstaande factuur en eigen historiek (eerdere facturen, betaald of niet betaald).
+- **Betalen**: toon op de factuur het bedrag, het rekeningnummer en een gestructureerde mededeling, plus een **EPC-QR-code** (SEPA-overschrijvings-QR) die je scant met je bank-app of Payconiq. Er gaat **geen geld via de app** en er is geen betaalprovider. Drankteam duidt aan wanneer een factuur betaald is.
+
+### Friet — behouden
+- Werkt met **bestelrondes**: iedereen kan een ronde openen, leiding voegt bestellingen toe, en iedereen kan de ronde afsluiten.
+- Je bestelt uit een **menu met prijzen**, dat in de app beheerd wordt.
+- Het bedrag komt **op de drankfactuur** van de leider.
+- Na het afsluiten volgt een overzicht per item (totalen voor de frituur) en per persoon.
+
+### Berichten — behouden
+- **Nieuw bericht**: naar alle leiding, een groep of een werkgroep. Enkel toegestane rollen mogen sturen.
+- **Meldingen**: een overzicht van alle ontvangen meldingen.
+- **Nudges**: iedereen kan een andere leider een kort seintje sturen.
+- **Pushmeldingen**: echte web-push op je gsm. Op iPhone werkt dit alleen als de app op het beginscherm staat (iOS 16.4+).
+
+### Polls — nieuw
+- Een vraag met meerdere opties, met een deadline, en de resultaten zichtbaar voor alle leiding.
+- Iedereen stemt één keer en kan zijn stem aanpassen tot de deadline.
+
+### Beheer
+- **Rollen beheren**: hoofdleiding kent groepen en werkgroepen toe, en maakt werkgroepen aan of verwijdert ze.
+- **Instellingen**: profiel, wachtwoord wijzigen, meldingen aan of uit.
+
+### Verwijderen
+Verwijder deze volledig, inclusief scherm, componenten, data en navigatie:
+- `BierpongScreen`
+- `QuotesScreen`
+- `CredentialsScreen`: kijk eerst wat dit scherm doet. Is het nodig voor login of registratie, meld dat dan voor je het verwijdert.
+
+## Beslissingen
+- **Registratie-uitzondering**: naast `@ksa-aalter.be` mag enkel het testaccount `it.takes.jaguarke@gmail.com` registreren (ook server-side zo afdwingen).
+- **Streaks-ranking**: zichtbaar voor alle leiding.
+- **Geen vaste rollen in de code**: werkgroepen (bv. Drankteam, Sfeerbeheer) maakt de hoofdleiding zelf aan in de app. Enkel de 7 groepen en de hoofdleiding zijn vast.
+- **Later**: Winkeltje en Financieel dashboard blijven in de code staan, maar vallen buiten de MVP.
+- **Behouden**: Friet-vergelijking en `CreditsScreen`.
+- **Weggelaten**: Google Sheets-sync (Excel-export volstaat).
+- **Alles gratis**: geen betaalde diensten. Pushmeldingen via standaard Web Push (VAPID) en de gratis tier van Supabase, zonder Firebase.
+
+## Tech stack
+- React + Vite
+- **JavaScript (JSX), geen TypeScript.** Het project wordt omgezet.
+- Tailwind CSS
+- Supabase (auth, database, RLS)
+- PWA: installeerbaar, met web-push
+
+## Mappenstructuur (doel)
+Groepeer per functie, niet per bestandstype:
+```
+src/
+├── features/
+│   ├── agenda/
+│   ├── drank/
+│   ├── friet/
+│   ├── berichten/
+│   ├── polls/
+│   ├── beheer/
+│   └── auth/
+├── components/     ← herbruikbare UI (BottomNav, knoppen, ...)
+├── lib/            ← supabase-client, helpers
+└── App.jsx
+```
+
+## Regels voor Claude
+- Antwoord in het Nederlands.
+- Werk in kleine stappen. Controleer na elke stap dat `npm run dev` zonder fouten start.
+- Stel een commit voor na elke werkende stap.
+- Geen geheime sleutels in de code. De Supabase-URL en anon key komen uit `.env` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`), en `.env` staat in `.gitignore`. Een service_role key komt nooit in de frontend.
+- Verwijder of wijzig nooit tabellen of data in Supabase zonder het eerst te vragen. Databasewijzigingen gaan via SQL-migratiebestanden in `supabase/migrations/`.
+- Werk mobiel eerst.
+
+## Commando's
+- `npm install`: dependencies installeren
+- `npm run dev`: app lokaal starten (http://localhost:5173)
+- `npm run build`: productieversie bouwen

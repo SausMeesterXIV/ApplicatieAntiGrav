@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Drink, Streak, BillingPeriod, StockItem } from '../types';
 import * as db from '../lib/supabaseService';
-import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { showToast } from '../components/Toast';
 
@@ -12,8 +11,6 @@ interface DrinkContextType {
   activePeriod: BillingPeriod | null;
   billingPeriods: BillingPeriod[];
   stockItems: StockItem[];
-  gsheetId: string | null;
-  gsheetSharingEmail: string | null;
   loading: boolean;
   handleAddCost: (userId: string, drinkId: string | number, quantity?: number, userNaam?: string) => Promise<void>;
   handleRemoveCost: (streakId: string, isAdmin?: boolean) => Promise<void>;
@@ -23,12 +20,9 @@ interface DrinkContextType {
   setActivePeriod: React.Dispatch<React.SetStateAction<BillingPeriod | null>>;
   setBillingPeriods: React.Dispatch<React.SetStateAction<BillingPeriod[]>>;
   setStockItems: React.Dispatch<React.SetStateAction<StockItem[]>>;
-  setGsheetId: React.Dispatch<React.SetStateAction<string | null>>;
   handleQuickStreep: () => void;
   handleDeleteStreak: (streakId: string | number) => Promise<void>;
   refreshDrinksData: () => Promise<void>;
-  setGsheetSharingEmail: React.Dispatch<React.SetStateAction<string | null>>;
-  syncToGoogleSheets: (command: string, payload: any) => Promise<any>;
 }
 
 const DrinkContext = createContext<DrinkContextType | undefined>(undefined);
@@ -41,8 +35,6 @@ export function DrinkProvider({ children }: { children: ReactNode }) {
   const [activePeriod, setActivePeriod] = useState<BillingPeriod | null>(null);
   const [billingPeriods, setBillingPeriods] = useState<BillingPeriod[]>([]);
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
-  const [gsheetId, setGsheetId] = useState<string | null>(null);
-  const [gsheetSharingEmail, setGsheetSharingEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,14 +46,12 @@ export function DrinkProvider({ children }: { children: ReactNode }) {
   const loadDrinkData = async () => {
     setLoading(true);
     try {
-      const [drankenData, streaksData, periodsData, balancesData, stockData, gsheetIdSetting, gsheetEmailSetting] = await Promise.all([
+      const [drankenData, streaksData, periodsData, balancesData, stockData] = await Promise.all([
         db.fetchDranken(),
         db.fetchConsumpties(), // All streaks
         db.fetchBillingPeriods(),
         db.fetchAllBalances(),
-        db.fetchStockItems(),
-        db.fetchSetting('gsheet_id'),
-        db.fetchSetting('gsheet_sharing_email')
+        db.fetchStockItems()
       ]);
 
       setDranken(drankenData);
@@ -69,8 +59,6 @@ export function DrinkProvider({ children }: { children: ReactNode }) {
       setBillingPeriods(periodsData);
       setBalances(balancesData);
       setStockItems(stockData);
-      setGsheetId(gsheetIdSetting);
-      setGsheetSharingEmail(gsheetEmailSetting);
       setActivePeriod(periodsData.find(p => !p.is_closed) || null);
     } catch (e) {
       console.error("Error loading drink data", e);
@@ -223,53 +211,18 @@ export function DrinkProvider({ children }: { children: ReactNode }) {
     await loadDrinkData();
   };
 
-  const syncToGoogleSheets = async (command: string, payload: any) => {
-    showToast('Synchroniseren met Google Sheets...', 'info');
-    try {
-      const { data, error } = await supabase.functions.invoke('google-sheets-sync', {
-        body: { command, payload }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data && data.success) {
-        showToast('Succesvol gesynct met Google Sheets!', 'success');
-        if (data.sheetId && command === 'CREATE_SHEET' && !data.error) {
-           await db.saveAppSetting('gsheet_id', data.sheetId);
-           setGsheetId(data.sheetId);
-        }
-        return data;
-      } else {
-        throw new Error(data?.error || 'Unknown error from Edge Function');
-      }
-    } catch (error: any) {
-      console.error('Google Sheets sync error:', error);
-      if (error.message && error.message.includes('403')) {
-          showToast('Google Sheets Error: Permissie geweigerd (403)', 'error');
-      } else if (error.message && error.message.includes('401')) {
-          showToast('Google Sheets Error: Niet geauthenticeerd (401)', 'error');
-      } else {
-          showToast(`Fout bij syncen met Google Sheets: ${error.message || 'Onbekende fout'}`, 'error');
-      }
-      return { success: false, error: error.message };
-    }
-  };
-
   return (
     <DrinkContext.Provider value={{
       dranken, streaks, balances, activePeriod, billingPeriods, stockItems, 
-      gsheetId, gsheetSharingEmail, loading,
+      loading,
       handleAddCost, handleRemoveCost, refreshDrinksData,
-      setGsheetSharingEmail, syncToGoogleSheets,
       setDrinks: setDranken, setStreaks, setBalance: (updater) => {
         if (!currentUser) return;
         setBalances(prev => ({
           ...prev,
           [currentUser.id]: typeof updater === 'function' ? updater(prev[currentUser.id] || 0) : updater
         }));
-      }, setActivePeriod, setBillingPeriods, setStockItems, setGsheetId, handleQuickStreep, handleDeleteStreak
+      }, setActivePeriod, setBillingPeriods, setStockItems, handleQuickStreep, handleDeleteStreak
     }}>
       {children}
     </DrinkContext.Provider>
