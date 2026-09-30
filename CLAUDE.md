@@ -138,4 +138,5 @@ src/
 - `npm run dev`: app lokaal starten (http://localhost:5173)
 - `npm run build`: productieversie bouwen
 - `npm run preview`: gebouwde versie lokaal draaien (nodig om pushmeldingen en de PWA te testen)
+- `npm test`: automatische tests (Node-testrunner, map `tests/`) voor rekenlogica zoals betaal-QR en bankuittreksel
 - Database: migraties en instellen van push staan in `supabase/README.md`
