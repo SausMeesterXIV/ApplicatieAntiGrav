@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import { usePushNotifications } from './features/berichten/usePushNotifications';
@@ -10,47 +10,86 @@ import { hasAccess } from './lib/roleUtils';
 import { BottomNav } from './components/BottomNav';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CredentialsScreen } from './features/auth/CredentialsScreen';
-import { CreditsScreen } from './features/beheer/CreditsScreen';
 import { HomeScreen } from './features/home/HomeScreen';
-import { NotificationsScreen } from './features/berichten/NotificationsScreen';
-import { NewMessageScreen } from './features/berichten/NewMessageScreen';
-import { NudgeSelectorScreen } from './features/berichten/NudgeSelectorScreen';
-import { PollsScreen } from './features/polls/PollsScreen';
-import { NewPollScreen } from './features/polls/NewPollScreen';
-import { AgendaScreen } from './features/agenda/AgendaScreen';
-import { AgendaManageScreen } from './features/agenda/AgendaManageScreen';
-import { FriesScreen } from './features/friet/FriesScreen';
-import { FriesOverviewScreen } from './features/friet/FriesOverviewScreen';
-import { FriesSummaryScreen } from './features/friet/FriesSummaryScreen';
-import { FriesHistoryScreen } from './features/friet/FriesHistoryScreen';
-import { FriesComparisonScreen } from './features/friet/FriesComparisonScreen';
-import { StrepenScreen } from './features/drank/StrepenScreen';
-import { RankingScreen } from './features/drank/RankingScreen';
-import { TeamDrankDashboardScreen } from './features/drank/TeamDrankDashboardScreen';
-import { TeamDrankStockScreen } from './features/drank/TeamDrankStockScreen';
-import { TeamDrankStreaksScreen } from './features/drank/TeamDrankStreaksScreen';
-import { TeamDrankBillingScreen } from './features/drank/TeamDrankBillingScreen';
-import { TeamDrankInvoicesScreen } from './features/drank/TeamDrankInvoicesScreen';
-import { TeamDrankArchiveScreen } from './features/drank/TeamDrankArchiveScreen';
-import { TeamDrankExcelPreviewScreen } from './features/drank/TeamDrankExcelPreviewScreen';
-import { TeamDrankBillingExcelPreviewScreen } from './features/drank/TeamDrankBillingExcelPreviewScreen';
-import { TeamDrankExcelBeheerScreen } from './features/drank/TeamDrankExcelBeheerScreen';
-import { ConsumptionOverviewScreen } from './features/drank/ConsumptionOverviewScreen';
-import { StrepenHistoryScreen } from './features/drank/StrepenHistoryScreen';
-import { MyInvoiceScreen } from './features/drank/MyInvoiceScreen';
-import { SettingsScreen } from './features/beheer/SettingsScreen';
-import { RolesManageScreen } from './features/beheer/RolesManageScreen';
-import { ResetPasswordScreen } from './features/auth/ResetPasswordScreen';
-import { BillingPeriodsManageScreen } from './features/drank/BillingPeriodsManageScreen';
 import { AuthProvider, useAuth } from './features/auth/AuthContext';
 import { DrinkProvider } from './features/drank/DrinkContext';
 import { AgendaProvider, useAgenda } from './features/agenda/AgendaContext';
 import { FriesProvider } from './features/friet/FriesContext';
-import { ShopDashboardScreen } from './features/winkeltje/ShopDashboardScreen';
-import { ShopCategoryScreen } from './features/winkeltje/ShopCategoryScreen';
-import { ShopInventoryScreen } from './features/winkeltje/ShopInventoryScreen';
-import { FinanceDashboardScreen } from './features/financien/FinanceDashboardScreen';
-import { TeamDrankFriesHistoryScreen } from './features/friet/TeamDrankFriesHistoryScreen';
+
+// Schermen worden pas geladen wanneer je ze opent (kleinere eerste download op gsm)
+const scherm = (laad, naam) => lazy(() => laad().then(m => ({ default: m[naam] })));
+const AgendaManageScreen = scherm(() => import('./features/agenda/AgendaManageScreen'), 'AgendaManageScreen');
+const AgendaScreen = scherm(() => import('./features/agenda/AgendaScreen'), 'AgendaScreen');
+const BillingPeriodsManageScreen = scherm(
+  () => import('./features/drank/BillingPeriodsManageScreen'),
+  'BillingPeriodsManageScreen',
+);
+const ConsumptionOverviewScreen = scherm(
+  () => import('./features/drank/ConsumptionOverviewScreen'),
+  'ConsumptionOverviewScreen',
+);
+const CreditsScreen = scherm(() => import('./features/beheer/CreditsScreen'), 'CreditsScreen');
+const FinanceDashboardScreen = scherm(
+  () => import('./features/financien/FinanceDashboardScreen'),
+  'FinanceDashboardScreen',
+);
+const FriesComparisonScreen = scherm(() => import('./features/friet/FriesComparisonScreen'), 'FriesComparisonScreen');
+const FriesHistoryScreen = scherm(() => import('./features/friet/FriesHistoryScreen'), 'FriesHistoryScreen');
+const FriesOverviewScreen = scherm(() => import('./features/friet/FriesOverviewScreen'), 'FriesOverviewScreen');
+const FriesScreen = scherm(() => import('./features/friet/FriesScreen'), 'FriesScreen');
+const FriesSummaryScreen = scherm(() => import('./features/friet/FriesSummaryScreen'), 'FriesSummaryScreen');
+const MyInvoiceScreen = scherm(() => import('./features/drank/MyInvoiceScreen'), 'MyInvoiceScreen');
+const NewMessageScreen = scherm(() => import('./features/berichten/NewMessageScreen'), 'NewMessageScreen');
+const NewPollScreen = scherm(() => import('./features/polls/NewPollScreen'), 'NewPollScreen');
+const NotificationsScreen = scherm(() => import('./features/berichten/NotificationsScreen'), 'NotificationsScreen');
+const NudgeSelectorScreen = scherm(() => import('./features/berichten/NudgeSelectorScreen'), 'NudgeSelectorScreen');
+const PollsScreen = scherm(() => import('./features/polls/PollsScreen'), 'PollsScreen');
+const RankingScreen = scherm(() => import('./features/drank/RankingScreen'), 'RankingScreen');
+const ResetPasswordScreen = scherm(() => import('./features/auth/ResetPasswordScreen'), 'ResetPasswordScreen');
+const RolesManageScreen = scherm(() => import('./features/beheer/RolesManageScreen'), 'RolesManageScreen');
+const SettingsScreen = scherm(() => import('./features/beheer/SettingsScreen'), 'SettingsScreen');
+const ShopCategoryScreen = scherm(() => import('./features/winkeltje/ShopCategoryScreen'), 'ShopCategoryScreen');
+const ShopDashboardScreen = scherm(() => import('./features/winkeltje/ShopDashboardScreen'), 'ShopDashboardScreen');
+const ShopInventoryScreen = scherm(() => import('./features/winkeltje/ShopInventoryScreen'), 'ShopInventoryScreen');
+const StrepenHistoryScreen = scherm(() => import('./features/drank/StrepenHistoryScreen'), 'StrepenHistoryScreen');
+const StrepenScreen = scherm(() => import('./features/drank/StrepenScreen'), 'StrepenScreen');
+const TeamDrankArchiveScreen = scherm(
+  () => import('./features/drank/TeamDrankArchiveScreen'),
+  'TeamDrankArchiveScreen',
+);
+const TeamDrankBillingExcelPreviewScreen = scherm(
+  () => import('./features/drank/TeamDrankBillingExcelPreviewScreen'),
+  'TeamDrankBillingExcelPreviewScreen',
+);
+const TeamDrankBillingScreen = scherm(
+  () => import('./features/drank/TeamDrankBillingScreen'),
+  'TeamDrankBillingScreen',
+);
+const TeamDrankDashboardScreen = scherm(
+  () => import('./features/drank/TeamDrankDashboardScreen'),
+  'TeamDrankDashboardScreen',
+);
+const TeamDrankExcelBeheerScreen = scherm(
+  () => import('./features/drank/TeamDrankExcelBeheerScreen'),
+  'TeamDrankExcelBeheerScreen',
+);
+const TeamDrankExcelPreviewScreen = scherm(
+  () => import('./features/drank/TeamDrankExcelPreviewScreen'),
+  'TeamDrankExcelPreviewScreen',
+);
+const TeamDrankFriesHistoryScreen = scherm(
+  () => import('./features/friet/TeamDrankFriesHistoryScreen'),
+  'TeamDrankFriesHistoryScreen',
+);
+const TeamDrankInvoicesScreen = scherm(
+  () => import('./features/drank/TeamDrankInvoicesScreen'),
+  'TeamDrankInvoicesScreen',
+);
+const TeamDrankStockScreen = scherm(() => import('./features/drank/TeamDrankStockScreen'), 'TeamDrankStockScreen');
+const TeamDrankStreaksScreen = scherm(
+  () => import('./features/drank/TeamDrankStreaksScreen'),
+  'TeamDrankStreaksScreen',
+);
 
 // Alle data zit in de providers (features/*/…Context); App regelt enkel routing en layout.
 
@@ -63,6 +102,12 @@ const RoleRoute = ({ children, role }) => {
   }
   return <>{children}</>;
 };
+
+const Laden = () => (
+  <div className="flex items-center justify-center py-20">
+    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+  </div>
+);
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -83,7 +128,9 @@ const MainLayout = () => {
     >
       <div id="main-scroll-container" className="flex-1 w-full overflow-y-auto no-scrollbar">
         <ErrorBoundary>
-          <Outlet />
+          <Suspense fallback={<Laden />}>
+            <Outlet />
+          </Suspense>
         </ErrorBoundary>
       </div>
 
@@ -107,219 +154,221 @@ const AppRoutes = () => {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={!session ? <CredentialsScreen /> : <Navigate to="/" />} />
-      <Route path="/reset-password" element={<ResetPasswordScreen />} />
-      <Route path="/credits" element={<CreditsScreen />} />
+    <Suspense fallback={<Laden />}>
+      <Routes>
+        <Route path="/login" element={!session ? <CredentialsScreen /> : <Navigate to="/" />} />
+        <Route path="/reset-password" element={<ResetPasswordScreen />} />
+        <Route path="/credits" element={<CreditsScreen />} />
 
-      {/* Protected Routes */}
-      {session ? (
-        <Route element={<MainLayout />}>
-          <Route index element={<HomeScreen />} />
+        {/* Protected Routes */}
+        {session ? (
+          <Route element={<MainLayout />}>
+            <Route index element={<HomeScreen />} />
 
-          <Route path="agenda" element={<AgendaScreen />} />
-          <Route
-            path="agenda/beheer"
-            element={
-              <RoleRoute role="agenda_beheren">
-                <AgendaManageScreen />
-              </RoleRoute>
-            }
-          />
+            <Route path="agenda" element={<AgendaScreen />} />
+            <Route
+              path="agenda/beheer"
+              element={
+                <RoleRoute role="agenda_beheren">
+                  <AgendaManageScreen />
+                </RoleRoute>
+              }
+            />
 
-          <Route path="notificaties" element={<NotificationsScreen />} />
-          <Route
-            path="notificaties/nieuw"
-            element={
-              <RoleRoute role={['berichten_sturen', 'drank_beheren']}>
-                <NewMessageScreen />
-              </RoleRoute>
-            }
-          />
-          <Route path="nudges" element={<NudgeSelectorScreen />} />
+            <Route path="notificaties" element={<NotificationsScreen />} />
+            <Route
+              path="notificaties/nieuw"
+              element={
+                <RoleRoute role={['berichten_sturen', 'drank_beheren']}>
+                  <NewMessageScreen />
+                </RoleRoute>
+              }
+            />
+            <Route path="nudges" element={<NudgeSelectorScreen />} />
 
-          <Route path="polls" element={<PollsScreen />} />
-          <Route
-            path="polls/nieuw"
-            element={
-              <RoleRoute role="polls_maken">
-                <NewPollScreen />
-              </RoleRoute>
-            }
-          />
+            <Route path="polls" element={<PollsScreen />} />
+            <Route
+              path="polls/nieuw"
+              element={
+                <RoleRoute role="polls_maken">
+                  <NewPollScreen />
+                </RoleRoute>
+              }
+            />
 
-          <Route path="frituur" element={<FriesScreen />} />
-          <Route path="frituur/overzicht" element={<FriesOverviewScreen />} />
-          <Route path="frituur/samenvatting" element={<FriesSummaryScreen />} />
-          <Route path="fries-comparison" element={<FriesComparisonScreen />} />
-          <Route path="frituur/geschiedenis" element={<FriesHistoryScreen />} />
-          <Route
-            path="team-drank/frieten"
-            element={
-              <RoleRoute role="drank">
-                <TeamDrankFriesHistoryScreen />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="financien"
-            element={
-              <RoleRoute role="financiën">
-                <FinanceDashboardScreen />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="billing-dashboard"
-            element={
-              <RoleRoute role="drank">
-                <TeamDrankDashboardScreen />
-              </RoleRoute>
-            }
-          />
+            <Route path="frituur" element={<FriesScreen />} />
+            <Route path="frituur/overzicht" element={<FriesOverviewScreen />} />
+            <Route path="frituur/samenvatting" element={<FriesSummaryScreen />} />
+            <Route path="fries-comparison" element={<FriesComparisonScreen />} />
+            <Route path="frituur/geschiedenis" element={<FriesHistoryScreen />} />
+            <Route
+              path="team-drank/frieten"
+              element={
+                <RoleRoute role="drank">
+                  <TeamDrankFriesHistoryScreen />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="financien"
+              element={
+                <RoleRoute role="financiën">
+                  <FinanceDashboardScreen />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="billing-dashboard"
+              element={
+                <RoleRoute role="drank">
+                  <TeamDrankDashboardScreen />
+                </RoleRoute>
+              }
+            />
 
-          <Route path="strepen" element={<StrepenScreen />} />
-          <Route path="strepen/ranking" element={<RankingScreen />} />
-          <Route path="strepen/geschiedenis" element={<StrepenHistoryScreen adminMode={false} />} />
-          <Route
-            path="strepen/geschiedenis-alle"
-            element={
-              <RoleRoute role="drank">
-                <StrepenHistoryScreen adminMode={true} />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="strepen/dashboard"
-            element={
-              <RoleRoute role="drank">
-                <TeamDrankDashboardScreen />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="strepen/voorraad"
-            element={
-              <RoleRoute role="drank">
-                <TeamDrankStockScreen />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="strepen/streaks"
-            element={
-              <RoleRoute role="drank">
-                <TeamDrankStreaksScreen />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="strepen/facturatie"
-            element={
-              <RoleRoute role="drank">
-                <TeamDrankInvoicesScreen />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="strepen/facturatie/nieuw"
-            element={
-              <RoleRoute role="drank">
-                <TeamDrankBillingScreen />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="strepen/facturatie/archief"
-            element={
-              <RoleRoute role="drank">
-                <TeamDrankArchiveScreen />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="strepen/facturatie/archief/:periodId"
-            element={
-              <RoleRoute role="drank">
-                <TeamDrankInvoicesScreen />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="strepen/facturatie/periodes"
-            element={
-              <RoleRoute role="drank">
-                <BillingPeriodsManageScreen />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="strepen/facturatie/excel"
-            element={
-              <RoleRoute role="drank">
-                <TeamDrankExcelPreviewScreen />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="strepen/facturatie/billing-excel"
-            element={
-              <RoleRoute role="drank">
-                <TeamDrankBillingExcelPreviewScreen />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="strepen/facturatie/beheer"
-            element={
-              <RoleRoute role="drank">
-                <TeamDrankExcelBeheerScreen />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="strepen/overzicht"
-            element={
-              <RoleRoute role="drank">
-                <ConsumptionOverviewScreen />
-              </RoleRoute>
-            }
-          />
+            <Route path="strepen" element={<StrepenScreen />} />
+            <Route path="strepen/ranking" element={<RankingScreen />} />
+            <Route path="strepen/geschiedenis" element={<StrepenHistoryScreen adminMode={false} />} />
+            <Route
+              path="strepen/geschiedenis-alle"
+              element={
+                <RoleRoute role="drank">
+                  <StrepenHistoryScreen adminMode={true} />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="strepen/dashboard"
+              element={
+                <RoleRoute role="drank">
+                  <TeamDrankDashboardScreen />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="strepen/voorraad"
+              element={
+                <RoleRoute role="drank">
+                  <TeamDrankStockScreen />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="strepen/streaks"
+              element={
+                <RoleRoute role="drank">
+                  <TeamDrankStreaksScreen />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="strepen/facturatie"
+              element={
+                <RoleRoute role="drank">
+                  <TeamDrankInvoicesScreen />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="strepen/facturatie/nieuw"
+              element={
+                <RoleRoute role="drank">
+                  <TeamDrankBillingScreen />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="strepen/facturatie/archief"
+              element={
+                <RoleRoute role="drank">
+                  <TeamDrankArchiveScreen />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="strepen/facturatie/archief/:periodId"
+              element={
+                <RoleRoute role="drank">
+                  <TeamDrankInvoicesScreen />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="strepen/facturatie/periodes"
+              element={
+                <RoleRoute role="drank">
+                  <BillingPeriodsManageScreen />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="strepen/facturatie/excel"
+              element={
+                <RoleRoute role="drank">
+                  <TeamDrankExcelPreviewScreen />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="strepen/facturatie/billing-excel"
+              element={
+                <RoleRoute role="drank">
+                  <TeamDrankBillingExcelPreviewScreen />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="strepen/facturatie/beheer"
+              element={
+                <RoleRoute role="drank">
+                  <TeamDrankExcelBeheerScreen />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="strepen/overzicht"
+              element={
+                <RoleRoute role="drank">
+                  <ConsumptionOverviewScreen />
+                </RoleRoute>
+              }
+            />
 
-          <Route path="mijn-factuur" element={<MyInvoiceScreen />} />
+            <Route path="mijn-factuur" element={<MyInvoiceScreen />} />
 
-          <Route
-            path="winkeltje/dashboard"
-            element={
-              <RoleRoute role="winkeltje">
-                <ShopDashboardScreen />
-              </RoleRoute>
-            }
-          />
-          <Route path="winkeltje/category/:categoryId" element={<ShopCategoryScreen />} />
-          <Route
-            path="winkeltje/voorraad/tellen"
-            element={
-              <RoleRoute role="winkeltje">
-                <ShopInventoryScreen />
-              </RoleRoute>
-            }
-          />
+            <Route
+              path="winkeltje/dashboard"
+              element={
+                <RoleRoute role="winkeltje">
+                  <ShopDashboardScreen />
+                </RoleRoute>
+              }
+            />
+            <Route path="winkeltje/category/:categoryId" element={<ShopCategoryScreen />} />
+            <Route
+              path="winkeltje/voorraad/tellen"
+              element={
+                <RoleRoute role="winkeltje">
+                  <ShopInventoryScreen />
+                </RoleRoute>
+              }
+            />
 
-          <Route path="settings" element={<SettingsScreen />} />
-          <Route
-            path="admin/rollen"
-            element={
-              <RoleRoute role="hoofdleiding">
-                <RolesManageScreen />
-              </RoleRoute>
-            }
-          />
-        </Route>
-      ) : (
-        <Route path="*" element={<Navigate to="/login" />} />
-      )}
-    </Routes>
+            <Route path="settings" element={<SettingsScreen />} />
+            <Route
+              path="admin/rollen"
+              element={
+                <RoleRoute role="hoofdleiding">
+                  <RolesManageScreen />
+                </RoleRoute>
+              }
+            />
+          </Route>
+        ) : (
+          <Route path="*" element={<Navigate to="/login" />} />
+        )}
+      </Routes>
+    </Suspense>
   );
 };
 
