@@ -72,8 +72,8 @@ niet in `npm run dev`. Op iPhone moet de app op het beginscherm staan (iOS 16.4+
 De app toont de albums (submappen) van één hoofdmap in Drive en laat leiding er foto's in zetten.
 De app uploadt **in naam van het KSA-Google-account**: dat account geeft één keer toestemming.
 De foto's gaan rechtstreeks van de gsm naar Google (niet via Supabase).
-Wie de foto's mag **bekijken**, bepaal je in Drive zelf: deel de hoofdmap enkel met de leiding, **nooit** met
-"iedereen met de link" (foto's van kinderen).
+Wie de foto's mag **bekijken**, bepaal je in Drive zelf: het zijn foto's van de leiding, dus deel de hoofdmap
+enkel met de leiding en niet met "iedereen met de link".
 
 Doe alles met het **KSA-Google-account** (dat van de Drive met de foto's):
 

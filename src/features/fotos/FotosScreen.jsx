@@ -94,7 +94,7 @@ export const FotosScreen = () => {
       <main className="flex-1 px-4 py-4 pb-nav-safe space-y-3">
         <p className="text-xs text-gray-500">
           De foto's staan in de Google Drive van KSA, samen met die van het cameraatje. Tik op een album om het in Drive
-          te openen. Voeg enkel foto's toe die gedeeld mogen worden (toestemming ouders).
+          te openen.
         </p>
 
         {upload && (

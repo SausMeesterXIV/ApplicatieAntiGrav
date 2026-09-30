@@ -44,7 +44,7 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 
 ### Foto's — nieuw
 - Foto's staan in de **Google Drive van KSA** (ook die van het cameraatje, dat rechtstreeks naar Drive uploadt).
-- De app toont de albums (submappen van één hoofdmap); bekijken gebeurt in Drive, waar ook de rechten staan. Deel de map nooit met "iedereen met de link" (foto's van kinderen).
+- De app toont de albums (submappen van één hoofdmap); bekijken gebeurt in Drive, waar ook de rechten staan. Het zijn foto's van en voor de leiding (geen kinderen); deel de map enkel met de leiding, niet met "iedereen met de link".
 - Alle leiding kan albums maken en foto's/video's toevoegen via de app (max 200 MB per bestand). De upload gaat rechtstreeks van de gsm naar Google, in naam van het KSA-Google-account (edge function `drive-fotos`; sleutels enkel als Supabase-secrets).
 
 ### Verslagen — nieuw
