@@ -13,7 +13,7 @@ verwachte_tabellen(naam) as (values
 verwachte_functies(naam) as (values
   ('is_leiding'), ('is_hoofdleiding'), ('heeft_recht'), ('streep_drank'), ('corrigeer_voorraad'),
   ('periode_overzicht'), ('sluit_periode_af'), ('ranking_huidige_periode'), ('gestructureerde_mededeling'),
-  ('stuur_bericht'), ('stuur_agenda_herinneringen'), ('finalize_frituur_sessie'), ('mag_item_aanpassen')
+  ('stuur_bericht'), ('stuur_agenda_herinneringen'), ('finalize_frituur_sessie'), ('mag_item_aanpassen'), ('ping')
 ),
 verwachte_triggers(tabel, naam) as (values
   ('profiles', 'bescherm_profielvelden'), ('profiles', 'bewaar_laatste_hoofdleiding'),

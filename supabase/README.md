@@ -30,6 +30,7 @@ Zo weten we altijd hoe de beveiliging en de functies er vóór de migraties uitz
 | `20261001001500_echte_kost.sql` | Tijdens de periode schatting (aantal × prijs); bij afsluiten echte kost verdeeld over alle strepen |
 | `20261001001600_beveiliging.sql` | Niets voor niet-ingelogden, RLS op alle tabellen, strepen/frietbestellingen/meldingen afgeschermd |
 | `20261001001700_startscherm_bollen.sql` | Volgorde van de bollen op het startscherm, per leider |
+| `20261001001800_keepalive.sql` | `ping()` voor de dagelijkse wektaak (project pauzeert niet meer) |
 
 **Na alle migraties**: draai `queries/controleer_migraties.sql` (wijzigt niets). Elke rij is een controle;
 alles met `ok = false` staat bovenaan en moet opgelost worden voor je de app test.
@@ -108,6 +109,14 @@ Doe alles met het **KSA-Google-account** (dat van de Drive met de foto's):
 
 Werkt het niet meer (bv. wachtwoord van het KSA-account gewijzigd of toegang ingetrokken)?
 Herhaal stap 5 en vervang `GOOGLE_REFRESH_TOKEN`.
+
+## 4. Wakker houden (gratis project pauzeert na 7 dagen zonder gebruik)
+
+Gebeurt automatisch zodra de app op Vercel staat: `vercel.json` plant elke dag om 6u (UTC) `api/keepalive.js`,
+die `ping()` aanroept (migratie `001800`). Nodig op Vercel: de variabelen `VITE_SUPABASE_URL` en
+`VITE_SUPABASE_ANON_KEY` (staan er al voor de app). Optioneel: zet ook `CRON_SECRET` (een willekeurige lange tekst),
+dan kan enkel Vercel zelf de functie aanroepen.
+Controleren: Vercel-dashboard > project > Settings > Cron Jobs (of open `/api/keepalive`: `"ok": true`).
 
 ## Niet meer gebruikt
 
