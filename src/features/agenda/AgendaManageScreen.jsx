@@ -5,10 +5,17 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronBack } from '../../components/ChevronBack';
 
 import { showToast } from '../../components/Toast';
+import { Bijlagen, NieuweBijlagen } from '../../components/Bijlagen';
+import * as db from '../../lib/supabaseService';
+import { hasRecht } from '../../lib/roleUtils';
+import { magEventAanpassen, magEventVerwijderen } from './rechten';
 
+// Alle leiding kan agenda-items toevoegen. Aanpassen: eigen items (+ Sfeerbeheer/hoofdleiding);
+// verwijderen: eigen items (+ hoofdleiding). Aftelklokken: enkel agenda_beheren.
 export const AgendaManageScreen = () => {
   const navigate = useNavigate();
-  const { availableRoles } = useAuth();
+  const { availableRoles, currentUser } = useAuth();
+  const kanAftelklokken = hasRecht(currentUser, 'agenda_beheren');
   const {
     events,
     handleSaveEvent: onSaveEvent,
@@ -80,6 +87,7 @@ export const AgendaManageScreen = () => {
   const [location, setLocation] = useState('De Sjelter');
   const [description, setDescription] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
+  const [nieuweBijlagen, setNieuweBijlagen] = useState([]); // bestanden voor een nieuw item, geüpload na het opslaan
 
   // Handle Edit Click - Populate form
   const handleEditClick = event => {
@@ -109,6 +117,7 @@ export const AgendaManageScreen = () => {
     setLocation('De Sjelter');
     setDescription('');
     setSelectedRole('');
+    setNieuweBijlagen([]);
   };
 
   const handleDelete = id => {
@@ -149,7 +158,16 @@ export const AgendaManageScreen = () => {
     };
 
     try {
-      await onSaveEvent(eventPayload);
+      const opgeslagen = await onSaveEvent(eventPayload);
+
+      // Bijlagen die bij een nieuw item gekozen werden, nu uploaden (het item heeft nu een id)
+      for (const file of nieuweBijlagen) {
+        try {
+          await db.uploadBijlage({ eventId: opgeslagen.id }, file);
+        } catch (err) {
+          showToast(err.message || `Uploaden van ${file.name} mislukt`, 'error');
+        }
+      }
       showToast('Evenement succesvol opgeslagen!', 'success');
       await refreshAgendaData(); // Ensure HomeScreen is updated
 
@@ -204,7 +222,7 @@ export const AgendaManageScreen = () => {
       {/* Header */}
       <header className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] flex items-center gap-4 bg-gray-50/90 dark:bg-gray-900/90 backdrop-blur-sm z-10 transition-colors sticky top-0 border-b border-gray-100 dark:border-gray-800">
         <ChevronBack onClick={() => navigate(-1)} />
-        <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Agenda & Aftelklok</h1>
+        <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Agenda beheren</h1>
       </header>
 
       <main className="flex-1 px-4 space-y-8 pb-32">
@@ -215,7 +233,6 @@ export const AgendaManageScreen = () => {
               <span className="material-icons-round text-base">event_note</span>
               Komende Evenementen
             </h2>
-            <span className="text-xs text-gray-500">Team Sfeerbeheer</span>
           </div>
 
           <div className="space-y-3">
@@ -256,18 +273,22 @@ export const AgendaManageScreen = () => {
                     </div>
 
                     <div className="flex gap-2 shrink-0">
-                      <button
-                        onClick={() => handleEditClick(event)}
-                        className="h-9 w-9 rounded-full bg-gray-100 dark:bg-gray-700/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                      >
-                        <span className="material-icons-round text-lg">edit</span>
-                      </button>
-                      <button
-                        onClick={() => handleDelete(event.id)}
-                        className="h-9 w-9 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 flex items-center justify-center text-red-500 dark:text-red-400 transition-colors"
-                      >
-                        <span className="material-icons-round text-lg">delete</span>
-                      </button>
+                      {magEventAanpassen(currentUser, event) && (
+                        <button
+                          onClick={() => handleEditClick(event)}
+                          className="h-9 w-9 rounded-full bg-gray-100 dark:bg-gray-700/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                        >
+                          <span className="material-icons-round text-lg">edit</span>
+                        </button>
+                      )}
+                      {magEventVerwijderen(currentUser, event) && (
+                        <button
+                          onClick={() => handleDelete(event.id)}
+                          className="h-9 w-9 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 flex items-center justify-center text-red-500 dark:text-red-400 transition-colors"
+                        >
+                          <span className="material-icons-round text-lg">delete</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -373,6 +394,16 @@ export const AgendaManageScreen = () => {
               </span>
             </div>
 
+            {/* Bijlagen, bv. de intro voor de groepsraad */}
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">Bijlagen</p>
+              {editingId ? (
+                <Bijlagen item={{ eventId: editingId }} magBeheren />
+              ) : (
+                <NieuweBijlagen bestanden={nieuweBijlagen} onChange={setNieuweBijlagen} />
+              )}
+            </div>
+
             {/* Submit Button */}
             <button
               onClick={handleSave}
@@ -388,117 +419,119 @@ export const AgendaManageScreen = () => {
           </div>
         </section>
 
-        <hr className="border-gray-200 dark:border-gray-800" />
+        {kanAftelklokken && <hr className="border-gray-200 dark:border-gray-800" />}
 
-        {/* COUNTDOWN CONFIGURATION - Refined Layout */}
-        <section className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/10 border border-indigo-100 dark:border-indigo-900/30 p-6 rounded-2xl shadow-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl text-indigo-600 dark:text-indigo-400">
-              <span className="material-icons-round text-xl">timer</span>
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Aftelklokken</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Beheer de klokken op het startscherm</p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Countdown 1 */}
-            <div
-              className={`bg-white dark:bg-[#1f2937] p-5 rounded-xl border transition-all ${cd1Active ? 'border-indigo-500 ring-1 ring-indigo-500/20 shadow-sm' : 'border-gray-200 dark:border-gray-700 opacity-90'}`}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <span className="font-bold text-xs uppercase text-gray-400 tracking-wider">Klok 1</span>
-                <div
-                  onClick={() => setCd1Active(!cd1Active)}
-                  className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${cd1Active ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-                >
-                  <div
-                    className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${cd1Active ? 'translate-x-5' : 'translate-x-0'}`}
-                  ></div>
-                </div>
+        {/* COUNTDOWN CONFIGURATION - enkel Sfeerbeheer en hoofdleiding */}
+        {kanAftelklokken && (
+          <section className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/10 border border-indigo-100 dark:border-indigo-900/30 p-6 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl text-indigo-600 dark:text-indigo-400">
+                <span className="material-icons-round text-xl">timer</span>
               </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Aftelklokken</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Beheer de klokken op het startscherm</p>
+              </div>
+            </div>
 
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Countdown 1 */}
               <div
-                className={`space-y-4 transition-all ${cd1Active ? 'opacity-100' : 'opacity-40 pointer-events-none grayscale'}`}
+                className={`bg-white dark:bg-[#1f2937] p-5 rounded-xl border transition-all ${cd1Active ? 'border-indigo-500 ring-1 ring-indigo-500/20 shadow-sm' : 'border-gray-200 dark:border-gray-700 opacity-90'}`}
               >
-                <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1.5">Naam Event</label>
-                  <input
-                    type="text"
-                    placeholder="bv. Groot Kamp"
-                    value={cd1Title}
-                    onChange={e => setCd1Title(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1.5">Datum</label>
-                  <input
-                    type="date"
-                    value={cd1Date}
-                    onChange={e => setCd1Date(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Countdown 2 */}
-            <div
-              className={`bg-white dark:bg-[#1f2937] p-5 rounded-xl border transition-all ${cd2Active ? 'border-indigo-500 ring-1 ring-indigo-500/20 shadow-sm' : 'border-gray-200 dark:border-gray-700 opacity-90'}`}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <span className="font-bold text-xs uppercase text-gray-400 tracking-wider">Klok 2</span>
-                <div
-                  onClick={() => setCd2Active(!cd2Active)}
-                  className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${cd2Active ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-                >
+                <div className="flex items-center justify-between mb-4">
+                  <span className="font-bold text-xs uppercase text-gray-400 tracking-wider">Klok 1</span>
                   <div
-                    className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${cd2Active ? 'translate-x-5' : 'translate-x-0'}`}
-                  ></div>
+                    onClick={() => setCd1Active(!cd1Active)}
+                    className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${cd1Active ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                  >
+                    <div
+                      className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${cd1Active ? 'translate-x-5' : 'translate-x-0'}`}
+                    ></div>
+                  </div>
+                </div>
+
+                <div
+                  className={`space-y-4 transition-all ${cd1Active ? 'opacity-100' : 'opacity-40 pointer-events-none grayscale'}`}
+                >
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1.5">Naam Event</label>
+                    <input
+                      type="text"
+                      placeholder="bv. Groot Kamp"
+                      value={cd1Title}
+                      onChange={e => setCd1Title(e.target.value)}
+                      className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1.5">Datum</label>
+                    <input
+                      type="date"
+                      value={cd1Date}
+                      onChange={e => setCd1Date(e.target.value)}
+                      className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                    />
+                  </div>
                 </div>
               </div>
 
+              {/* Countdown 2 */}
               <div
-                className={`space-y-4 transition-all ${cd2Active ? 'opacity-100' : 'opacity-40 pointer-events-none grayscale'}`}
+                className={`bg-white dark:bg-[#1f2937] p-5 rounded-xl border transition-all ${cd2Active ? 'border-indigo-500 ring-1 ring-indigo-500/20 shadow-sm' : 'border-gray-200 dark:border-gray-700 opacity-90'}`}
               >
-                <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1.5">Naam Event</label>
-                  <input
-                    type="text"
-                    placeholder="bv. Klein Kamp"
-                    value={cd2Title}
-                    onChange={e => setCd2Title(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
-                  />
+                <div className="flex items-center justify-between mb-4">
+                  <span className="font-bold text-xs uppercase text-gray-400 tracking-wider">Klok 2</span>
+                  <div
+                    onClick={() => setCd2Active(!cd2Active)}
+                    className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${cd2Active ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                  >
+                    <div
+                      className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${cd2Active ? 'translate-x-5' : 'translate-x-0'}`}
+                    ></div>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1.5">Datum</label>
-                  <input
-                    type="date"
-                    value={cd2Date}
-                    onChange={e => setCd2Date(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
-                  />
+
+                <div
+                  className={`space-y-4 transition-all ${cd2Active ? 'opacity-100' : 'opacity-40 pointer-events-none grayscale'}`}
+                >
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1.5">Naam Event</label>
+                    <input
+                      type="text"
+                      placeholder="bv. Klein Kamp"
+                      value={cd2Title}
+                      onChange={e => setCd2Title(e.target.value)}
+                      className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1.5">Datum</label>
+                    <input
+                      type="date"
+                      value={cd2Date}
+                      onChange={e => setCd2Date(e.target.value)}
+                      className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="md:col-span-2 mt-2">
-              <button
-                onClick={handleSaveCountdown}
-                className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
-              >
-                <span className="material-icons-round group-hover:scale-110 transition-transform">check_circle</span>
-                Instellingen Opslaan
-              </button>
-              <p className="text-center text-[10px] text-gray-400 mt-2">
-                Wijzigingen zijn direct zichtbaar op het startscherm.
-              </p>
+              <div className="md:col-span-2 mt-2">
+                <button
+                  onClick={handleSaveCountdown}
+                  className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
+                >
+                  <span className="material-icons-round group-hover:scale-110 transition-transform">check_circle</span>
+                  Instellingen Opslaan
+                </button>
+                <p className="text-center text-[10px] text-gray-400 mt-2">
+                  Wijzigingen zijn direct zichtbaar op het startscherm.
+                </p>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </main>
     </div>
   );

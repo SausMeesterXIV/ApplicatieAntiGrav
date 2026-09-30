@@ -242,6 +242,15 @@ export const HomeScreen = () => {
               onClick={() => navigate('/polls')}
             />
 
+            {/* VERSLAGEN van groepsraden (voor iedereen) */}
+            <NavCard
+              title="Verslagen"
+              description="Verslagen van groepsraden lezen en toevoegen"
+              icon="description"
+              iconColorClass="bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400"
+              onClick={() => navigate('/verslagen')}
+            />
+
             {/* --- 3. ADMIN DASHBOARDS --- */}
 
             {hasAccess(currentUser, 'financiën') && (

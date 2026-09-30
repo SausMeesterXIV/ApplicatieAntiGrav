@@ -23,7 +23,8 @@ const json = (body, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 // Waar de melding naartoe leidt als je erop tikt
-const urlVoorType = type => ({ agenda: '/agenda', poll: '/polls', order: '/frituur' })[type] ?? '/notificaties';
+const urlVoorType = type =>
+  ({ agenda: '/agenda', poll: '/polls', order: '/frituur', verslag: '/verslagen' })[type] ?? '/notificaties';
 
 Deno.serve(async req => {
   try {

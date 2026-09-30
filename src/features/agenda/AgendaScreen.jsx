@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronBack } from '../../components/ChevronBack';
 import { SkeletonEvent } from '../../components/Skeleton';
 import { Aanwezigheid } from './Aanwezigheid';
+import { Bijlagen } from '../../components/Bijlagen';
 
 export const AgendaScreen = () => {
   const navigate = useNavigate();
@@ -102,6 +103,13 @@ export const AgendaScreen = () => {
         <div className="flex items-center gap-2">
           <ChevronBack onClick={() => navigate(-1)} />
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Agenda</h1>
+          <button
+            onClick={() => navigate('/agenda/beheer')}
+            className="ml-1 h-9 w-9 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-sm"
+            title="Agenda-item toevoegen"
+          >
+            <span className="material-icons-round text-xl">add</span>
+          </button>
         </div>
 
         {/* Nieuwe Events Button */}
@@ -293,6 +301,7 @@ export const AgendaScreen = () => {
                           <span className="material-icons-round text-blue-500 text-base">location_on</span>
                           <span className="truncate">{event.location}</span>
                         </div>
+                        <Bijlagen item={{ eventId: event.id }} />
                         <Aanwezigheid eventId={event.id} />
                       </div>
                     ))}

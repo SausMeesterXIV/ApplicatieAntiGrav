@@ -257,10 +257,14 @@ export async function setAanwezigheid(eventId, userId, status) {
   if (error) throw error;
 }
 
+// Datum als YYYY-MM-DD in lokale tijd (toISOString rekent in UTC en schuift items vóór 2u naar de vorige dag)
+const lokaleDatum = d =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 export async function saveEvent(event) {
   const payload = {
     titel: event.title,
-    datum: event.date instanceof Date ? event.date.toISOString().split('T')[0] : String(event.date),
+    datum: event.date instanceof Date ? lokaleDatum(event.date) : String(event.date),
     tijd: event.startTime || '20:00',
     locatie: event.location,
     type: event.type,
@@ -292,12 +296,120 @@ function mapEvent(e) {
     startTime: e.start_time || e.tijd || '20:00',
     endTime: e.end_time || null,
     date: new Date(e.datum),
+    createdBy: e.created_by || null,
   };
 }
 
 export async function deleteEvent(id) {
-  const { error } = await supabase.from('events').delete().eq('id', id);
+  await verwijderMetBijlagen({ eventId: id }, async () => {
+    // Zonder recht verwijdert RLS stil niets: controleer dat de rij echt weg is
+    const { data, error } = await supabase.from('events').delete().eq('id', id).select('id');
+    if (error) throw error;
+    if (!data?.length) throw new Error('Je kan enkel je eigen agenda-items verwijderen');
+  });
+}
+
+// ==================== BIJLAGEN (agenda en verslagen) ====================
+// Privé-bucket 'bijlagen'; openen via een tijdelijke link. RLS bepaalt wie mag toevoegen/verwijderen.
+
+export const MAX_BIJLAGE_MB = 10;
+
+const bijlageFilter = ({ eventId, verslagId }) =>
+  eventId ? ['event_id', eventId] : ['verslag_id', verslagId];
+
+export async function fetchBijlagen(item) {
+  const [kolom, id] = bijlageFilter(item);
+  const { data, error } = await supabase.from('bijlagen').select('*').eq(kolom, id).order('created_at');
   if (error) throw error;
+  return data || [];
+}
+
+export async function uploadBijlage({ eventId, verslagId }, file) {
+  if (file.size > MAX_BIJLAGE_MB * 1024 * 1024) {
+    throw new Error(`${file.name} is groter dan ${MAX_BIJLAGE_MB} MB`);
+  }
+  const map = eventId ? `agenda/${eventId}` : `verslagen/${verslagId}`;
+  const veiligeNaam = file.name.replace(/[^\w.-]+/g, '_');
+  const pad = `${map}/${Date.now()}-${veiligeNaam}`;
+
+  const { error: uploadError } = await supabase.storage.from('bijlagen').upload(pad, file);
+  if (uploadError) throw uploadError;
+
+  const { data, error } = await supabase
+    .from('bijlagen')
+    .insert({
+      event_id: eventId || null,
+      verslag_id: verslagId || null,
+      pad,
+      naam: file.name,
+      grootte: file.size,
+      mime: file.type || null,
+    })
+    .select()
+    .single();
+  if (error) {
+    await supabase.storage.from('bijlagen').remove([pad]); // geen losse bestanden achterlaten
+    throw error;
+  }
+  return data;
+}
+
+export async function verwijderBijlage(bijlage) {
+  const { error } = await supabase.from('bijlagen').delete().eq('id', bijlage.id);
+  if (error) throw error;
+  await supabase.storage.from('bijlagen').remove([bijlage.pad]);
+}
+
+/** Tijdelijke link (1 uur) om een bijlage te openen of te downloaden. */
+export async function bijlageLink(bijlage) {
+  const { data, error } = await supabase.storage.from('bijlagen').createSignedUrl(bijlage.pad, 3600);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+// Een agenda-item of verslag verwijderen, samen met de bestanden van de bijlagen.
+// Eerst het item (de bijlage-rijen gaan mee via cascade); pas als dat lukte, de bestanden.
+async function verwijderMetBijlagen(item, verwijder) {
+  let paden = [];
+  try {
+    paden = (await fetchBijlagen(item)).map(b => b.pad);
+  } catch (e) {
+    console.warn('Bijlagen ophalen mislukt (migratie nog niet uitgevoerd?)', e);
+  }
+  await verwijder();
+  if (paden.length) {
+    const { error } = await supabase.storage.from('bijlagen').remove(paden);
+    if (error) console.warn('Bestanden van bijlagen opruimen mislukt', error);
+  }
+}
+
+// ==================== VERSLAGEN (groepsraden) ====================
+
+export async function fetchVerslagen() {
+  const { data, error } = await supabase
+    .from('verslagen')
+    .select('*, auteur:profiles!verslagen_auteur_id_fkey(naam, nickname), event:events(titel, datum)')
+    .order('datum', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function saveVerslag({ id, titel, datum, inhoud, eventId }) {
+  const row = { titel, datum, inhoud: inhoud || null, event_id: eventId || null };
+  const query = id
+    ? supabase.from('verslagen').update(row).eq('id', id)
+    : supabase.from('verslagen').insert(row);
+  const { data, error } = await query.select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteVerslag(id) {
+  await verwijderMetBijlagen({ verslagId: id }, async () => {
+    const { data, error } = await supabase.from('verslagen').delete().eq('id', id).select('id');
+    if (error) throw error;
+    if (!data?.length) throw new Error('Je kan enkel je eigen verslagen verwijderen');
+  });
 }
 
 // ==================== NOTIFICATIES ====================

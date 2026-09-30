@@ -103,6 +103,7 @@ const TeamDrankStreaksScreen = scherm(
   () => import('./features/drank/TeamDrankStreaksScreen'),
   'TeamDrankStreaksScreen',
 );
+const VerslagenScreen = scherm(() => import('./features/verslagen/VerslagenScreen'), 'VerslagenScreen');
 
 // Alle data zit in de providers (features/*/…Context); App regelt enkel routing en layout.
 
@@ -179,14 +180,8 @@ const AppRoutes = () => {
             <Route index element={<HomeScreen />} />
 
             <Route path="agenda" element={<AgendaScreen />} />
-            <Route
-              path="agenda/beheer"
-              element={
-                <RoleRoute role="agenda_beheren">
-                  <AgendaManageScreen />
-                </RoleRoute>
-              }
-            />
+            {/* Iedereen voegt agenda-items toe; wat je mag aanpassen/verwijderen regelt het scherm + RLS */}
+            <Route path="agenda/beheer" element={<AgendaManageScreen />} />
 
             <Route path="notificaties" element={<NotificationsScreen />} />
             <Route
@@ -208,6 +203,8 @@ const AppRoutes = () => {
                 </RoleRoute>
               }
             />
+
+            <Route path="verslagen" element={<VerslagenScreen />} />
 
             <Route path="frituur" element={<FriesScreen />} />
             <Route path="frituur/overzicht" element={<FriesOverviewScreen />} />

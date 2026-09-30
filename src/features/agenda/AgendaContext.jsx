@@ -52,7 +52,7 @@ export function AgendaProvider({ children }) {
     try {
       const savedEvent = await db.saveEvent(event);
       setEvents(prev => prev.map(e => (e.id === event.id || e.id === savedEvent.id ? savedEvent : e)));
-      showToast('Evenement opgeslagen!', 'success');
+      return savedEvent;
     } catch (error) {
       showToast('Fout bij het opslaan van het evenement', 'error');
       const freshEvents = await db.fetchEvents();
@@ -69,7 +69,7 @@ export function AgendaProvider({ children }) {
       showToast('Evenement verwijderd', 'info');
     } catch (error) {
       if (event) setEvents(prev => [...prev, event]);
-      showToast('Fout bij het verwijderen', 'error');
+      showToast(error.message || 'Fout bij het verwijderen', 'error');
     }
   };
 
