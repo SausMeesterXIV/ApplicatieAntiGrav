@@ -29,6 +29,7 @@ Zo weten we altijd hoe de beveiliging en de functies er vóór de migraties uitz
 | `20261001001400_agenda_bijlagen_verslagen.sql` | Iedereen zet items in de agenda (eigen items verwijderen, hoofdleiding alles), bijlagen, verslagen van groepsraden |
 | `20261001001500_echte_kost.sql` | Tijdens de periode schatting (aantal × prijs); bij afsluiten echte kost verdeeld over alle strepen |
 | `20261001001600_beveiliging.sql` | Niets voor niet-ingelogden, RLS op alle tabellen, strepen/frietbestellingen/meldingen afgeschermd |
+| `20261001001700_startscherm_bollen.sql` | Volgorde van de bollen op het startscherm, per leider |
 
 **Na alle migraties**: draai `queries/controleer_migraties.sql` (wijzigt niets). Elke rij is een controle;
 alles met `ok = false` staat bovenaan en moet opgelost worden voor je de app test.

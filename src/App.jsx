@@ -105,6 +105,7 @@ const TeamDrankStreaksScreen = scherm(
 );
 const VerslagenScreen = scherm(() => import('./features/verslagen/VerslagenScreen'), 'VerslagenScreen');
 const FotosScreen = scherm(() => import('./features/fotos/FotosScreen'), 'FotosScreen');
+const BollenVolgordeScreen = scherm(() => import('./features/beheer/BollenVolgordeScreen'), 'BollenVolgordeScreen');
 
 // Alle data zit in de providers (features/*/…Context); App regelt enkel routing en layout.
 
@@ -361,6 +362,7 @@ const AppRoutes = () => {
             />
 
             <Route path="settings" element={<SettingsScreen />} />
+            <Route path="settings/bollen" element={<BollenVolgordeScreen />} />
             <Route
               path="admin/rollen"
               element={

@@ -2,7 +2,9 @@ import React from 'react';
 
 export const UserAvatar = ({ user, size = 'md', className = '' }) => {
   const name = user?.naam || user?.name || 'Onbekend';
-  const initial = name.charAt(0).toUpperCase();
+  // Initialen van voor- en achternaam (bv. "TD"), zoals in de design-update
+  const delen = name.trim().split(/\s+/).filter(Boolean);
+  const initial = (delen.length > 1 ? delen[0][0] + delen[delen.length - 1][0] : name.slice(0, 1)).toUpperCase();
   const avatarUrl = user?.avatar_url || user?.avatar;
 
   const sizeClasses = {
@@ -24,7 +26,7 @@ export const UserAvatar = ({ user, size = 'md', className = '' }) => {
           const parent = e.target.parentElement;
           if (parent) {
             const fallback = document.createElement('div');
-            fallback.className = `${sizeClasses[size]} rounded-full bg-blue-600 flex items-center justify-center text-white font-bold ${className}`;
+            fallback.className = `${sizeClasses[size]} rounded-full bg-inkt dark:bg-white flex items-center justify-center text-white dark:text-inkt font-bold ${className}`;
             fallback.innerText = initial;
             parent.appendChild(fallback);
           }
@@ -35,7 +37,7 @@ export const UserAvatar = ({ user, size = 'md', className = '' }) => {
 
   return (
     <div
-      className={`${sizeClasses[size]} rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border border-gray-200 dark:border-gray-700 ${className}`}
+      className={`${sizeClasses[size]} rounded-full bg-inkt dark:bg-white flex items-center justify-center text-white dark:text-inkt font-bold ${className}`}
     >
       {initial}
     </div>

@@ -1,289 +1,252 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useAuth } from '../auth/AuthContext';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronBack } from '../../components/ChevronBack';
-
+import { useAuth } from '../auth/AuthContext';
+import { useDrink } from '../drank/DrinkContext';
 import { supabase } from '../../lib/supabase';
 import * as db from '../../lib/supabaseService';
+import { isHoofdleiding } from '../../lib/roleUtils';
+import { SPECIAL_DRINKS } from '../../lib/constants';
 import { showToast } from '../../components/Toast';
+import { BottomSheet } from '../../components/Modal';
 import { isHapticEnabled, setHapticEnabled as saveHapticPref, hapticFeedback } from '../../lib/haptics';
 import { UserAvatar } from '../../components/UserAvatar';
 import { WachtwoordWijzigen } from './WachtwoordWijzigen';
 import { PushInstelling } from './PushInstelling';
+import { bollenVoor, gekozenVolgorde } from '../home/bollen';
+
+// Instellingen (design-update): gegroepeerde lijst — Account, Startscherm, Meldingen, Weergave, Beheer.
+
+const Groep = ({ titel, children }) => (
+  <section className="space-y-2">
+    <h2 className="px-2 text-xs font-bold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">{titel}</h2>
+    <div className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d overflow-hidden divide-y divide-white dark:divide-white/5">
+      {children}
+    </div>
+  </section>
+);
+
+const Rij = ({ label, waarde, onClick, icoon = 'chevron_right' }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left active:bg-black/5 dark:active:bg-white/5"
+  >
+    <span className="font-semibold text-base">{label}</span>
+    <span className="flex items-center gap-1 min-w-0 text-gray-500 dark:text-gray-400">
+      {waarde && <span className="truncate text-sm">{waarde}</span>}
+      <span className="material-icons-round text-xl">{icoon}</span>
+    </span>
+  </button>
+);
+
+const Schakelaar = ({ label, aan, onChange }) => (
+  <div className="flex items-center justify-between gap-3 px-5 py-4">
+    <span className="font-semibold text-base">{label}</span>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={aan}
+      aria-label={label}
+      onClick={onChange}
+      className={`w-12 h-7 rounded-full relative transition-colors ${aan ? 'bg-inkt dark:bg-white' : 'bg-gray-300 dark:bg-gray-600'}`}
+    >
+      <span
+        className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full shadow transition-transform ${
+          aan ? 'translate-x-5 bg-white dark:bg-inkt' : 'bg-white'
+        }`}
+      />
+    </button>
+  </div>
+);
 
 export const SettingsScreen = () => {
   const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useAuth();
-  const [wachtwoordOpen, setWachtwoordOpen] = useState(false);
+  const { dranken } = useDrink();
 
-  const onUpdateUser = async user => {
-    setCurrentUser(user);
-    try {
-      await db.updateProfile(user.id, {
-        naam: user.naam,
-        avatar_url: user.avatar,
-        nickname: user.nickname || null,
-        quick_drink_id: user.quick_drink_id,
-      });
-    } catch (e) {
-      console.error('Failed to sync profile:', e);
-    }
-  };
+  const [wachtwoordOpen, setWachtwoordOpen] = useState(false);
+  const [bijnaamOpen, setBijnaamOpen] = useState(false);
+  const [drankOpen, setDrankOpen] = useState(false);
+  const [bijnaam, setBijnaam] = useState(currentUser?.nickname || '');
   const [isDark, setIsDark] = useState(false);
   const [hapticOn, setHapticOn] = useState(false);
-  const [nickname, setNickname] = useState(currentUser?.nickname || '');
-  const [avatar, setAvatar] = useState(currentUser?.avatar);
-  const fileInputRef = useRef(null);
+  const fotoInvoer = useRef(null);
 
+  useEffect(() => setBijnaam(currentUser?.nickname || ''), [currentUser?.nickname]);
   useEffect(() => {
-    setNickname(currentUser?.nickname || '');
-    setAvatar(currentUser?.avatar);
-  }, [currentUser]);
-
-  useEffect(() => {
-    // Sync local state with the actual class on html element (applied in App.tsx)
     setIsDark(document.documentElement.classList.contains('dark'));
     setHapticOn(isHapticEnabled());
   }, []);
 
+  const aantalBollen = useMemo(() => bollenVoor(currentUser, gekozenVolgorde(currentUser)).length, [currentUser]);
+  const drankKeuzes = dranken.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM);
+  const snelleDrank = drankKeuzes.find(d => String(d.id) === String(currentUser?.quickDrinkId)) || drankKeuzes[0];
+
   const toggleDarkMode = () => {
-    const newIsDark = !isDark;
-    if (newIsDark) {
-      document.documentElement.classList.add('dark');
-      document.getElementById('theme-color-meta')?.setAttribute('content', '#0f172a');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.getElementById('theme-color-meta')?.setAttribute('content', '#ffffff');
+    const nieuw = !isDark;
+    document.documentElement.classList.toggle('dark', nieuw);
+    document.getElementById('theme-color-meta')?.setAttribute('content', nieuw ? '#0f172a' : '#ffffff');
+    setIsDark(nieuw);
+    try {
+      localStorage.setItem('dark_mode', String(nieuw));
+    } catch {
+      // niet bewaard: geldt enkel voor deze sessie
     }
-    setIsDark(newIsDark);
-    localStorage.setItem('dark_mode', String(newIsDark));
   };
 
   const toggleHaptic = () => {
-    const newVal = !hapticOn;
-    setHapticOn(newVal);
-    saveHapticPref(newVal);
-    if (newVal) hapticFeedback(); // Geef feedback bij aanzetten
+    const nieuw = !hapticOn;
+    setHapticOn(nieuw);
+    saveHapticPref(nieuw);
+    if (nieuw) hapticFeedback();
   };
 
-  const handleSaveNickname = () => {
-    onUpdateUser({ ...currentUser, id: currentUser?.id || '', nickname });
-    showToast('Bijnaam opgeslagen!', 'success');
-  };
-
-  const handleImageUpload = async event => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  const bewaarBijnaam = async () => {
+    const schoon = bijnaam.trim();
     try {
-      const publicUrl = await db.uploadAvatar(currentUser?.id || '', file);
-      setAvatar(publicUrl);
-      setCurrentUser({ ...currentUser, id: currentUser?.id || '', avatar: publicUrl });
-      showToast('Profielfoto opgeslagen!', 'success');
-    } catch (error) {
-      console.error('Avatar upload error:', error);
-      // Fallback: show local preview even if upload fails
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result;
-        setAvatar(result);
-      };
-      reader.readAsDataURL(file);
-      showToast('Foto kon niet worden geüpload. Probeer opnieuw.', 'error');
+      await db.updateProfile(currentUser.id, { nickname: schoon || null });
+      setCurrentUser({ ...currentUser, nickname: schoon || null });
+      showToast('Bijnaam opgeslagen', 'success');
+      setBijnaamOpen(false);
+    } catch {
+      showToast('Bijnaam opslaan mislukt', 'error');
     }
   };
 
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
+  const kiesDrank = async drank => {
+    try {
+      await db.updateProfile(currentUser.id, { quick_drink_id: drank.id });
+      setCurrentUser({ ...currentUser, quickDrinkId: drank.id, quick_drink_id: drank.id });
+      showToast(`Snelle drank: ${drank.name}`, 'success');
+      setDrankOpen(false);
+    } catch {
+      showToast('Snelle drank opslaan mislukt', 'error');
+    }
   };
 
+  const nieuweFoto = async e => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const url = await db.uploadAvatar(currentUser.id, file);
+      setCurrentUser({ ...currentUser, avatar: url, avatar_url: url });
+      showToast('Profielfoto opgeslagen', 'success');
+    } catch (err) {
+      console.error('Profielfoto uploaden mislukt', err);
+      showToast('Profielfoto uploaden mislukt. Probeer opnieuw.', 'error');
+    }
+  };
+
+  const rollen = (currentUser?.roles || []).join(' · ') || 'Leiding';
+
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] pb-nav-safe transition-colors duration-200">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-gray-50/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] flex items-center justify-between transition-colors">
-        <div className="flex items-center gap-2">
-          <ChevronBack onClick={() => navigate(-1)} />
-          <h1 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">Instellingen</h1>
-        </div>
-        <div className="w-8"></div>
+    <div className="flex flex-col min-h-full bg-gray-50 dark:bg-[#0f172a] text-inkt dark:text-white pb-nav-safe">
+      <header className="px-4 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-2">
+        <h1 className="text-[28px] font-extrabold tracking-tight">Instellingen</h1>
       </header>
 
-      <main className="flex-1 overflow-y-auto">
-        {/* Profile Header */}
-        <section className="p-6 flex flex-col items-center border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1e2330]/30 transition-colors">
-          <div className="relative mb-4 group cursor-pointer" onClick={triggerFileInput}>
-            <UserAvatar user={currentUser || undefined} size="xl" />
-            {/* Hidden Input */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/*"
-              onChange={handleImageUpload}
-              onClick={e => e.stopPropagation()}
-            />
-            <button className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full shadow-lg border-2 border-gray-50 dark:border-[#0f172a] transition-transform active:scale-95 group-hover:scale-110">
-              <span className="material-icons-round text-sm block">edit</span>
-            </button>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {currentUser?.nickname || currentUser?.name}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 font-medium">KSA Aalter</p>
-        </section>
-
-        {/* Profile Form */}
-        <section className="p-4">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 px-1">
-            Profiel
-          </h3>
-          <div className="bg-white dark:bg-[#1e2330] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 transition-colors p-4 space-y-4">
-            <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Naam (Niet aanpasbaar)</label>
-              <input
-                type="text"
-                value={currentUser?.name}
-                disabled
-                className="w-full bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Bijnaam</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={nickname}
-                  onChange={e => setNickname(e.target.value)}
-                  placeholder="Kies een bijnaam..."
-                  className="flex-1 min-w-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-                <button
-                  onClick={handleSaveNickname}
-                  className="shrink-0 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors"
-                >
-                  Opslaan
-                </button>
-              </div>
-              <p className="text-[10px] text-gray-400 mt-1">Deze naam wordt getoond aan andere leiding.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Roles */}
-        <section className="p-4 pt-0">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 px-1">
-            Jouw Rollen
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {currentUser?.roles && currentUser?.roles.length > 0 ? (
-              currentUser?.roles.map(role => (
-                <span
-                  key={role}
-                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold border text-blue-600 bg-blue-50 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
-                >
-                  <span className="material-icons-round text-lg mr-1.5">verified</span>
-                  {role}
-                </span>
-              ))
-            ) : (
-              <span className="text-sm text-gray-500 italic px-1">Geen speciale rollen toegewezen.</span>
-            )}
-          </div>
-        </section>
-
-        {/* Toggles */}
-        <section className="px-4 py-2 space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 px-1">
-              Voorkeuren
-            </h3>
-            <div className="bg-white dark:bg-[#1e2330] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 transition-colors">
-              {/* Dark Mode */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800/50">
-                <div className="flex items-center gap-3">
-                  <span className="material-icons-round text-blue-600 dark:text-blue-500">dark_mode</span>
-                  <span className="font-medium text-gray-900 dark:text-white">Donkere Weergave</span>
-                </div>
-                <button
-                  onClick={toggleDarkMode}
-                  className={`w-12 h-6 rounded-full relative transition-colors duration-200 ease-in-out focus:outline-none ${isDark ? 'bg-blue-600' : 'bg-gray-300'}`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out ${isDark ? 'translate-x-6' : 'translate-x-0'}`}
-                  />
-                </button>
-              </div>
-
-              {/* Haptic Feedback */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800/50">
-                <div className="flex items-center gap-3">
-                  <span className="material-icons-round text-blue-600 dark:text-blue-500">vibration</span>
-                  <span className="font-medium text-gray-900 dark:text-white">Trillen bij acties</span>
-                </div>
-                <button
-                  onClick={toggleHaptic}
-                  className={`w-12 h-6 rounded-full relative transition-colors duration-200 ease-in-out focus:outline-none ${hapticOn ? 'bg-blue-600' : 'bg-gray-300'}`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out ${hapticOn ? 'translate-x-6' : 'translate-x-0'}`}
-                  />
-                </button>
-              </div>
-
-              {/* Pushmeldingen aan/uit */}
-              <PushInstelling />
-
-              {/* Notifications */}
-              <button
-                onClick={() => navigate('/notificaties')}
-                className="w-full flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="material-icons-round text-blue-600 dark:text-blue-500">notifications</span>
-                  <span className="font-medium text-gray-900 dark:text-white">Meldingen</span>
-                </div>
-                <span className="material-icons-round text-gray-400">chevron_right</span>
-              </button>
-
-              {/* Wachtwoord */}
-              <button
-                onClick={() => setWachtwoordOpen(true)}
-                className="w-full flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="material-icons-round text-blue-600 dark:text-blue-500">lock_reset</span>
-                  <span className="font-medium text-gray-900 dark:text-white">Wachtwoord wijzigen</span>
-                </div>
-                <span className="material-icons-round text-gray-400">chevron_right</span>
-              </button>
-
-              {/* Credits & Poem */}
-              <button
-                onClick={() => navigate('/credits')}
-                className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="material-icons-round text-blue-600 dark:text-blue-500">auto_awesome</span>
-                  <span className="font-medium text-gray-900 dark:text-white">Credits</span>
-                </div>
-                <span className="material-icons-round text-gray-400">chevron_right</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Logout */}
+      <main className="flex-1 px-4 space-y-6">
+        {/* Profiel */}
+        <div className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d p-4 flex items-center gap-4">
           <button
-            onClick={async () => {
-              await supabase.auth.signOut();
-            }}
-            className="w-full flex items-center justify-center gap-2 p-4 bg-red-50 text-red-600 font-bold rounded-xl border border-red-100 dark:bg-red-900/10 dark:text-red-400 dark:border-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
+            type="button"
+            onClick={() => fotoInvoer.current?.click()}
+            className="relative shrink-0 rounded-full"
+            aria-label="Profielfoto wijzigen"
           >
-            <span className="material-icons-round">logout</span>
-            Uitloggen
+            <UserAvatar user={currentUser || undefined} size="lg" />
+            <span className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-inkt dark:bg-white text-white dark:text-inkt flex items-center justify-center">
+              <span className="material-icons-round text-sm">photo_camera</span>
+            </span>
           </button>
-        </section>
+          <input ref={fotoInvoer} type="file" accept="image/*" className="hidden" onChange={nieuweFoto} />
+          <div className="min-w-0">
+            <p className="text-lg font-bold truncate">{currentUser?.naam}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{rollen}</p>
+          </div>
+        </div>
+
+        <Groep titel="Account">
+          <Rij label="Bijnaam" waarde={currentUser?.nickname || 'Geen'} onClick={() => setBijnaamOpen(true)} />
+          <Rij label="Wachtwoord wijzigen" onClick={() => setWachtwoordOpen(true)} />
+        </Groep>
+
+        <Groep titel="Startscherm">
+          <Rij label="Volgorde bollen" waarde={`${aantalBollen} bollen`} onClick={() => navigate('/settings/bollen')} />
+          <Rij label="Snelle drank" waarde={snelleDrank?.name || 'Kies'} onClick={() => setDrankOpen(true)} />
+        </Groep>
+
+        <Groep titel="Meldingen">
+          <PushInstelling />
+          <Rij label="Alle meldingen" onClick={() => navigate('/notificaties')} />
+        </Groep>
+
+        <Groep titel="Weergave">
+          <Schakelaar label="Donkere weergave" aan={isDark} onChange={toggleDarkMode} />
+          <Schakelaar label="Trillen bij acties" aan={hapticOn} onChange={toggleHaptic} />
+        </Groep>
+
+        <Groep titel="Beheer">
+          {isHoofdleiding(currentUser) && (
+            <Rij label="Rollen en werkgroepen" onClick={() => navigate('/admin/rollen')} />
+          )}
+          <Rij label="Credits" onClick={() => navigate('/credits')} />
+        </Groep>
+
+        <button
+          type="button"
+          onClick={() => supabase.auth.signOut()}
+          className="w-full rounded-2xl py-4 font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/15"
+        >
+          Uitloggen
+        </button>
       </main>
+
       <WachtwoordWijzigen isOpen={wachtwoordOpen} onClose={() => setWachtwoordOpen(false)} />
+
+      <BottomSheet isOpen={bijnaamOpen} onClose={() => setBijnaamOpen(false)} title="Bijnaam">
+        <div className="space-y-3 pb-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Deze naam zien andere leiding, bv. in de ranking.</p>
+          <input
+            id="bijnaam"
+            value={bijnaam}
+            onChange={e => setBijnaam(e.target.value)}
+            maxLength={30}
+            placeholder="Kies een bijnaam"
+            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+          />
+          <button
+            type="button"
+            onClick={bewaarBijnaam}
+            className="w-full py-3 rounded-2xl bg-inkt dark:bg-white text-white dark:text-inkt font-bold"
+          >
+            Opslaan
+          </button>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet
+        isOpen={drankOpen}
+        onClose={() => setDrankOpen(false)}
+        title="Snelle drank"
+        subtitle="De grote +1-knop op je startscherm"
+      >
+        <ul className="pb-4 divide-y divide-gray-100 dark:divide-gray-800">
+          {drankKeuzes.map(d => (
+            <li key={d.id}>
+              <button
+                type="button"
+                onClick={() => kiesDrank(d)}
+                className="w-full flex items-center justify-between py-3.5 text-left"
+              >
+                <span className="font-semibold">{d.name}</span>
+                {String(d.id) === String(snelleDrank?.id) && <span className="material-icons-round">check</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </BottomSheet>
     </div>
   );
 };

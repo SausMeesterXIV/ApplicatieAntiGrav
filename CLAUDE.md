@@ -36,6 +36,13 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 
 ## Functies
 
+### Startscherm — design-update (Instagram-stijl)
+- **Bollen** bovenaan, horizontaal scrollbaar: Friet, Agenda, Polls, Verslagen, Foto's voor iedereen; rol-bollen (Team drank, Friet beheer, Agenda beheer, Berichten, Nieuwe poll, Financiën, Winkeltje, Rollen) enkel met dat recht; hoofdleiding ziet alles. Oranje ring = iets nieuws of open. Definitie in `src/features/home/bollen.js`.
+- **Groot veegbaar vierkant**: frietronde (enkel als er een ronde loopt), strepen (vandaag gestreept, snelle drank +1, twee andere dranken, "Alle…"), ranking.
+- Daaronder de **twee eerstvolgende agenda-items** en onderaan de **aftelklok** (bv. kamp).
+- **Instellingen**: gegroepeerde lijst; "Volgorde bollen" (per leider, bewaard op het profiel) en "Snelle drank".
+- Stijl: lettertype Plus Jakarta Sans, pastels per bol en donkere knoppen (`inkt`), tokens in `tailwind.config.js`.
+
 ### Agenda — behouden
 - Inhoud: **grote evenementen** (kamp, weekends, fuiven, eetfestijn) en **leidingsvergaderingen**. Geen wekelijkse activiteiten per groep.
 - **Aanwezigheid**: leiding duidt aan of ze komt (komt / komt niet / misschien).

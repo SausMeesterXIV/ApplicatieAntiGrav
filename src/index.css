@@ -168,6 +168,15 @@
   padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* Scrollen zonder zichtbare schuifbalk (bollenrij, carrousel, hoofdinhoud) */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* === SKELETON SHIMMER === */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
