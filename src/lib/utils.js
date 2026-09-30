@@ -1,13 +1,3 @@
-/** Genereert een stabiele numerieke ID van een UUID string (voor React keys) */
-export function stableNumericId(uuid) {
-  let hash = 0;
-  for (let i = 0; i < uuid.length; i++) {
-    const char = uuid.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0;
-  }
-  return Math.abs(hash);
-}
 
 /** Formatteert een datum naar een "tijd geleden" string */
 export function formatTimeAgo(date) {

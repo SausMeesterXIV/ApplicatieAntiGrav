@@ -3,13 +3,6 @@ import { formatTimeAgo } from './utils';
 
 // ==================== PROFILES ====================
 
-export async function fetchProfiles() {
-  const { data, error } = await supabase.from('profiles').select('*').eq('actief', true).order('naam');
-
-  if (error) throw error;
-  return (data || []).map(mapProfileToUser);
-}
-
 export async function fetchAllProfiles() {
   const { data, error } = await supabase.from('profiles').select('*').order('naam');
 
@@ -30,7 +23,6 @@ function mapProfileToUser(p) {
     avatar_url: p.avatar_url || null,
     roles: p.roles || [],
     quickDrinkId: p.quick_drink_id || undefined,
-    fcm_token: p.fcm_token || null,
     balance: 0,
   };
 }
@@ -149,32 +141,6 @@ export async function deleteConsumptie(id) {
   if (error) throw error;
 }
 
-async function fetchBalanceForUserOud(userId) {
-  const [consumptiesResult, frituurResult, correctionsResult] = await Promise.all([
-    supabase.from('consumpties').select('aantal, dranken(prijs)').eq('user_id', userId).is('factuur_id', null),
-    supabase.from('frituur_bestellingen').select('totaal_prijs').eq('user_id', userId).is('period_id', null),
-    supabase.from('billing_corrections').select('correctie_bedrag').eq('user_id', userId),
-  ]);
-
-  if (consumptiesResult.error) throw consumptiesResult.error;
-  if (frituurResult.error) throw frituurResult.error;
-  if (correctionsResult.error) throw correctionsResult.error;
-
-  const consumptiesTotal = (consumptiesResult.data || []).reduce(
-    (sum, c) => sum + c.aantal * Number(c.dranken?.prijs || 0),
-    0
-  );
-
-  const frituurTotal = (frituurResult.data || []).reduce((sum, f) => sum + Number(f.totaal_prijs || 0), 0);
-
-  const correctionsTotal = (correctionsResult.data || []).reduce(
-    (sum, corr) => sum + Number(corr.correctie_bedrag || 0),
-    0
-  );
-
-  return consumptiesTotal + frituurTotal + correctionsTotal;
-}
-
 async function fetchAllBalancesOud() {
   const [consumptiesResult, frituurResult, correctionsResult] = await Promise.all([
     supabase.from('consumpties').select('user_id, aantal, dranken(prijs)').is('factuur_id', null),
@@ -231,16 +197,6 @@ export async function fetchAllBalances() {
     if (!isFunctieOntbreekt(error)) throw error;
     console.warn('periode_overzicht ontbreekt (migratie nog niet uitgevoerd?), oude berekening gebruikt');
     return fetchAllBalancesOud();
-  }
-}
-
-export async function fetchBalanceForUser(userId) {
-  try {
-    const rows = await fetchPeriodeOverzicht();
-    return rows.find(r => r.user_id === userId)?.totaal || 0;
-  } catch (error) {
-    if (!isFunctieOntbreekt(error)) throw error;
-    return fetchBalanceForUserOud(userId);
   }
 }
 
@@ -651,16 +607,6 @@ export async function saveBetaalgegevens({ naam, iban, bic }) {
   ]);
 }
 
-export async function createFactuur(userId, totaalBedrag, periode, userNaam) {
-  const { data, error } = await supabase
-    .from('facturen')
-    .insert([{ user_id: userId, totaal_bedrag: totaalBedrag, periode, user_naam: userNaam || null }])
-    .select('id')
-    .single();
-  if (error) throw error;
-  return data.id;
-}
-
 export async function updateFactuurStatus(id, status) {
   const { error } = await supabase.from('facturen').update({ status }).eq('id', id);
   if (error) throw error;
@@ -695,22 +641,6 @@ export async function saveCountdowns(countdowns) {
 }
 
 // ==================== APP SETTINGS ====================
-
-export async function fetchAppSetting(key) {
-  const { data, error } = await supabase.from('app_settings').select('value').eq('key', key).single();
-
-  if (error) {
-    if (error.code === 'PGRST116') return null; // Not found
-    throw error;
-  }
-  return data?.value || null;
-}
-
-export async function saveAppSetting(key, value) {
-  const { error } = await supabase.from('app_settings').upsert({ key, value }, { onConflict: 'key' });
-
-  if (error) throw error;
-}
 
 // ==================== BILLING PERIODS ====================
 
@@ -776,18 +706,6 @@ export async function updateBillingPeriod(id, updates) {
   const { error } = await supabase.from('billing_periods').update(updates).eq('id', id);
 
   if (error) throw error;
-}
-
-export async function updateGeschatteKost(periodId, bedrag) {
-  const { error } = await supabase.from('billing_periods').update({ geschatte_kost: bedrag }).eq('id', periodId);
-
-  if (error) throw error;
-}
-
-export async function archiveConsumptiesPeriod() {
-  const { data, error } = await supabase.rpc('archive_consumpties_period');
-  if (error) throw error;
-  return data || { closed_period_id: null, new_period_id: '' };
 }
 
 function mapBillingPeriod(p) {
@@ -935,9 +853,6 @@ export async function setProfielActief(profileId, actief) {
   const { error } = await supabase.from('profiles').update({ actief }).eq('id', profileId);
   if (error) throw error;
 }
-
-// Keep backward compat alias
-export const fetchActiveBillingPeriod = fetchOpenBillingPeriod;
 
 // ==================== SHOP ====================
 
