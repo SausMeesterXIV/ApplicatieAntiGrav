@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useFries } from './FriesContext';
-import { useAgenda } from '../agenda/AgendaContext';
 import { BottomSheet } from '../../components/Modal';
 import { showToast } from '../../components/Toast';
 import { PerPersoon } from './FriesRondeOverzicht';
@@ -11,13 +10,13 @@ import { FRITUUR_STATUS } from '../../lib/constants';
 export const FriesOverviewScreen = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { handleAddNotification: onAddNotification } = useAgenda();
   const {
     friesOrders: orders,
     activeFrituurSession,
     setFriesSessionStatus: onSessionChange,
     setFriesPickupTime: onSetPickupTime,
     handleCompleteFriesPayment: onCompletePayment,
+    meldAanBestellers,
   } = useFries();
 
   const sessionStatus = activeFrituurSession?.status || FRITUUR_STATUS.CLOSED;
@@ -140,18 +139,7 @@ export const FriesOverviewScreen = () => {
     onSetPickupTime(tempPickupTime);
     onSessionChange(FRITUUR_STATUS.ORDERED);
 
-    onAddNotification({
-      type: 'order',
-      sender: 'Friet Verantwoordelijke',
-      role: 'ADMIN',
-      title: 'Frieten Besteld! 🍟',
-      content: `De bestelling is doorgegeven. Jullie mogen de frieten gaan afhalen om ${tempPickupTime}.`,
-      time: 'Zonet',
-      isRead: false,
-      action: '',
-      icon: 'fastfood',
-      color: 'bg-yellow-100 dark:bg-yellow-600/20 text-yellow-600 dark:text-yellow-500',
-    });
+    meldAanBestellers('Frieten besteld! 🍟', `De bestelling is doorgegeven. Jullie mogen de frieten gaan afhalen om ${tempPickupTime}.`);
 
     setShowTimeInput(false);
   };

@@ -255,13 +255,37 @@ export const HomeScreen = () => {
                     iconColorClass="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
                     onClick={() => navigate('/admin/rollen')}
                   />
-                  <NavCard
-                    title="Bericht Versturen"
-                    description="Naar leiding of groepen"
-                    icon="send"
-                    iconColorClass="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-                    onClick={() => navigate('/notificaties/nieuw')}
-                  />
+                </div>
+              </section>
+            )}
+
+            {(hasAccess(currentUser, 'berichten_sturen') || hasAccess(currentUser, 'polls_maken')) && (
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 mb-3 px-1">
+                  <span className="material-icons-round text-primary text-sm">campaign</span>
+                  <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Communicatie
+                  </h2>
+                </div>
+                <div className="grid gap-3">
+                  {hasAccess(currentUser, 'berichten_sturen') && (
+                    <NavCard
+                      title="Bericht versturen"
+                      description="Naar alle leiding, een groep of een werkgroep"
+                      icon="send"
+                      iconColorClass="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                      onClick={() => navigate('/notificaties/nieuw')}
+                    />
+                  )}
+                  {hasAccess(currentUser, 'polls_maken') && (
+                    <NavCard
+                      title="Poll maken"
+                      description="Een vraag met opties en een deadline"
+                      icon="how_to_vote"
+                      iconColorClass="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
+                      onClick={() => navigate('/polls/nieuw')}
+                    />
+                  )}
                 </div>
               </section>
             )}

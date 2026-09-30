@@ -1045,3 +1045,19 @@ export async function savePushToken(userId, token, platform) {
     .upsert({ user_id: userId, token, device_type: platform }, { onConflict: 'token' });
   if (error) throw error;
 }
+
+// ==================== BERICHTEN ====================
+
+/** Verstuurt een bericht via de database (rechtencontrole + ontvangers bepalen). Geeft het aantal ontvangers. */
+export async function stuurBericht({ doel, doelId, personen, titel, bericht, afzenderNaam }) {
+  const { data, error } = await supabase.rpc('stuur_bericht', {
+    p_doel: doel,
+    p_doel_id: doelId,
+    p_personen: personen,
+    p_titel: titel,
+    p_bericht: bericht,
+    p_afzender_naam: afzenderNaam,
+  });
+  if (error) throw error;
+  return data || 0;
+}

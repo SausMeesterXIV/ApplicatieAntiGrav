@@ -6,14 +6,12 @@ import { useFriesRealtime } from '../../lib/useRealtime';
 import { hasRecht } from '../../lib/roleUtils';
 import { useAuth } from '../auth/AuthContext';
 import { useDrink } from '../drank/DrinkContext';
-import { useAgenda } from '../agenda/AgendaContext';
 
 const FriesContext = createContext(undefined);
 
 export const FriesProvider = ({ children }) => {
   const { session, currentUser, users } = useAuth();
   const { activePeriod, setBalance } = useDrink();
-  const { handleAddNotification } = useAgenda();
 
   const [fryItems, setFryItems] = useState([]);
   const [friesOrders, setFriesOrders] = useState([]);
@@ -245,19 +243,6 @@ export const FriesProvider = ({ children }) => {
           });
         }
 
-        handleAddNotification({
-          type: 'order',
-          sender: 'Systeem',
-          role: '',
-          title: notifTitle,
-          content: notifContent,
-          time: 'Zonet',
-          isRead: false,
-          action: '',
-          icon: 'price_change',
-          color: 'bg-orange-100 dark:bg-orange-600/20 text-orange-600 dark:text-orange-500',
-        });
-
         showToast('Betaling afgerond — prijsverschil gemeld', 'warning');
       } else {
         showToast('Betaling succesvol afgerond!', 'success');
@@ -269,6 +254,19 @@ export const FriesProvider = ({ children }) => {
       setFrituurSessieId(prevSessieId);
       showToast('Fout bij het afronden. De sessie is niet gesloten.', 'error');
     }
+  };
+
+  // Melding naar wie in de lopende ronde besteld heeft (individuele meldingen: toegestaan voor alle leiding)
+  const meldAanBestellers = async (titel, bericht) => {
+    if (!currentUser) return;
+    const ontvangers = [...new Set(friesOrders.filter(o => o.status === 'open').map(o => o.userId))].filter(
+      id => id !== currentUser.id
+    );
+    await Promise.all(
+      ontvangers.map(id =>
+        db.addNotificatie(currentUser.id, id, titel, bericht, currentUser.naam || 'Friet', '', 'order').catch(() => {})
+      )
+    );
   };
 
   const handleAddFryItem = async item => {
@@ -332,6 +330,7 @@ export const FriesProvider = ({ children }) => {
         handleAddFryItem,
         handleUpdateFryItem,
         handleDeleteFryItem,
+        meldAanBestellers,
         loading,
       }}
     >

@@ -52,9 +52,11 @@ import { TeamDrankFriesHistoryScreen } from './features/friet/TeamDrankFriesHist
 
 // Alle data zit in de providers (features/*/…Context); App regelt enkel routing en layout.
 
+// role: één rol/recht of een lijst (één ervan volstaat)
 const RoleRoute = ({ children, role }) => {
   const { currentUser } = useAuth();
-  if (!hasAccess(currentUser, role)) {
+  const rollen = Array.isArray(role) ? role : [role];
+  if (!rollen.some(r => hasAccess(currentUser, r))) {
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;
@@ -124,7 +126,14 @@ const AppRoutes = () => {
           />
 
           <Route path="notificaties" element={<NotificationsScreen />} />
-          <Route path="notificaties/nieuw" element={<NewMessageScreen />} />
+          <Route
+            path="notificaties/nieuw"
+            element={
+              <RoleRoute role={['berichten_sturen', 'drank_beheren']}>
+                <NewMessageScreen />
+              </RoleRoute>
+            }
+          />
           <Route path="nudges" element={<NudgeSelectorScreen />} />
 
           <Route path="frituur" element={<FriesScreen />} />

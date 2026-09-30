@@ -10,7 +10,6 @@ export const AgendaManageScreen = () => {
   const navigate = useNavigate();
   const { availableRoles } = useAuth();
   const {
-    handleAddNotification: onAddNotification,
     events,
     handleSaveEvent: onSaveEvent,
     handleDeleteEvent: onDeleteEvent,
@@ -154,36 +153,8 @@ export const AgendaManageScreen = () => {
       showToast('Evenement succesvol opgeslagen!', 'success');
       await refreshAgendaData(); // Ensure HomeScreen is updated
 
-      if (editingId) {
-        // Trigger Notification for UPDATE
-        onAddNotification({
-          type: 'agenda',
-          sender: 'Agenda Update',
-          role: 'AGENDA',
-          title: 'Event Bijgewerkt',
-          content: `Het event '${title}' is bijgewerkt met nieuwe informatie.`,
-          time: 'Zonet',
-          isRead: false,
-          action: 'Bekijken',
-          icon: 'edit_calendar',
-          color: 'bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-500',
-        });
-        setEditingId(null);
-      } else {
-        // Trigger Notification for NEW
-        onAddNotification({
-          type: 'agenda',
-          sender: 'Nieuw Event',
-          role: 'AGENDA',
-          title: title,
-          content: description || 'Er is een nieuw evenement toegevoegd aan de agenda.',
-          time: 'Zonet',
-          isRead: false,
-          action: 'Bekijken',
-          icon: 'event',
-          color: 'bg-green-100 dark:bg-green-600/20 text-green-600 dark:text-green-500',
-        });
-      }
+      // De melding naar alle leiding maakt de database zelf (trigger melding_agenda_item)
+      if (editingId) setEditingId(null);
       resetForm();
     } catch (error) {
       showToast('Fout bij opslaan: ' + (error.message || 'Onbekende fout'), 'error');

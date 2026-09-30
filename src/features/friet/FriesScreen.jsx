@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useFries } from './FriesContext';
-import { useAgenda } from '../agenda/AgendaContext';
 
 import { ChevronBack } from '../../components/ChevronBack';
 import { BottomSheet } from '../../components/Modal';
@@ -19,7 +18,6 @@ const TABS = ['favorieten', 'frieten', 'snacks', 'sauzen', 'huisbereid', 'burger
 export const FriesScreen = () => {
   const navigate = useNavigate();
   const { currentUser, users, loading: authLoading } = useAuth();
-  const { handleAddNotification: onAddNotification } = useAgenda();
   const {
     handlePlaceFryOrder: onPlaceOrder,
     handleRemoveFryOrder: onRemoveOrder,
@@ -32,6 +30,7 @@ export const FriesScreen = () => {
     handleUpdateFryItem,
     handleDeleteFryItem,
     loading: friesLoading,
+    meldAanBestellers,
   } = useFries();
 
   const loading = authLoading || friesLoading;
@@ -645,18 +644,7 @@ export const FriesScreen = () => {
             onClick={() => {
               onSetPickupTime(tempPickupTime);
               onSessionChange(FRITUUR_STATUS.ORDERED);
-              onAddNotification({
-                type: 'order',
-                sender: 'Friet Verantwoordelijke',
-                role: 'ADMIN',
-                title: 'Frieten Besteld! 🍟',
-                content: `De bestelling is doorgegeven. Jullie mogen de frieten gaan afhalen om ${tempPickupTime}.`,
-                time: 'Zonet',
-                isRead: false,
-                action: '',
-                icon: 'fastfood',
-                color: 'bg-yellow-100 dark:bg-yellow-600/20 text-yellow-600 dark:text-yellow-500',
-              });
+              meldAanBestellers('Frieten besteld! 🍟', `De bestelling is doorgegeven. Jullie mogen de frieten gaan afhalen om ${tempPickupTime}.`);
               setShowTimeInput(false);
             }}
             className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all"

@@ -1,51 +1,33 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import * as db from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
 import { hapticSuccess } from '../../lib/haptics';
-import { hasRole } from '../../lib/roleUtils';
 
+// Nieuw bericht naar alle leiding, een groep, een werkgroep, gekozen personen of wie een open factuur heeft.
+// De database (stuur_bericht) controleert het recht berichten_sturen en bepaalt de ontvangers.
 export const NewMessageScreen = () => {
   const navigate = useNavigate();
-  const { currentUser, users, availableRoles } = useAuth();
+  const { currentUser, users, groepen: groepenData, werkgroepen } = useAuth();
 
-  // State
-  const [targetType, setTargetType] = useState('individual');
-  const [selectedTarget, setSelectedTarget] = useState(''); // Voor de specifieke groep of team
+  const [targetType, setTargetType] = useState('all');
+  const [selectedTarget, setSelectedTarget] = useState(''); // groep-id of werkgroep-id
   const [selectedUsers, setSelectedUsers] = useState([]); // Voor individuele selectie
-  const [recipientCount, setRecipientCount] = useState(0);
 
-  // Splits de rollen op voor de UI
-  const groepen = useMemo(() => availableRoles.filter(r => r.category === 'Groep'), [availableRoles]);
-  const teams = useMemo(
-    () => availableRoles.filter(r => r.category === 'Team' || r.category === 'Bestuur'),
-    [availableRoles]
-  );
+  const groepen = useMemo(() => groepenData.map(g => ({ id: String(g.id), label: g.naam })), [groepenData]);
+  const teams = useMemo(() => werkgroepen.map(w => ({ id: w.id, label: w.naam })), [werkgroepen]);
 
-  // Effect om het aantal ontvangers te berekenen
-  useEffect(() => {
-    const calculateRecipients = async () => {
-      let count = 0;
-      if (targetType === 'individual') {
-        count = selectedUsers.length;
-      } else if (targetType === 'group') {
-        count = selectedTarget ? users.filter(u => (u.roles || []).includes(selectedTarget)).length : 0;
-      } else if (targetType === 'team') {
-        count = selectedTarget ? users.filter(u => hasRole(u, selectedTarget)).length : 0;
-      } else if (targetType === 'balance') {
-        try {
-          const allBalances = await db.fetchAllBalances();
-          count = users.filter(u => (allBalances[u.id] || 0) > 0).length;
-        } catch (e) {
-          count = 0;
-        }
-      }
-      setRecipientCount(count);
-    };
+  const anderen = users.filter(u => u.actief && u.id !== currentUser?.id);
+  // null = niet op voorhand te tellen (open facturen van anderen zijn niet zichtbaar voor iedereen)
+  const recipientCount = useMemo(() => {
+    if (targetType === 'all') return anderen.length;
+    if (targetType === 'individual') return selectedUsers.length;
+    if (targetType === 'group') return selectedTarget ? anderen.filter(u => u.groepIds.map(String).includes(selectedTarget)).length : 0;
+    if (targetType === 'team') return selectedTarget ? anderen.filter(u => u.werkgroepIds.includes(selectedTarget)).length : 0;
+    return null;
+  }, [targetType, selectedTarget, selectedUsers, anderen]);
 
-    calculateRecipients();
-  }, [targetType, selectedTarget, selectedUsers, users]);
   const [isOfficial, setIsOfficial] = useState(true);
   const [subject, setSubject] = useState('');
   const [content, setContent] = useState('');
@@ -60,56 +42,38 @@ export const NewMessageScreen = () => {
       showToast('Vul een onderwerp en bericht in', 'error');
       return;
     }
-
     if (targetType === 'individual' && selectedUsers.length === 0) {
       showToast('Selecteer minimaal één ontvanger', 'error');
       return;
     }
+    if ((targetType === 'group' || targetType === 'team') && !selectedTarget) {
+      showToast('Kies eerst een groep of werkgroep', 'error');
+      return;
+    }
 
     setIsSending(true);
-
-    setTimeout(async () => {
-      try {
-        const senderId = currentUser?.id || '';
-        const senderName = isOfficial ? 'KSA Aalter' : currentUser?.naam || 'Leiding';
-        let recipientIds = [];
-
-        // BEPALEN VAN DE ONTVANGERS
-        if (targetType === 'individual') {
-          recipientIds = selectedUsers;
-        } else if (targetType === 'group') {
-          // Filter op specifieke leidingsgroep (Pagadders, etc.)
-          recipientIds = users.filter(u => (u.roles || []).includes(selectedTarget)).map(u => u.id);
-        } else if (targetType === 'team') {
-          // Filter op team/rol via de hasRole utility
-          recipientIds = users.filter(u => hasRole(u, selectedTarget)).map(u => u.id);
-        } else if (targetType === 'balance') {
-          // Iedereen met een rekening > 0
-          const allBalances = await db.fetchAllBalances();
-          recipientIds = users.filter(u => (allBalances[u.id] || 0) > 0).map(u => u.id);
-        }
-
-        if (recipientIds.length === 0) {
-          showToast('Geen ontvangers gevonden voor deze selectie', 'error');
-          setIsSending(false);
-          return;
-        }
-
-        // Versturen
-        const promises = recipientIds.map(id =>
-          db.addNotificatie(senderId, id, subject, content, senderName, '', isOfficial ? 'official' : 'official')
-        );
-
-        await Promise.all(promises);
-
-        hapticSuccess();
-        showToast('Bericht succesvol verzonden!', 'success');
-        navigate(-1);
-      } catch (error) {
-        showToast('Fout bij verzenden', 'error');
+    try {
+      const doel = { all: 'alle', group: 'groep', team: 'werkgroep', individual: 'personen', balance: 'open_factuur' }[targetType];
+      const aantal = await db.stuurBericht({
+        doel,
+        doelId: selectedTarget || null,
+        personen: targetType === 'individual' ? selectedUsers : null,
+        titel: subject,
+        bericht: content,
+        afzenderNaam: isOfficial ? 'KSA Aalter' : currentUser?.naam || 'Leiding',
+      });
+      if (!aantal) {
+        showToast('Geen ontvangers gevonden voor deze selectie', 'error');
         setIsSending(false);
+        return;
       }
-    }, 10);
+      hapticSuccess();
+      showToast(`Bericht verzonden naar ${aantal} ${aantal === 1 ? 'persoon' : 'personen'}`, 'success');
+      navigate(-1);
+    } catch (error) {
+      showToast('Verzenden mislukt: ' + (error.message || 'onbekende fout'), 'error');
+      setIsSending(false);
+    }
   };
 
   return (
@@ -129,10 +93,11 @@ export const NewMessageScreen = () => {
           <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">Type Ontvanger</h2>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { id: 'individual', label: 'Individueel', icon: 'person' },
-              { id: 'group', label: 'Leidingsgroep', icon: 'groups' },
-              { id: 'team', label: 'Teams', icon: 'engineering' },
-              { id: 'balance', label: 'Open Rekening', icon: 'payments' },
+              { id: 'all', label: 'Alle leiding', icon: 'campaign' },
+              { id: 'group', label: 'Groep', icon: 'groups' },
+              { id: 'team', label: 'Werkgroep', icon: 'engineering' },
+              { id: 'individual', label: 'Personen', icon: 'person' },
+              { id: 'balance', label: 'Open factuur', icon: 'payments' },
             ].map(t => (
               <button
                 key={t.id}
@@ -158,7 +123,7 @@ export const NewMessageScreen = () => {
               >
                 <option value="">Kies een groep...</option>
                 {groepen.map(g => (
-                  <option key={g.id} value={g.label}>
+                  <option key={g.id} value={g.id}>
                     {g.label}
                   </option>
                 ))}
@@ -176,9 +141,9 @@ export const NewMessageScreen = () => {
                 onChange={e => setSelectedTarget(e.target.value)}
                 className="w-full bg-white dark:bg-[#1e293b] border border-gray-100 dark:border-gray-800 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white appearance-none focus:outline-none focus:border-blue-500 shadow-sm"
               >
-                <option value="">Kies een team...</option>
+                <option value="">Kies een werkgroep...</option>
                 {teams.map(t => (
-                  <option key={t.id} value={t.label}>
+                  <option key={t.id} value={t.id}>
                     {t.label}
                   </option>
                 ))}
@@ -195,7 +160,7 @@ export const NewMessageScreen = () => {
                 Informatie
               </p>
               <p className="text-xs text-amber-800 dark:text-amber-200">
-                Dit bericht wordt gestuurd naar iedereen die momenteel een negatieve balans heeft.
+                Dit bericht wordt gestuurd naar iedereen met een onbetaalde factuur.
               </p>
             </div>
           )}
@@ -204,14 +169,20 @@ export const NewMessageScreen = () => {
           <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800 animate-in fade-in duration-300 mt-4">
             <span className="material-icons-round text-blue-600 text-sm">info</span>
             <p className="text-xs text-blue-800 dark:text-blue-300">
-              Dit bericht wordt verzonden naar <span className="font-bold">{recipientCount}</span>{' '}
-              {recipientCount === 1 ? 'persoon' : 'personen'}.
+              {recipientCount === null ? (
+                <>Het aantal ontvangers wordt bepaald bij het versturen.</>
+              ) : (
+                <>
+                  Dit bericht wordt verzonden naar <span className="font-bold">{recipientCount}</span>{" "}
+                  {recipientCount === 1 ? "persoon" : "personen"}.
+                </>
+              )}
             </p>
           </div>
 
           {targetType === 'individual' && (
             <div className="bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-xl max-h-48 overflow-y-auto p-2 space-y-1 shadow-sm mt-3 custom-scrollbar">
-              {users.map(user => (
+              {anderen.map(user => (
                 <div
                   key={user.id}
                   onClick={() => toggleUser(user.id)}
