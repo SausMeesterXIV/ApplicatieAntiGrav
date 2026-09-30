@@ -8,10 +8,12 @@ import * as db from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
 import { isHapticEnabled, setHapticEnabled as saveHapticPref, hapticFeedback } from '../../lib/haptics';
 import { UserAvatar } from '../../components/UserAvatar';
+import { WachtwoordWijzigen } from './WachtwoordWijzigen';
 
 export const SettingsScreen = () => {
   const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useAuth();
+  const [wachtwoordOpen, setWachtwoordOpen] = useState(false);
 
   const onUpdateUser = async user => {
     setCurrentUser(user);
@@ -239,6 +241,18 @@ export const SettingsScreen = () => {
                 <span className="material-icons-round text-gray-400">chevron_right</span>
               </button>
 
+              {/* Wachtwoord */}
+              <button
+                onClick={() => setWachtwoordOpen(true)}
+                className="w-full flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="material-icons-round text-blue-600 dark:text-blue-500">lock_reset</span>
+                  <span className="font-medium text-gray-900 dark:text-white">Wachtwoord wijzigen</span>
+                </div>
+                <span className="material-icons-round text-gray-400">chevron_right</span>
+              </button>
+
               {/* Credits & Poem */}
               <button
                 onClick={() => navigate('/credits')}
@@ -265,6 +279,7 @@ export const SettingsScreen = () => {
           </button>
         </section>
       </main>
+      <WachtwoordWijzigen isOpen={wachtwoordOpen} onClose={() => setWachtwoordOpen(false)} />
     </div>
   );
 };
