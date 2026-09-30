@@ -39,10 +39,10 @@ export const TeamDrankBillingExcelPreviewScreen = ({ onBack }) => {
     return allStreaks.filter(s => s.period_id === selectedPeriod.id);
   }, [allStreaks, selectedPeriod]);
 
-  // Dynamic pricing
+  // Afgesloten met echte kost: verdeeld over alle strepen. Anders de schatting: aantal x prijs van de drank.
   const totalStrepen = useMemo(() => filteredStreaks.reduce((sum, s) => sum + s.amount, 0), [filteredStreaks]);
-  const geschatteKost = selectedPeriod?.geschatte_kost || 0;
-  const prijsPerStreep = totalStrepen > 0 ? geschatteKost / totalStrepen : 0;
+  const echteKost = selectedPeriod?.echte_kost || 0;
+  const prijsPerStreep = totalStrepen > 0 ? echteKost / totalStrepen : 0;
 
   // Build billing data with dynamic pricing
   const billingData = useMemo(() => {
@@ -50,7 +50,12 @@ export const TeamDrankBillingExcelPreviewScreen = ({ onBack }) => {
       .map(user => {
         const userStreaks = filteredStreaks.filter(s => s.userId === user.id);
         const userStrepen = userStreaks.reduce((sum, s) => sum + s.amount, 0);
-        const berekendBedrag = Number((userStrepen * prijsPerStreep).toFixed(2));
+        const berekendBedrag = Number(
+          (prijsPerStreep > 0
+            ? userStrepen * prijsPerStreep
+            : userStreaks.reduce((sum, s) => sum + s.amount * (s.price || 0), 0)
+          ).toFixed(2),
+        );
 
         const userCorrections = corrections.filter(c => c.user_id === user.id);
         const totalCorrection = userCorrections.reduce((sum, c) => sum + c.correctie_bedrag, 0);
@@ -99,7 +104,7 @@ export const TeamDrankBillingExcelPreviewScreen = ({ onBack }) => {
         ];
         const kostRow = [
           { v: 'Factuurkosten:', t: 's' },
-          { v: `€ ${geschatteKost.toFixed(2)}`, t: 's' },
+          { v: `€ ${echteKost.toFixed(2)}`, t: 's' },
           { v: 'Prijs/streep:', t: 's' },
           { v: prijsPerStreep > 0 ? `€ ${prijsPerStreep.toFixed(2)}` : 'N.v.t.', t: 's' },
           '',
@@ -233,7 +238,7 @@ export const TeamDrankBillingExcelPreviewScreen = ({ onBack }) => {
           <div className="bg-green-50 dark:bg-green-900/10 border-b border-green-200 dark:border-green-800 px-4 py-2 text-xs flex justify-between">
             <span className="text-gray-500">
               Factuurkosten:{' '}
-              <strong className="text-gray-900 dark:text-white">€ {geschatteKost.toFixed(2).replace('.', ',')}</strong>
+              <strong className="text-gray-900 dark:text-white">€ {echteKost.toFixed(2).replace('.', ',')}</strong>
             </span>
             <span className="text-gray-500">
               Prijs/streep:{' '}

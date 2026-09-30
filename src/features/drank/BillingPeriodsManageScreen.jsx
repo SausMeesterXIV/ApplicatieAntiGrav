@@ -139,9 +139,12 @@ export const BillingPeriodsManageScreen = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {period.geschatte_kost > 0 && (
-                    <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      € {period.geschatte_kost.toFixed(2).replace('.', ',')}
+                  {period.echte_kost > 0 && (
+                    <span
+                      className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      title="Echte kost, verdeeld over de strepen"
+                    >
+                      € {period.echte_kost.toFixed(2).replace('.', ',')}
                     </span>
                   )}
                   {!period.is_closed ? (

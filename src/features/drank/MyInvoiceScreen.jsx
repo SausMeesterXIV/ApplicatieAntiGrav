@@ -146,10 +146,10 @@ export const MyInvoiceScreen = () => {
           <p className="text-xs font-bold tracking-widest uppercase text-gray-500">Lopende periode</p>
           <p className="text-4xl font-black text-blue-600 dark:text-blue-500 my-2">{euro(totaal)}</p>
           <p className="text-xs text-gray-500">{activePeriod?.naam || 'Geen open periode'}</p>
-          {activePeriod?.geschatte_kost > 0 && overzicht?.strepen > 0 && (
+          {overzicht?.strepen > 0 && (
             <p className="text-xs text-gray-500 mt-2">
-              Kostendeling: {euro(overzicht.drank_bedrag / overzicht.strepen)} per streep (voorlopig, verandert met het
-              totaal aantal strepen)
+              Schatting: jouw strepen × de prijs van de drank. Bij het afsluiten verdeelt Drankteam de echte kost over
+              alle strepen, dus het bedrag op je factuur kan nog wat verschillen.
             </p>
           )}
         </section>

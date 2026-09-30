@@ -27,10 +27,17 @@ export const TeamDrankBillingScreen = () => {
   const [betaal, setBetaal] = useState({ naam: '', iban: '', bic: '' });
   const [betaalOpen, setBetaalOpen] = useState(false);
 
+  // Echte kost van de periode (bv. factuur van de brouwer): verdeeld over alle strepen. Leeg = aantal x prijs.
+  const [echteKostTekst, setEchteKostTekst] = useState('');
+  const echteKost = (() => {
+    const n = parseFloat(String(echteKostTekst).replace(',', '.'));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  })();
+
   const laadOverzicht = async () => {
     setLaden(true);
     try {
-      setRijen(await db.fetchPeriodeOverzicht());
+      setRijen(await db.fetchPeriodeOverzicht(activePeriod?.id || null, echteKost));
     } catch (e) {
       console.error(e);
       showToast('Overzicht laden mislukt (is de drank-migratie uitgevoerd?)', 'error');
@@ -40,9 +47,14 @@ export const TeamDrankBillingScreen = () => {
   };
 
   useEffect(() => {
-    laadOverzicht();
     db.fetchBetaalgegevens().then(setBetaal).catch(() => {});
-  }, [activePeriod?.id]);
+  }, []);
+
+  // Opnieuw berekenen bij een andere periode of echte kost (kort wachten tot het typen stopt)
+  useEffect(() => {
+    const t = setTimeout(laadOverzicht, 400);
+    return () => clearTimeout(t);
+  }, [activePeriod?.id, echteKost]);
 
   const gesorteerd = useMemo(() => [...rijen].sort((a, b) => b.totaal - a.totaal), [rijen]);
   const totaal = rijen.reduce((s, r) => s + r.totaal, 0);
@@ -77,7 +89,7 @@ export const TeamDrankBillingScreen = () => {
     if (!bevestig) return setBevestig(true);
     setBezig(true);
     try {
-      const res = await db.sluitPeriodeAf(activePeriod?.id || null);
+      const res = await db.sluitPeriodeAf(activePeriod?.id || null, echteKost);
       showToast(`Periode afgesloten: ${res?.aantal_facturen ?? 0} facturen gemaakt`, 'success');
       await refreshDrinksData();
       navigate(`/strepen/facturatie/archief/${res?.closed_period_id || ''}`);
@@ -120,12 +132,27 @@ export const TeamDrankBillingScreen = () => {
           </div>
         </section>
 
-        {activePeriod?.geschatte_kost > 0 && (
-          <p className="text-xs p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
-            Deze periode gebruikt kostendeling: geschatte kost {euro(activePeriod.geschatte_kost)} gedeeld door alle
-            strepen. Zonder geschatte kost wordt met de drankprijzen gerekend.
+        <section className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-2">
+          <label className="block">
+            <span className="font-semibold">Echte kost van deze periode</span>
+            <span className="block text-xs text-gray-500 mb-2">
+              Bv. de factuur van de brouwer. Die wordt verdeeld over alle {totaalStrepen} strepen. Leeg laten = de
+              schatting (aantal strepen × prijs van de drank).
+            </span>
+            <input
+              inputMode="decimal"
+              placeholder="€ 0,00"
+              value={echteKostTekst}
+              onChange={e => setEchteKostTekst(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+            />
+          </label>
+          <p className="text-xs text-blue-700 dark:text-blue-300">
+            {echteKost && totaalStrepen > 0
+              ? `Prijs per streep: ${euro(echteKost / totaalStrepen)}. De bedragen hieronder zijn wat op de facturen komt.`
+              : 'De bedragen hieronder zijn de schatting (aantal × prijs).'}
           </p>
-        )}
+        </section>
 
         <button
           onClick={() => setBetaalOpen(true)}

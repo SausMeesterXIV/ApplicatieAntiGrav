@@ -174,8 +174,9 @@ async function fetchAllBalancesOud() {
 
 // Saldo's volgens periode_overzicht() in de database: dezelfde berekening als de factuur.
 // Gewone leiding krijgt enkel de eigen rij, Drankteam iedereen (afgedwongen in de functie).
-export async function fetchPeriodeOverzicht(periodId = null) {
-  const { data, error } = await supabase.rpc('periode_overzicht', { p_period_id: periodId });
+// echteKost (optioneel, bij het afsluiten): wordt verdeeld over alle strepen; anders aantal x prijs (schatting)
+export async function fetchPeriodeOverzicht(periodId = null, echteKost = null) {
+  const { data, error } = await supabase.rpc('periode_overzicht', { p_period_id: periodId, p_echte_kost: echteKost });
   if (error) throw error;
   return (data || []).map(r => ({
     ...r,
@@ -202,8 +203,8 @@ export async function fetchAllBalances() {
 
 // ==================== FACTUREN & PERIODES (Drankteam) ====================
 
-export async function sluitPeriodeAf(periodId = null) {
-  const { data, error } = await supabase.rpc('sluit_periode_af', { p_period_id: periodId });
+export async function sluitPeriodeAf(periodId = null, echteKost = null) {
+  const { data, error } = await supabase.rpc('sluit_periode_af', { p_period_id: periodId, p_echte_kost: echteKost });
   if (error) throw error;
   return data;
 }
@@ -840,6 +841,7 @@ function mapBillingPeriod(p) {
     eind_datum: p.eind_datum || p.end_date || null,
     is_closed: p.is_closed || false,
     geschatte_kost: Number(p.geschatte_kost || 0),
+    echte_kost: p.echte_kost == null ? null : Number(p.echte_kost),
   };
 }
 
