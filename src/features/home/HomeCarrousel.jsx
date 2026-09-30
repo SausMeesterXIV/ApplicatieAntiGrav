@@ -9,25 +9,30 @@ import { hapticSuccess } from '../../lib/haptics';
 import { showToast } from '../../components/Toast';
 
 // Het grote vierkant op het startscherm, veegbaar zoals een Instagram-post met meerdere foto's.
-// Kaarten: frietronde (enkel als er een ronde loopt), strepen, ranking.
+// Volgorde: ranking eerst, dan strepen. Worden er frieten opgenomen (ronde open), dan staat de frietkaart
+// helemaal vooraan; loopt de ronde nog maar is bestellen gesloten, dan komt ze na de ranking.
 
 export const HomeCarrousel = () => {
-  const { rondeLoopt: frietActief } = useFries();
+  const { rondeLoopt, friesSessionStatus } = useFries();
+  const frietOpen = rondeLoopt && friesSessionStatus === 'open';
 
+  const friet = { id: 'friet', Kaart: FrietKaart };
   const kaarten = [
-    ...(frietActief ? [{ id: 'friet', Kaart: FrietKaart }] : []),
-    { id: 'strepen', Kaart: StrepenKaart },
+    ...(frietOpen ? [friet] : []),
     { id: 'ranking', Kaart: RankingKaart },
+    ...(rondeLoopt && !frietOpen ? [friet] : []),
+    { id: 'strepen', Kaart: StrepenKaart },
   ];
 
   const baan = useRef(null);
   const [actief, setActief] = useState(0);
 
-  // Bij een nieuwe frietronde verschuiven de kaarten: terug naar de eerste
+  // Als de volgorde verandert (ronde gaat open of dicht): terug naar de eerste kaart
+  const volgorde = kaarten.map(k => k.id).join();
   useEffect(() => {
     baan.current?.scrollTo({ left: 0 });
     setActief(0);
-  }, [frietActief]);
+  }, [volgorde]);
 
   const opScroll = () => {
     const el = baan.current;
