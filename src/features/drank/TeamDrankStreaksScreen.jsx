@@ -111,7 +111,7 @@ export const TeamDrankStreaksScreen = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-gray-700 dark:text-gray-200">
-                      € {streak.price.toFixed(2).replace('.', ',')}
+                      € {(streak.price * (streak.amount || 1)).toFixed(2).replace('.', ',')}
                     </span>
                     <button
                       onClick={() => onDeleteStreak(streak.id)}

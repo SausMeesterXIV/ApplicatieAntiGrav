@@ -46,40 +46,54 @@ export function DrinkProvider({ children }) {
     }
   };
 
+  // Offline gezette strepen doorsturen. Wat mislukt, blijft in de wachtrij voor een volgende poging
+  // (anders gaan strepen stil verloren). Eén sync tegelijk.
+  const syncBezig = React.useRef(false);
   const syncOfflineStreaks = async () => {
-    const pendingStr = localStorage.getItem('ksa_pending_streaks');
-    if (!pendingStr) return;
+    if (syncBezig.current || !navigator.onLine) return;
+    let pendingStreaks = [];
     try {
-      const pendingStreaks = JSON.parse(pendingStr);
-      if (pendingStreaks.length > 0) {
-        showToast(`Netwerk hersteld. ${pendingStreaks.length} offline strepen synchroniseren...`, 'info');
-        for (const streak of pendingStreaks) {
-          try {
-            const realId = await db.addConsumptie(
-              streak.userId,
-              streak.drinkId,
-              streak.quantity,
-              streak.periodId,
-              streak.userName
-            );
-            setStreaks(prev => prev.map(s => (s.id === streak.tempId ? { ...s, id: realId } : s)));
-          } catch (e) {
-            console.error('Failed to sync streak', streak, e);
-          }
-        }
-        localStorage.removeItem('ksa_pending_streaks');
-        showToast('Vastgelopen strepen succesvol gesynct!', 'success');
-        refreshDrinksData();
-      }
+      pendingStreaks = JSON.parse(localStorage.getItem('ksa_pending_streaks') || '[]');
     } catch (e) {
-      console.error('Sync failed', e);
+      console.error('Offline strepen onleesbaar', e);
+      return;
     }
+    if (!pendingStreaks.length) return;
+
+    syncBezig.current = true;
+    showToast(`${pendingStreaks.length} offline strepen doorsturen...`, 'info');
+    const mislukt = [];
+    for (const streak of pendingStreaks) {
+      try {
+        const realId = await db.addConsumptie(streak.userId, streak.drinkId, streak.quantity, streak.periodId, streak.userName);
+        setStreaks(prev => prev.map(s => (s.id === streak.tempId ? { ...s, id: realId } : s)));
+      } catch (e) {
+        console.error('Offline streep doorsturen mislukt', streak, e);
+        const pogingen = (streak.pogingen || 0) + 1;
+        if (pogingen < 5) mislukt.push({ ...streak, pogingen });
+        else showToast(`Een offline streep kon na 5 pogingen niet doorgestuurd worden: ${e.message || 'fout'}`, 'error');
+      }
+    }
+    if (mislukt.length) {
+      localStorage.setItem('ksa_pending_streaks', JSON.stringify(mislukt));
+      showToast(`${mislukt.length} strepen nog niet doorgestuurd; we proberen het later opnieuw.`, 'warning');
+    } else {
+      localStorage.removeItem('ksa_pending_streaks');
+      showToast('Offline strepen doorgestuurd!', 'success');
+    }
+    syncBezig.current = false;
+    refreshDrinksData();
   };
 
+  // Bij terug online én bij het (opnieuw) openen van de app met een sessie
   useEffect(() => {
     window.addEventListener('online', syncOfflineStreaks);
     return () => window.removeEventListener('online', syncOfflineStreaks);
   }, []);
+
+  useEffect(() => {
+    if (session?.user?.id) syncOfflineStreaks();
+  }, [session?.user?.id]);
 
   const handleAddCost = async (userId, drinkId, quantity = 1, userNaam) => {
     const drink = dranken.find(d => d.id === drinkId);
@@ -187,7 +201,7 @@ export function DrinkProvider({ children }) {
         ...prev,
         [cost.userId]: (prev[cost.userId] || 0) + cost.price * cost.amount,
       }));
-      showToast('Fout bij verwijderen. Probeer opnieuw.', 'error');
+      showToast(error.message || 'Fout bij verwijderen. Probeer opnieuw.', 'error');
     }
   };
 

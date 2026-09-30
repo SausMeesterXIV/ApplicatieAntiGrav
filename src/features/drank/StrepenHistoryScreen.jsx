@@ -102,7 +102,7 @@ export const StrepenHistoryScreen = ({ adminMode = false }) => {
 
         if (existingBundle) {
           existingBundle.ids.push(streak.id);
-          existingBundle.totalPrice += streak.price;
+          existingBundle.totalPrice += streak.price * (streak.amount || 1);
           existingBundle.totalAmount += streak.amount || 1;
           if (new Date(streak.timestamp) > new Date(existingBundle.timestamp)) {
             existingBundle.timestamp = streak.timestamp;
@@ -113,7 +113,7 @@ export const StrepenHistoryScreen = ({ adminMode = false }) => {
             userId: streak.userId,
             drinkId: streak.drinkId,
             drinkName: streak.drinkName,
-            totalPrice: streak.price,
+            totalPrice: streak.price * (streak.amount || 1),
             totalAmount: streak.amount || 1,
             timestamp: streak.timestamp,
           });
@@ -126,7 +126,7 @@ export const StrepenHistoryScreen = ({ adminMode = false }) => {
           userId: streak.userId,
           drinkId: streak.drinkId,
           drinkName: streak.drinkName,
-          totalPrice: streak.price,
+          totalPrice: streak.price * (streak.amount || 1),
           totalAmount: streak.amount || 1,
           timestamp: streak.timestamp,
         });

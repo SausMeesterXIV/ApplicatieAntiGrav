@@ -116,7 +116,7 @@ export async function fetchConsumpties(userId) {
     userName: c.profiles?.naam || c.user_naam || 'Onbekend',
     drinkId: c.drank_id,
     drinkName: c.dranken?.naam || 'Onbekend',
-    price: Number(c.prijs ?? c.dranken?.prijs ?? 0) * c.aantal,
+    price: Number(c.prijs ?? c.dranken?.prijs ?? 0), // prijs per stuk; totaal = price * amount
     amount: c.aantal,
     timestamp: new Date(c.datum),
     period_id: c.period_id || undefined,
@@ -137,8 +137,10 @@ export async function addConsumptie(userId, drankId, aantal = 1, periodId, userN
 }
 
 export async function deleteConsumptie(id) {
-  const { error } = await supabase.from('consumpties').delete().eq('id', id);
+  // Zonder recht (bv. eigen streep ouder dan 1 uur of al gefactureerd) verwijdert RLS stil niets
+  const { data, error } = await supabase.from('consumpties').delete().eq('id', id).select('id');
   if (error) throw error;
+  if (!data?.length) throw new Error('Deze streep kan je niet (meer) verwijderen');
 }
 
 async function fetchAllBalancesOud() {
