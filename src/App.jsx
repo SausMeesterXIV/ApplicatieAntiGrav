@@ -15,6 +15,8 @@ import { HomeScreen } from './features/home/HomeScreen';
 import { NotificationsScreen } from './features/berichten/NotificationsScreen';
 import { NewMessageScreen } from './features/berichten/NewMessageScreen';
 import { NudgeSelectorScreen } from './features/berichten/NudgeSelectorScreen';
+import { PollsScreen } from './features/polls/PollsScreen';
+import { NewPollScreen } from './features/polls/NewPollScreen';
 import { AgendaScreen } from './features/agenda/AgendaScreen';
 import { AgendaManageScreen } from './features/agenda/AgendaManageScreen';
 import { FriesScreen } from './features/friet/FriesScreen';
@@ -135,6 +137,16 @@ const AppRoutes = () => {
             }
           />
           <Route path="nudges" element={<NudgeSelectorScreen />} />
+
+          <Route path="polls" element={<PollsScreen />} />
+          <Route
+            path="polls/nieuw"
+            element={
+              <RoleRoute role="polls_maken">
+                <NewPollScreen />
+              </RoleRoute>
+            }
+          />
 
           <Route path="frituur" element={<FriesScreen />} />
           <Route path="frituur/overzicht" element={<FriesOverviewScreen />} />

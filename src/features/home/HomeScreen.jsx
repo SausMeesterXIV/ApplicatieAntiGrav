@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useDrink } from '../drank/DrinkContext';
 import { useAgenda } from '../agenda/AgendaContext';
 
 import { hasAccess } from '../../lib/roleUtils';
+import * as db from '../../lib/supabaseService';
 import { SPECIAL_DRINKS } from '../../lib/constants';
 
 import { SkeletonWidget, SkeletonCard, SkeletonEvent } from '../../components/Skeleton';
@@ -18,6 +19,15 @@ export const HomeScreen = () => {
 
   const loading = authLoading || drinkLoading;
   const navigate = useNavigate();
+
+  // Aantal open polls waarop je nog niet stemde
+  const [openPolls, setOpenPolls] = useState(0);
+  useEffect(() => {
+    if (!currentUser) return;
+    db.fetchPolls()
+      .then(polls => setOpenPolls(polls.filter(p => p.isOpen && !p.stemmen.some(s => s.user_id === currentUser.id)).length))
+      .catch(() => {});
+  }, [currentUser?.id]);
 
   const displayName = currentUser?.nickname || currentUser?.name?.split(' ')[0] || 'Lid';
 
@@ -218,6 +228,19 @@ export const HomeScreen = () => {
                 </div>
               </div>
             </div>
+
+            {/* POLLS (voor iedereen) */}
+            <NavCard
+              title="Polls"
+              description={
+                openPolls > 0
+                  ? `${openPolls} open ${openPolls === 1 ? 'poll wacht' : 'polls wachten'} op jouw stem`
+                  : 'Stem mee en bekijk de resultaten'
+              }
+              icon="how_to_vote"
+              iconColorClass="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
+              onClick={() => navigate('/polls')}
+            />
 
             {/* --- 3. ADMIN DASHBOARDS --- */}
 

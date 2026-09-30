@@ -1061,3 +1061,56 @@ export async function stuurBericht({ doel, doelId, personen, titel, bericht, afz
   if (error) throw error;
   return data || 0;
 }
+
+// ==================== POLLS ====================
+
+/** Alle polls met opties en stemmen; [] als de tabellen nog niet gemigreerd zijn. */
+export async function fetchPolls() {
+  const { data, error } = await supabase
+    .from('polls')
+    .select('*, poll_opties(*), poll_stemmen(user_id, optie_id)')
+    .order('deadline', { ascending: false });
+  if (error) {
+    console.warn('Polls niet beschikbaar (migratie nog niet uitgevoerd?)', error.message);
+    return [];
+  }
+  return (data || []).map(p => ({
+    ...p,
+    opties: [...(p.poll_opties || [])].sort((a, b) => a.volgorde - b.volgorde),
+    stemmen: p.poll_stemmen || [],
+    isOpen: new Date(p.deadline) > new Date(),
+  }));
+}
+
+export async function createPoll({ vraag, opties, deadline, userId }) {
+  const { data: poll, error } = await supabase
+    .from('polls')
+    .insert({ vraag: vraag.trim(), deadline: new Date(deadline).toISOString(), gemaakt_door: userId })
+    .select()
+    .single();
+  if (error) throw error;
+  const { error: optieError } = await supabase
+    .from('poll_opties')
+    .insert(opties.map((tekst, i) => ({ poll_id: poll.id, tekst: tekst.trim(), volgorde: i })));
+  if (optieError) {
+    await supabase.from('polls').delete().eq('id', poll.id);
+    throw optieError;
+  }
+  return poll;
+}
+
+/** Stemmen of je stem aanpassen; optieId null trekt je stem in. */
+export async function stemOpPoll(pollId, userId, optieId) {
+  if (!optieId) {
+    const { error } = await supabase.from('poll_stemmen').delete().eq('poll_id', pollId).eq('user_id', userId);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await supabase.from('poll_stemmen').upsert({ poll_id: pollId, user_id: userId, optie_id: optieId });
+  if (error) throw error;
+}
+
+export async function deletePoll(pollId) {
+  const { error } = await supabase.from('polls').delete().eq('id', pollId);
+  if (error) throw error;
+}
