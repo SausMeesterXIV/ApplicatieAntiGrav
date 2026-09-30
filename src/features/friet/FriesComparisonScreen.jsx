@@ -5,6 +5,7 @@ import { ChevronBack } from '../../components/ChevronBack';
 import * as db from '../../lib/supabaseService';
 import { SkeletonCard, SkeletonRow } from '../../components/Skeleton';
 import { supabase } from '../../lib/supabase';
+import { Kasticket } from './Kasticket';
 
 export const FriesComparisonScreen = () => {
   const navigate = useNavigate();
@@ -140,12 +141,16 @@ export const FriesComparisonScreen = () => {
               Kasticket
             </h3>
             <div className="bg-white dark:bg-[#1e293b] rounded-2xl p-2 border border-gray-100 dark:border-gray-800 shadow-sm">
-              <img
-                src={session.receipt_url}
-                alt="Receipt"
-                className="w-full rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => window.open(session.receipt_url, '_blank')}
-              />
+              <Kasticket receiptUrl={session.receipt_url}>
+                {url => (
+                  <img
+                    src={url}
+                    alt="Receipt"
+                    className="w-full rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => window.open(url, '_blank')}
+                  />
+                )}
+              </Kasticket>
               <p className="text-[10px] text-center text-gray-400 mt-2 italic">Klik op de foto om te vergroten</p>
             </div>
           </section>

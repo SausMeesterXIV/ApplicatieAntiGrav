@@ -23,6 +23,7 @@ Zo weten we altijd hoe de beveiliging en de functies er vóór de migraties uitz
 | `20261001000800_friet_afsluiten.sql` | Frietronde afsluiten (functie die de app al gebruikte, nu vastgelegd met rechtencontrole) |
 | `20261001000900_friet_prijzen.sql` | Frietprijs komt altijd uit het menu; enkel hoofdleiding en Drankteam passen prijzen aan |
 | `20261001001000_friet_melding_voor_ander.sql` | Melding (en push) als iemand friet bestelt in jouw naam |
+| `20261001001100_opslag_fotos.sql` | Kastickets privé (enkel leiding); profielfoto's: enkel je eigen foto aanpassen |
 
 Na migratie 1: controleer dat er een hoofdleiding is:
 

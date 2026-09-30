@@ -4,6 +4,7 @@ import { ChevronBack } from '../../components/ChevronBack';
 import { BottomSheet } from '../../components/Modal';
 import * as db from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
+import { Kasticket } from './Kasticket';
 
 export const TeamDrankFriesHistoryScreen = () => {
   const navigate = useNavigate();
@@ -194,14 +195,18 @@ export const TeamDrankFriesHistoryScreen = () => {
                     {session.receipt_url && (
                       <div>
                         <h4 className="text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider">Kasticket</h4>
-                        <a
-                          href={session.receipt_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block w-full max-w-[200px] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:opacity-80 transition-opacity"
-                        >
-                          <img src={session.receipt_url} alt="Kasticket" className="w-full h-auto" />
-                        </a>
+                        <Kasticket receiptUrl={session.receipt_url}>
+                          {url => (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block w-full max-w-[200px] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:opacity-80 transition-opacity"
+                            >
+                              <img src={url} alt="Kasticket" className="w-full h-auto" />
+                            </a>
+                          )}
+                        </Kasticket>
                       </div>
                     )}
 

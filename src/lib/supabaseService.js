@@ -400,10 +400,22 @@ export async function uploadReceipt(sessieId, file) {
 
   if (uploadError) throw uploadError;
 
-  // Get public URL
-  const { data } = supabase.storage.from('receipts').getPublicUrl(filePath);
+  // De bucket is privé: we bewaren het pad, de link wordt pas bij het bekijken gemaakt (kasticketLink)
+  return filePath;
+}
 
-  return data.publicUrl;
+// receipt_url bevat het pad, of (oudere rondes) een volledige publieke URL
+function kasticketPad(waarde) {
+  const i = waarde.indexOf('/receipts/');
+  return i >= 0 ? decodeURIComponent(waarde.slice(i + '/receipts/'.length).split('?')[0]) : waarde;
+}
+
+/** Tijdelijke link (1 uur) naar een kasticket; enkel leiding mag ze aanvragen (storage-policy). */
+export async function kasticketLink(receiptUrl) {
+  if (!receiptUrl) return null;
+  const { data, error } = await supabase.storage.from('receipts').createSignedUrl(kasticketPad(receiptUrl), 3600);
+  if (error) throw error;
+  return data.signedUrl;
 }
 
 export async function fetchFrituurBestellingen(sessieId) {
