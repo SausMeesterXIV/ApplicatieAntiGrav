@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { showToast } from '../../components/Toast';
 import { Modal, BottomSheet } from '../../components/Modal';
 import { SkeletonRow } from '../../components/Skeleton';
+import { VoorraadPerDrank } from './VoorraadPerDrank';
 
 export const TeamDrankStockScreen = () => {
   const navigate = useNavigate();
@@ -225,6 +226,7 @@ export const TeamDrankStockScreen = () => {
       <main className="flex-1 px-4 pb-nav-safe overflow-y-auto pt-2">
         {activeMainTab === 'voorraad' ? (
           <>
+            <VoorraadPerDrank />
             {viewMode === 'list' ? (
               <>
                 <div className="flex justify-between items-end mb-3 px-1 mt-2">

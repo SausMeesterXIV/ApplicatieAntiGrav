@@ -4,6 +4,7 @@ import { useAgenda } from './AgendaContext';
 import { useNavigate } from 'react-router-dom';
 import { ChevronBack } from '../../components/ChevronBack';
 import { SkeletonEvent } from '../../components/Skeleton';
+import { Aanwezigheid } from './Aanwezigheid';
 
 export const AgendaScreen = () => {
   const navigate = useNavigate();
@@ -292,6 +293,7 @@ export const AgendaScreen = () => {
                           <span className="material-icons-round text-blue-500 text-base">location_on</span>
                           <span className="truncate">{event.location}</span>
                         </div>
+                        <Aanwezigheid eventId={event.id} />
                       </div>
                     ))}
                   </div>

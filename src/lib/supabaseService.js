@@ -124,10 +124,11 @@ export async function fetchConsumpties(userId) {
     userName: c.profiles?.naam || c.user_naam || 'Onbekend',
     drinkId: c.drank_id,
     drinkName: c.dranken?.naam || 'Onbekend',
-    price: Number(c.dranken?.prijs || 0) * c.aantal,
+    price: Number(c.prijs ?? c.dranken?.prijs ?? 0) * c.aantal,
     amount: c.aantal,
     timestamp: new Date(c.datum),
     period_id: c.period_id || undefined,
+    factuurId: c.factuur_id || null,
   }));
 }
 
@@ -148,7 +149,7 @@ export async function deleteConsumptie(id) {
   if (error) throw error;
 }
 
-export async function fetchBalanceForUser(userId) {
+async function fetchBalanceForUserOud(userId) {
   const [consumptiesResult, frituurResult, correctionsResult] = await Promise.all([
     supabase.from('consumpties').select('aantal, dranken(prijs)').eq('user_id', userId).is('factuur_id', null),
     supabase.from('frituur_bestellingen').select('totaal_prijs').eq('user_id', userId).is('period_id', null),
@@ -174,7 +175,7 @@ export async function fetchBalanceForUser(userId) {
   return consumptiesTotal + frituurTotal + correctionsTotal;
 }
 
-export async function fetchAllBalances() {
+async function fetchAllBalancesOud() {
   const [consumptiesResult, frituurResult, correctionsResult] = await Promise.all([
     supabase.from('consumpties').select('user_id, aantal, dranken(prijs)').is('factuur_id', null),
     supabase.from('frituur_bestellingen').select('user_id, totaal_prijs').is('period_id', null),
@@ -205,6 +206,67 @@ export async function fetchAllBalances() {
   return balances;
 }
 
+// Saldo's volgens periode_overzicht() in de database: dezelfde berekening als de factuur.
+// Gewone leiding krijgt enkel de eigen rij, Drankteam iedereen (afgedwongen in de functie).
+export async function fetchPeriodeOverzicht(periodId = null) {
+  const { data, error } = await supabase.rpc('periode_overzicht', { p_period_id: periodId });
+  if (error) throw error;
+  return (data || []).map(r => ({
+    ...r,
+    strepen: Number(r.strepen || 0),
+    drank_bedrag: Number(r.drank_bedrag || 0),
+    friet_bedrag: Number(r.friet_bedrag || 0),
+    correctie_bedrag: Number(r.correctie_bedrag || 0),
+    totaal: Number(r.totaal || 0),
+  }));
+}
+
+const isFunctieOntbreekt = error => error?.code === 'PGRST202' || /Could not find the function/i.test(error?.message || '');
+
+export async function fetchAllBalances() {
+  try {
+    const rows = await fetchPeriodeOverzicht();
+    return Object.fromEntries(rows.map(r => [r.user_id, r.totaal]));
+  } catch (error) {
+    if (!isFunctieOntbreekt(error)) throw error;
+    console.warn('periode_overzicht ontbreekt (migratie nog niet uitgevoerd?), oude berekening gebruikt');
+    return fetchAllBalancesOud();
+  }
+}
+
+export async function fetchBalanceForUser(userId) {
+  try {
+    const rows = await fetchPeriodeOverzicht();
+    return rows.find(r => r.user_id === userId)?.totaal || 0;
+  } catch (error) {
+    if (!isFunctieOntbreekt(error)) throw error;
+    return fetchBalanceForUserOud(userId);
+  }
+}
+
+// ==================== FACTUREN & PERIODES (Drankteam) ====================
+
+export async function sluitPeriodeAf(periodId = null) {
+  const { data, error } = await supabase.rpc('sluit_periode_af', { p_period_id: periodId });
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchRanking() {
+  const { data, error } = await supabase.rpc('ranking_huidige_periode');
+  if (error) throw error;
+  return (data || []).map(r => ({ ...r, strepen: Number(r.strepen || 0) }));
+}
+
+export async function corrigeerVoorraad(drankId, nieuweVoorraad, notitie) {
+  const { error } = await supabase.rpc('corrigeer_voorraad', {
+    p_drank_id: drankId,
+    p_nieuwe_voorraad: nieuweVoorraad,
+    p_notitie: notitie || null,
+  });
+  if (error) throw error;
+}
+
 // ==================== EVENTS ====================
 
 export async function fetchEvents() {
@@ -212,6 +274,31 @@ export async function fetchEvents() {
 
   if (error) throw error;
   return (data || []).map(mapEvent);
+}
+
+// ==================== AANWEZIGHEID (agenda) ====================
+
+/** Alle aanwezigheden; [] als de tabel nog niet gemigreerd is. */
+export async function fetchAanwezigheden() {
+  const { data, error } = await supabase.from('event_aanwezigheid').select('event_id, user_id, status');
+  if (error) {
+    console.warn('Aanwezigheid niet beschikbaar (migratie nog niet uitgevoerd?)', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+/** status: 'komt' | 'komt_niet' | 'misschien' | null (null = wissen) */
+export async function setAanwezigheid(eventId, userId, status) {
+  if (!status) {
+    const { error } = await supabase.from('event_aanwezigheid').delete().eq('event_id', eventId).eq('user_id', userId);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await supabase
+    .from('event_aanwezigheid')
+    .upsert({ event_id: eventId, user_id: userId, status, updated_at: new Date().toISOString() });
+  if (error) throw error;
 }
 
 export async function saveEvent(event) {
@@ -381,6 +468,7 @@ export async function fetchFrituurBestellingen(sessieId) {
     date: new Date(b.created_at),
     status: b.status, // Directe cast naar DB type
     periodId: b.period_id || undefined,
+    factuurId: b.factuur_id || null,
   }));
 }
 
@@ -544,7 +632,31 @@ export async function fetchFacturen(userId) {
 
   const { data, error } = await query;
   if (error) throw error;
-  return data || [];
+  return (data || []).map(f => ({
+    ...f,
+    totaal_bedrag: Number(f.totaal_bedrag || 0),
+    drank_bedrag: Number(f.drank_bedrag || 0),
+    friet_bedrag: Number(f.friet_bedrag || 0),
+    correctie_bedrag: Number(f.correctie_bedrag || 0),
+  }));
+}
+
+// Rekeninggegevens voor de betaal-QR (ingesteld door Drankteam)
+export async function fetchBetaalgegevens() {
+  const [naam, iban, bic] = await Promise.all([
+    fetchSetting('betaal_naam'),
+    fetchSetting('betaal_iban'),
+    fetchSetting('betaal_bic'),
+  ]);
+  return { naam: naam || '', iban: iban || '', bic: bic || '' };
+}
+
+export async function saveBetaalgegevens({ naam, iban, bic }) {
+  await Promise.all([
+    updateSetting('betaal_naam', naam || ''),
+    updateSetting('betaal_iban', iban || ''),
+    updateSetting('betaal_bic', bic || ''),
+  ]);
 }
 
 export async function createFactuur(userId, totaalBedrag, periode, userNaam) {

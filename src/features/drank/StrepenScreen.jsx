@@ -14,7 +14,7 @@ import { UserAvatar } from '../../components/UserAvatar';
 
 export const StrepenScreen = () => {
   const navigate = useNavigate();
-  const { currentUser, setCurrentUser: onUpdateUser } = useAuth();
+  const { currentUser, setCurrentUser: onUpdateUser, users } = useAuth();
   const { balances, handleAddCost: onAddCost, dranken: drinks, activePeriod } = useDrink();
   const currentBalance = balances && currentUser ? balances[currentUser?.id || ''] || 0 : 0;
 
@@ -25,6 +25,9 @@ export const StrepenScreen = () => {
   const [showFloatingPlus, setShowFloatingPlus] = useState(false);
 
   const isTeamDrank = hasRole(currentUser, 'drank') || hasRole(currentUser, 'hoofdleiding');
+  // Drankteam kan strepen voor iemand anders (bv. correcties); standaard voor jezelf
+  const [strepenVoorId, setStrepenVoorId] = useState(null);
+  const doelUser = (isTeamDrank && strepenVoorId && users.find(u => u.id === strepenVoorId)) || currentUser;
 
   useEffect(() => {
     if (!selectedDrink && drinks.length > 0) setSelectedDrink(drinks[0]);
@@ -49,7 +52,7 @@ export const StrepenScreen = () => {
 
     const raw = getCurrentCountRaw();
     const countToAdd = raw === 0 ? 1 : raw;
-    onAddCost(currentUser?.id || '', selectedDrink.id, countToAdd, currentUser?.naam);
+    onAddCost(doelUser?.id || '', selectedDrink.id, countToAdd, doelUser?.naam);
 
     // De verbeterde haptics aanroepen
     await hapticSuccess();
@@ -88,12 +91,14 @@ export const StrepenScreen = () => {
             <ChevronBack onClick={() => navigate(-1)} />
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Strepen</h1>
           </div>
-          <div
-            onClick={() => setIsManageMode(!isManageMode)}
-            className={`p-2 rounded-full cursor-pointer transition-colors ${isManageMode ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-          >
-            <span className="material-icons-round">{isManageMode ? 'close' : 'settings'}</span>
-          </div>
+          {isTeamDrank && (
+            <div
+              onClick={() => setIsManageMode(!isManageMode)}
+              className={`p-2 rounded-full cursor-pointer transition-colors ${isManageMode ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+            >
+              <span className="material-icons-round">{isManageMode ? 'close' : 'settings'}</span>
+            </div>
+          )}
         </div>
         <div
           onClick={() => navigate('/mijn-factuur')}
@@ -163,12 +168,37 @@ export const StrepenScreen = () => {
             )}
 
             <div className="flex items-center gap-3 mb-6">
-              <UserAvatar user={currentUser} size="md" />
-              <div>
-                <p className="font-semibold text-gray-900 dark:text-white">Jouw Totaal</p>
+              <UserAvatar user={doelUser} size="md" />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {doelUser?.id === currentUser?.id ? 'Jouw Totaal' : `Strepen voor ${doelUser?.naam}`}
+                </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Vandaag: {totalToday} streepjes</p>
               </div>
             </div>
+
+            {isTeamDrank && (
+              <label className="block mb-6">
+                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Strepen voor
+                </span>
+                <select
+                  value={strepenVoorId || ''}
+                  onChange={e => setStrepenVoorId(e.target.value || null)}
+                  className="mt-1.5 w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                >
+                  <option value="">Mezelf</option>
+                  {users
+                    .filter(u => u.actief && u.id !== currentUser?.id)
+                    .sort((a, b) => (a.naam || '').localeCompare(b.naam || ''))
+                    .map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.naam}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
 
             <div className="mb-6">
               <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2.5">
@@ -297,13 +327,29 @@ export const StrepenScreen = () => {
           </div>
         </section>
 
-        {isManageMode && (
+        {isTeamDrank && isManageMode && (
           <StrepenAdminPanel
             onDrinkDeleted={id => {
               if (selectedDrink?.id === id && drinks.length > 0) setSelectedDrink(drinks[0]);
             }}
           />
         )}
+
+        <div
+          onClick={() => navigate('/strepen/ranking')}
+          className="bg-white dark:bg-[#1e2330] rounded-xl p-4 border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-all"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center">
+              <span className="material-icons-round text-2xl text-amber-500">emoji_events</span>
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white text-base">Ranking</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Wie streepte het meest deze periode?</p>
+            </div>
+          </div>
+          <span className="material-icons-round text-gray-300">chevron_right</span>
+        </div>
 
         <div
           onClick={() => navigate('/nudges')}

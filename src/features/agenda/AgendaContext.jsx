@@ -12,6 +12,7 @@ export function AgendaProvider({ children }) {
   const [events, setEvents] = useState([]);
   const [countdowns, setCountdowns] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [aanwezigheden, setAanwezigheden] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useNotificationsRealtime(session?.user?.id || null, setNotifications);
@@ -25,15 +26,17 @@ export function AgendaProvider({ children }) {
   const loadAgendaData = async userId => {
     setLoading(true);
     try {
-      const [eventsData, countdownsData, notificationsData] = await Promise.all([
+      const [eventsData, countdownsData, notificationsData, aanwezigheidData] = await Promise.all([
         db.fetchEvents(),
         db.fetchCountdowns(),
         db.fetchNotificaties(userId),
+        db.fetchAanwezigheden(),
       ]);
 
       setEvents(eventsData);
       setCountdowns(countdownsData);
       setNotifications(notificationsData);
+      setAanwezigheden(aanwezigheidData);
     } catch (e) {
       console.error('Error loading agenda data', e);
     } finally {
@@ -118,6 +121,22 @@ export function AgendaProvider({ children }) {
     }
   };
 
+
+  // Aanwezigheid: status 'komt' | 'komt_niet' | 'misschien'; dezelfde status opnieuw kiezen wist ze
+  const handleSetAanwezigheid = async (eventId, status) => {
+    if (!currentUser) return;
+    const vorige = aanwezigheden.find(a => a.event_id === eventId && a.user_id === currentUser.id);
+    const nieuw = vorige?.status === status ? null : status;
+    const zonder = aanwezigheden.filter(a => !(a.event_id === eventId && a.user_id === currentUser.id));
+    setAanwezigheden(nieuw ? [...zonder, { event_id: eventId, user_id: currentUser.id, status: nieuw }] : zonder);
+    try {
+      await db.setAanwezigheid(eventId, currentUser.id, nieuw);
+    } catch (error) {
+      console.error('Aanwezigheid opslaan mislukt', error);
+      setAanwezigheden(prev => [...prev.filter(a => !(a.event_id === eventId && a.user_id === currentUser.id)), ...(vorige ? [vorige] : [])]);
+      showToast('Kon je aanwezigheid niet opslaan', 'error');
+    }
+  };
   const refreshAgendaData = async () => {
     if (session?.user?.id) {
       await loadAgendaData(session.user.id);
@@ -138,6 +157,8 @@ export function AgendaProvider({ children }) {
         handleDeleteEvent,
         handleAddNotification,
         handleMarkNotificationAsRead,
+        aanwezigheden,
+        handleSetAanwezigheid,
       }}
     >
       {children}

@@ -22,6 +22,7 @@ import { FriesOverviewScreen } from './features/friet/FriesOverviewScreen';
 import { FriesHistoryScreen } from './features/friet/FriesHistoryScreen';
 import { FriesComparisonScreen } from './features/friet/FriesComparisonScreen';
 import { StrepenScreen } from './features/drank/StrepenScreen';
+import { RankingScreen } from './features/drank/RankingScreen';
 import { TeamDrankDashboardScreen } from './features/drank/TeamDrankDashboardScreen';
 import { TeamDrankStockScreen } from './features/drank/TeamDrankStockScreen';
 import { TeamDrankStreaksScreen } from './features/drank/TeamDrankStreaksScreen';
@@ -115,7 +116,7 @@ const AppRoutes = () => {
           <Route
             path="agenda/beheer"
             element={
-              <RoleRoute role="hoofdleiding">
+              <RoleRoute role="agenda_beheren">
                 <AgendaManageScreen />
               </RoleRoute>
             }
@@ -155,6 +156,7 @@ const AppRoutes = () => {
           />
 
           <Route path="strepen" element={<StrepenScreen />} />
+          <Route path="strepen/ranking" element={<RankingScreen />} />
           <Route path="strepen/geschiedenis" element={<StrepenHistoryScreen adminMode={false} />} />
           <Route
             path="strepen/geschiedenis-alle"

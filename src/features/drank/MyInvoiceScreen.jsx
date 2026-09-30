@@ -1,215 +1,222 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import QRCode from 'react-qr-code';
 import { useAuth } from '../auth/AuthContext';
 import { useDrink } from './DrinkContext';
 import { useFries } from '../friet/FriesContext';
+import * as db from '../../lib/supabaseService';
+import { epcPayload, formatIban } from '../../lib/epc';
+import { showToast } from '../../components/Toast';
 import { ChevronBack } from '../../components/ChevronBack';
 
-export const MyInvoiceScreen = ({
-  onBack: propOnBack,
-  balance: propBalance,
-  currentUser: propCurrentUser,
-  streaks: propStreaks,
-  friesOrders: propFriesOrders,
-}) => {
+const euro = n => `€${Number(n || 0).toFixed(2).replace('.', ',')}`;
+
+// Gewone leiding: eigen verbruik in de open periode, eigen facturen en betalen via overschrijving/EPC-QR.
+export const MyInvoiceScreen = () => {
   const navigate = useNavigate();
-  const { currentUser: authUser } = useAuth();
+  const { currentUser } = useAuth();
   const { streaks, activePeriod, balances } = useDrink();
   const { friesOrders } = useFries();
 
-  // Use props if provided, otherwise context
-  const currentUser = propCurrentUser || authUser;
-  const allStreaks = propStreaks || streaks || [];
-  const allFriesOrders = propFriesOrders || friesOrders || [];
+  const [overzicht, setOverzicht] = useState(null); // eigen rij uit periode_overzicht
+  const [facturen, setFacturen] = useState([]);
+  const [betaal, setBetaal] = useState({ naam: '', iban: '', bic: '' });
+  const [openFactuur, setOpenFactuur] = useState(null);
 
-  // ========== DYNAMIC PRICING ==========
-  // Filter streaks for the active (open) period
-  const userStreaks = allStreaks.filter(s => {
-    if (s.userId !== currentUser?.id) return false;
-    if (activePeriod) return s.period_id === activePeriod.id;
-    return true; // fallback: show all if no period
-  });
+  useEffect(() => {
+    if (!currentUser) return;
+    db.fetchPeriodeOverzicht()
+      .then(rows => setOverzicht(rows.find(r => r.user_id === currentUser.id) || null))
+      .catch(() => setOverzicht(null));
+    db.fetchFacturen(currentUser.id)
+      .then(setFacturen)
+      .catch(() => {});
+    db.fetchBetaalgegevens().then(setBetaal).catch(() => {});
+  }, [currentUser?.id, activePeriod?.id]);
 
-  // Calculate dynamic price per streep
-  const allPeriodStreaks = activePeriod ? allStreaks.filter(s => s.period_id === activePeriod.id) : allStreaks;
-  const totalStrepenInPeriod = allPeriodStreaks.reduce((sum, s) => sum + s.amount, 0);
-  const geschatteKost = activePeriod?.geschatte_kost || 0;
-  const prijsPerStreep = totalStrepenInPeriod > 0 ? geschatteKost / totalStrepenInPeriod : 0;
+  // Nog niet gefactureerd verbruik, per drank
+  const perDrank = useMemo(() => {
+    const groep = {};
+    streaks
+      .filter(s => s.userId === currentUser?.id && !s.factuurId)
+      .forEach(s => {
+        groep[s.drinkName] = (groep[s.drinkName] || 0) + s.amount;
+      });
+    return Object.entries(groep).sort((a, b) => b[1] - a[1]);
+  }, [streaks, currentUser?.id]);
 
-  // Group streaks by drink with dynamic pricing
-  const groupedConsumptions = userStreaks.reduce((acc, streak) => {
-    if (!acc[streak.drinkId]) {
-      acc[streak.drinkId] = {
-        name: streak.drinkName,
-        quantity: 0,
-        totalPrice: 0,
-      };
+  const frietOpen = friesOrders.filter(o => o.userId === currentUser?.id && !o.factuurId);
+
+  const totaal = overzicht?.totaal ?? balances[currentUser?.id] ?? 0;
+  const onbetaald = facturen.filter(f => f.status !== 'betaald');
+
+  const kopieer = async tekst => {
+    try {
+      await navigator.clipboard.writeText(tekst);
+      showToast('Gekopieerd', 'success');
+    } catch {
+      showToast('Kopiëren lukt niet op dit toestel', 'warning');
     }
-    acc[streak.drinkId].quantity += streak.amount;
-    acc[streak.drinkId].totalPrice += streak.amount * prijsPerStreep;
-    return acc;
-  }, {});
-
-  const consumptionsList = Object.values(groupedConsumptions).sort((a, b) => b.quantity - a.quantity);
-  const totalConsumptions = consumptionsList.reduce((sum, c) => sum + c.totalPrice, 0);
-
-  // Group fries orders (unchanged — fries have fixed prices)
-  const userFriesOrders = allFriesOrders.filter(o => o.userId === currentUser?.id);
-  const groupedFries = userFriesOrders.reduce((acc, order) => {
-    order.items.forEach(item => {
-      const key = `${item.name}-${item.price}`;
-      if (!acc[key]) {
-        acc[key] = {
-          name: item.name,
-          quantity: 0,
-          totalPrice: 0,
-          unitPrice: item.price,
-        };
-      }
-      acc[key].quantity += item.quantity;
-      acc[key].totalPrice += item.price * item.quantity;
-    });
-    return acc;
-  }, {});
-
-  const friesList = Object.values(groupedFries).sort((a, b) => b.quantity - a.quantity);
-  const totalFries = friesList.reduce((sum, f) => sum + f.totalPrice, 0);
-
-  // Total balance = dynamic drink cost + fries cost
-  const dynamicBalance = Number((totalConsumptions + totalFries).toFixed(2));
-  // Saldo uit de database (zelfde berekening als voorheen in App.tsx), anders de schatting
-  const serverBalance = currentUser ? (balances[currentUser.id] ?? 0) : undefined;
-  const displayBalance = propBalance ?? serverBalance ?? dynamicBalance;
-
-  const handleBack = () => {
-    if (propOnBack) propOnBack();
-    else navigate(-1);
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200">
-      {/* Header */}
-      <header className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] sticky top-0 bg-gray-50 dark:bg-[#0f172a] z-10 flex items-center justify-between transition-colors duration-200">
-        <ChevronBack onClick={handleBack} className="text-blue-600 dark:text-blue-500" />
-        <h1 className="text-base font-bold tracking-widest text-gray-500 dark:text-gray-400 uppercase">
-          Mijn Rekening
-        </h1>
-        <button className="p-2 -mr-2 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400">
-          <span className="material-icons-round text-2xl">ios_share</span>
-        </button>
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white">
+      <header className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] sticky top-0 bg-gray-50/95 dark:bg-[#0f172a]/95 backdrop-blur-sm z-10 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3">
+        <ChevronBack onClick={() => navigate(-1)} />
+        <h1 className="text-xl font-bold">Mijn rekening</h1>
       </header>
 
-      <main
-        className="flex-1 px-4 overflow-y-auto space-y-6"
-        style={{ paddingBottom: 'calc(12rem + env(safe-area-inset-bottom, 0px))' }}
-      >
-        {/* Total Card */}
-        <div className="bg-white dark:bg-[#1e2330] rounded-3xl p-8 flex flex-col items-center justify-center border border-gray-200 dark:border-gray-800 shadow-xl dark:shadow-2xl relative overflow-hidden mt-2 transition-colors duration-200">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-blue-100 dark:bg-blue-600/20 blur-[50px] rounded-full pointer-events-none"></div>
+      <main className="flex-1 px-4 py-4 pb-nav-safe space-y-6">
+        {/* Openstaande facturen eerst: daar moet iets gebeuren */}
+        {onbetaald.length > 0 && (
+          <section className="space-y-2">
+            <h2 className="text-sm font-bold text-red-600 uppercase tracking-wider px-1">Te betalen</h2>
+            {onbetaald.map(f => (
+              <div key={f.id} className="bg-white dark:bg-[#1e2330] rounded-2xl border border-red-200 dark:border-red-900/40">
+                <button
+                  onClick={() => setOpenFactuur(openFactuur === f.id ? null : f.id)}
+                  className="w-full p-4 flex items-center gap-3 text-left"
+                >
+                  <div className="flex-1">
+                    <p className="font-bold">{f.periode}</p>
+                    <p className="text-xs text-gray-500">Factuur {f.nummer}</p>
+                  </div>
+                  <p className="text-xl font-black">{euro(f.totaal_bedrag)}</p>
+                  <span className="material-icons-round text-gray-400">
+                    {openFactuur === f.id ? 'expand_less' : 'expand_more'}
+                  </span>
+                </button>
 
-          <h2 className="text-gray-500 dark:text-gray-400 text-xs font-bold tracking-widest uppercase mb-2 relative z-10">
-            Voorlopig Totaal
-          </h2>
-          <div className="text-5xl font-bold text-blue-600 dark:text-blue-500 mb-4 relative z-10">
-            € {displayBalance.toFixed(2).replace('.', ',')}
+                {openFactuur === f.id && (
+                  <div className="px-4 pb-4 space-y-3">
+                    {betaal.iban ? (
+                      <>
+                        <div className="bg-white p-3 rounded-xl mx-auto w-fit">
+                          <QRCode
+                            value={epcPayload({
+                              naam: betaal.naam,
+                              iban: betaal.iban,
+                              bic: betaal.bic,
+                              bedrag: f.totaal_bedrag,
+                              mededeling: f.mededeling,
+                            })}
+                            size={184}
+                          />
+                        </div>
+                        <p className="text-xs text-center text-gray-500">
+                          Scan met je bank-app of Payconiq. Er gaat geen geld via deze app.
+                        </p>
+                        <dl className="text-sm space-y-2">
+                          {[
+                            ['Begunstigde', betaal.naam],
+                            ['Rekening', formatIban(betaal.iban)],
+                            ['Bedrag', euro(f.totaal_bedrag)],
+                            ['Mededeling', f.mededeling],
+                          ].map(([k, v]) => (
+                            <div key={k} className="flex items-center justify-between gap-2">
+                              <dt className="text-gray-500">{k}</dt>
+                              <dd className="font-semibold font-mono text-right flex items-center gap-1">
+                                {v}
+                                {(k === 'Rekening' || k === 'Mededeling') && (
+                                  <button onClick={() => kopieer(v)} className="text-blue-600" title="Kopieer">
+                                    <span className="material-icons-round text-base">content_copy</span>
+                                  </button>
+                                )}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </>
+                    ) : (
+                      <p className="text-sm text-gray-500">
+                        Drankteam heeft nog geen rekeningnummer ingesteld. Mededeling: {f.mededeling}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500">Drankteam zet je factuur op betaald zodra de betaling binnen is.</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </section>
+        )}
+
+        {/* Lopende periode */}
+        <section className="bg-white dark:bg-[#1e2330] rounded-3xl p-6 border border-gray-200 dark:border-gray-800 text-center">
+          <p className="text-xs font-bold tracking-widest uppercase text-gray-500">Lopende periode</p>
+          <p className="text-4xl font-black text-blue-600 dark:text-blue-500 my-2">{euro(totaal)}</p>
+          <p className="text-xs text-gray-500">{activePeriod?.naam || 'Geen open periode'}</p>
+          {activePeriod?.geschatte_kost > 0 && overzicht?.strepen > 0 && (
+            <p className="text-xs text-gray-500 mt-2">
+              Kostendeling: {euro(overzicht.drank_bedrag / overzicht.strepen)} per streep (voorlopig, verandert met het
+              totaal aantal strepen)
+            </p>
+          )}
+        </section>
+
+        <section>
+          <h2 className="text-lg font-bold mb-2 px-1">Verbruik</h2>
+          <div className="bg-white dark:bg-[#1e2330] rounded-2xl border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
+            {perDrank.length === 0 && frietOpen.length === 0 && (
+              <p className="p-4 text-center text-sm text-gray-500">Nog niets gestreept in deze periode.</p>
+            )}
+            {perDrank.map(([naam, aantal]) => (
+              <div key={naam} className="p-4 flex justify-between">
+                <span>{naam}</span>
+                <span className="font-semibold">{aantal}×</span>
+              </div>
+            ))}
+            {frietOpen.map(o => (
+              <div key={o.id} className="p-4 flex justify-between">
+                <span>🍟 Friet {new Date(o.date).toLocaleDateString('nl-BE')}</span>
+                <span className="font-semibold">{euro(o.totalPrice)}</span>
+              </div>
+            ))}
+            {overzicht && (
+              <div className="p-4 space-y-1 text-sm">
+                <div className="flex justify-between text-gray-500">
+                  <span>Drank</span>
+                  <span>{euro(overzicht.drank_bedrag)}</span>
+                </div>
+                <div className="flex justify-between text-gray-500">
+                  <span>Friet</span>
+                  <span>{euro(overzicht.friet_bedrag)}</span>
+                </div>
+                {overzicht.correctie_bedrag !== 0 && (
+                  <div className="flex justify-between text-gray-500">
+                    <span>Correcties</span>
+                    <span>{euro(overzicht.correctie_bedrag)}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+        </section>
 
-          {/* Price breakdown info */}
-          {activePeriod && prijsPerStreep > 0 && (
-            <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl px-4 py-2 mb-4 relative z-10 w-full">
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-500 dark:text-gray-400">{activePeriod.naam}</span>
-                <span className="text-blue-600 dark:text-blue-400 font-bold">
-                  € {prijsPerStreep.toFixed(2).replace('.', ',')} / streep
+        <section>
+          <h2 className="text-lg font-bold mb-2 px-1">Mijn facturen</h2>
+          <div className="bg-white dark:bg-[#1e2330] rounded-2xl border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
+            {facturen.length === 0 && <p className="p-4 text-center text-sm text-gray-500">Nog geen facturen.</p>}
+            {facturen.map(f => (
+              <div key={f.id} className="p-4 flex items-center gap-3">
+                <div className="flex-1">
+                  <p className="font-semibold">{f.periode}</p>
+                  <p className="text-xs text-gray-500">
+                    {f.status === 'betaald'
+                      ? `Betaald${f.betaald_op ? ` op ${new Date(f.betaald_op).toLocaleDateString('nl-BE')}` : ''}`
+                      : 'Nog niet betaald'}
+                  </p>
+                </div>
+                <span className="font-bold">{euro(f.totaal_bedrag)}</span>
+                <span
+                  className={`material-icons-round ${f.status === 'betaald' ? 'text-green-500' : 'text-red-500'}`}
+                >
+                  {f.status === 'betaald' ? 'check_circle' : 'schedule'}
                 </span>
               </div>
-            </div>
-          )}
-
-          <div className="flex flex-col items-center gap-3 w-full relative z-10 mt-2">
-            <div className="inline-flex items-center gap-2 bg-gray-50 dark:bg-[#191e2b] border border-blue-100 dark:border-blue-900/30 px-3 py-1.5 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              <span className="text-xs text-blue-600 dark:text-blue-200 font-medium">Dynamisch berekend</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Consumpties Section */}
-        <section>
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <span className="material-icons-round text-blue-600 dark:text-blue-500 text-sm">local_bar</span>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Consumpties</h3>
-          </div>
-
-          <div className="bg-white dark:bg-[#1e2330] rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800/50 divide-y divide-gray-100 dark:divide-gray-800/50 shadow-sm transition-colors duration-200">
-            {consumptionsList.length > 0 ? (
-              consumptionsList.map((item, index) => (
-                <div key={index} className="p-4 flex justify-between items-center">
-                  <div>
-                    <h4 className="text-gray-900 dark:text-white font-medium">{item.name}</h4>
-                    <p className="text-gray-500 text-xs mt-0.5">
-                      {item.quantity}x × € {prijsPerStreep.toFixed(2).replace('.', ',')}
-                    </p>
-                  </div>
-                  <span className="font-bold text-gray-900 dark:text-white">
-                    € {item.totalPrice.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="p-6 text-center text-gray-500 text-sm">Geen consumpties gevonden voor deze periode.</div>
-            )}
+            ))}
           </div>
         </section>
-
-        {/* Frieten Section */}
-        <section>
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <span className="material-icons-round text-blue-600 dark:text-blue-500 text-sm">fastfood</span>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Frieten</h3>
-          </div>
-
-          <div className="bg-white dark:bg-[#1e2330] rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800/50 divide-y divide-gray-100 dark:divide-gray-800/50 shadow-sm transition-colors duration-200">
-            {friesList.length > 0 ? (
-              friesList.map((item, index) => (
-                <div key={index} className="p-4 flex justify-between items-center">
-                  <div>
-                    <h4 className="text-gray-900 dark:text-white font-medium">{item.name}</h4>
-                    <p className="text-gray-500 text-xs mt-0.5">
-                      {item.quantity}x € {item.unitPrice.toFixed(2).replace('.', ',')}
-                    </p>
-                  </div>
-                  <span className="font-bold text-gray-900 dark:text-white">
-                    € {item.totalPrice.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="p-6 text-center text-gray-500 text-sm">Geen frietbestellingen gevonden.</div>
-            )}
-          </div>
-        </section>
-
-        {/* Info Box */}
-        <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 rounded-xl p-4 flex gap-3 items-start">
-          <span className="material-icons-round text-blue-500 dark:text-blue-400 mt-0.5">info</span>
-          <p className="text-xs text-blue-700 dark:text-blue-200/70 leading-relaxed">
-            Dit bedrag is dynamisch berekend op basis van de factuurkosten van de brouwer. Eventuele correcties kunnen
-            later nog worden doorgevoerd.
-          </p>
-        </div>
       </main>
-
-      {/* Footer */}
-      <footer className="fixed bottom-nav-offset left-0 right-0 p-6 bg-gray-50 dark:bg-[#0f172a] border-t border-gray-200 dark:border-gray-800 z-20 transition-colors duration-200">
-        <div className="flex justify-between items-center">
-          <span className="text-gray-500 text-sm font-medium">Periode</span>
-          <div className="flex items-center gap-2">
-            <span className="material-icons-round text-gray-500 text-sm">calendar_today</span>
-            <span className="text-gray-900 dark:text-white text-sm font-bold">{activePeriod?.naam || 'Onbekend'}</span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };
