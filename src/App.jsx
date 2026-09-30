@@ -104,6 +104,7 @@ const TeamDrankStreaksScreen = scherm(
   'TeamDrankStreaksScreen',
 );
 const VerslagenScreen = scherm(() => import('./features/verslagen/VerslagenScreen'), 'VerslagenScreen');
+const FotosScreen = scherm(() => import('./features/fotos/FotosScreen'), 'FotosScreen');
 
 // Alle data zit in de providers (features/*/…Context); App regelt enkel routing en layout.
 
@@ -205,6 +206,7 @@ const AppRoutes = () => {
             />
 
             <Route path="verslagen" element={<VerslagenScreen />} />
+            <Route path="fotos" element={<FotosScreen />} />
 
             <Route path="frituur" element={<FriesScreen />} />
             <Route path="frituur/overzicht" element={<FriesOverviewScreen />} />

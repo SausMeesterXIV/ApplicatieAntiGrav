@@ -42,6 +42,11 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - **Meldingen**: pushmelding bij een nieuw item en een herinnering de dag vooraf om 18u (Belgische tijd).
 - **Bijlagen**: bij een agenda-item kan je bestanden zetten, bv. de intro voor de groepsraad (privé-opslag, max 10 MB per bestand, enkel leiding kan ze openen).
 
+### Foto's — nieuw
+- Foto's staan in de **Google Drive van KSA** (ook die van het cameraatje, dat rechtstreeks naar Drive uploadt).
+- De app toont de albums (submappen van één hoofdmap); bekijken gebeurt in Drive, waar ook de rechten staan. Deel de map nooit met "iedereen met de link" (foto's van kinderen).
+- Alle leiding kan albums maken en foto's/video's toevoegen via de app (max 200 MB per bestand). De upload gaat rechtstreeks van de gsm naar Google, in naam van het KSA-Google-account (edge function `drive-fotos`; sleutels enkel als Supabase-secrets).
+
 ### Verslagen — nieuw
 - Verslagen van groepsraden: titel, datum, tekst en bijlagen, optioneel gekoppeld aan een agenda-item.
 - Alle leiding leest en voegt toe; de auteur en hoofdleiding passen aan of verwijderen. Melding naar alle leiding bij een nieuw verslag.

@@ -67,6 +67,43 @@ update public.profiles set is_hoofdleiding = true where email = 'jouw.naam@ksa-a
 Testen: pushmeldingen werken enkel in de gebouwde app (`npm run build` + `npm run preview`, of de online versie),
 niet in `npm run dev`. Op iPhone moet de app op het beginscherm staan (iOS 16.4+).
 
+## 3. Foto's (Google Drive van KSA, gratis)
+
+De app toont de albums (submappen) van één hoofdmap in Drive en laat leiding er foto's in zetten.
+De app uploadt **in naam van het KSA-Google-account**: dat account geeft één keer toestemming.
+De foto's gaan rechtstreeks van de gsm naar Google (niet via Supabase).
+Wie de foto's mag **bekijken**, bepaal je in Drive zelf: deel de hoofdmap enkel met de leiding, **nooit** met
+"iedereen met de link" (foto's van kinderen).
+
+Doe alles met het **KSA-Google-account** (dat van de Drive met de foto's):
+
+1. **Google Cloud-project**: ga naar <https://console.cloud.google.com>, maak een project, bv. "KSA app".
+2. **Drive API aanzetten**: APIs & Services > Library > "Google Drive API" > Enable.
+3. **OAuth consent screen** (Google Auth Platform):
+   - type **External** (of **Internal** als ksa-aalter.be een Google Workspace is), appnaam "KSA app", je e-mailadres
+   - scope toevoegen: `https://www.googleapis.com/auth/drive`
+   - **Publishing status op "In production" zetten**. In "Testing" vervalt de toestemming na 7 dagen.
+     Een verificatie door Google is niet nodig: bij stap 5 zie je enkel een waarschuwing
+     ("Google heeft deze app niet geverifieerd" > Geavanceerd > Doorgaan).
+4. **OAuth-client**: Credentials > Create credentials > OAuth client ID > **Web application**.
+   Bij "Authorized redirect URIs": `https://developers.google.com/oauthplayground`. Noteer client ID en secret.
+5. **Refresh token** ophalen via <https://developers.google.com/oauthplayground>:
+   - tandwiel rechtsboven > "Use your own OAuth credentials" > client ID en secret invullen
+   - Step 1: scope `https://www.googleapis.com/auth/drive` invullen > Authorize APIs > inloggen met het KSA-account
+   - Step 2: "Exchange authorization code for tokens" > kopieer de **Refresh token**
+6. **Hoofdmap-id**: open de fotomap in Drive; de id is het laatste stuk van de URL
+   (`https://drive.google.com/drive/folders/<ID>`).
+7. **Secrets** (Supabase Dashboard > Edge Functions > Secrets), **nooit** in de app of in git:
+   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`
+   - `DRIVE_FOTOS_MAP_ID` = de id uit stap 6
+8. **Edge function deployen**:
+   ```
+   npx supabase functions deploy drive-fotos --project-ref <project-ref>
+   ```
+
+Werkt het niet meer (bv. wachtwoord van het KSA-account gewijzigd of toegang ingetrokken)?
+Herhaal stap 5 en vervang `GOOGLE_REFRESH_TOKEN`.
+
 ## Niet meer gebruikt
 
 - `setup_final.sql` en `../supabase.sql`: oude setup-scripts, enkel ter referentie. Niet opnieuw uitvoeren.

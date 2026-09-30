@@ -251,6 +251,15 @@ export const HomeScreen = () => {
               onClick={() => navigate('/verslagen')}
             />
 
+            {/* FOTO'S in de Google Drive van KSA (voor iedereen) */}
+            <NavCard
+              title="Foto's"
+              description="Albums openen en je eigen foto's toevoegen"
+              icon="photo_library"
+              iconColorClass="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+              onClick={() => navigate('/fotos')}
+            />
+
             {/* --- 3. ADMIN DASHBOARDS --- */}
 
             {hasAccess(currentUser, 'financiën') && (
