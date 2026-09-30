@@ -34,7 +34,7 @@ export const HomeScreen = () => {
   const { currentUser, loading: authLoading } = useAuth();
   const { loading: drinkLoading } = useDrink();
   const { events, countdowns, notifications } = useAgenda();
-  const { friesSessionStatus, frituurSessieId } = useFries();
+  const { rondeLoopt } = useFries();
 
   const loading = authLoading || drinkLoading;
   const naam = currentUser?.nickname || currentUser?.naam?.split(' ')[0] || '';
@@ -56,12 +56,12 @@ export const HomeScreen = () => {
   const nieuw = useMemo(() => {
     const ongelezen = type => notifications.some(n => n.type === type && !n.isRead);
     const s = new Set();
-    if (frituurSessieId && ['open', 'ordering', 'ordered'].includes(friesSessionStatus)) s.add('friet');
+    if (rondeLoopt) s.add('friet');
     if (ongelezen('agenda')) s.add('agenda');
     if (openPolls > 0 || ongelezen('poll')) s.add('polls');
     if (ongelezen('verslag')) s.add('verslagen');
     return s;
-  }, [notifications, friesSessionStatus, frituurSessieId, openPolls]);
+  }, [notifications, rondeLoopt, openPolls]);
 
   const eerstvolgend = useMemo(() => {
     const vandaag = middernacht(new Date());

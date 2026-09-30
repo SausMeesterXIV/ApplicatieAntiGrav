@@ -66,8 +66,9 @@ export const CredentialsScreen = () => {
 
     setLoading(true);
     try {
+      // Spatie of hoofdletter van het gsm-toetsenbord laten het inloggen anders mislukken
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password,
       });
       if (error) throw error;
@@ -107,7 +108,7 @@ export const CredentialsScreen = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim().toLowerCase(),
         password,
         options: {
           data: {
@@ -169,6 +170,10 @@ export const CredentialsScreen = () => {
               <input
                 type="email"
                 required
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-2xl px-5 py-4 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
@@ -186,6 +191,7 @@ export const CredentialsScreen = () => {
               <input
                 type="password"
                 required
+                autoComplete={isRegister ? 'new-password' : 'current-password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 className="w-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-2xl px-5 py-4 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"

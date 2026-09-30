@@ -417,12 +417,16 @@ export async function deleteVerslag(id) {
 // ==================== NOTIFICATIES ====================
 
 export async function fetchNotificaties(userId) {
-  const { data, error } = await supabase
-    .from('notificaties')
-    .select('*, profiles!notificaties_zender_id_fkey(naam, is_hoofdleiding)')
-    .or(`ontvanger_id.eq.all,ontvanger_id.eq.${userId}`)
-    .order('datum', { ascending: false });
+  const vraag = velden =>
+    supabase
+      .from('notificaties')
+      .select(`*, profiles!notificaties_zender_id_fkey(${velden})`)
+      .or(`ontvanger_id.eq.all,ontvanger_id.eq.${userId}`)
+      .order('datum', { ascending: false });
 
+  let { data, error } = await vraag('naam, is_hoofdleiding');
+  // Vóór migratie 000100 bestaat is_hoofdleiding nog niet (fout 42703): zonder dat veld opnieuw
+  if (error?.code === '42703') ({ data, error } = await vraag('naam'));
   if (error) throw error;
 
   return (data || []).map(n => mapNotificatie(n, n.profiles));
@@ -488,7 +492,12 @@ export async function fetchActiveFrituurSessie() {
 
   if (error) throw error;
   if (!data || data.length === 0) return null;
-  return { id: data[0].id, status: data[0].status, pickupTime: data[0].pickup_time };
+  return {
+    id: data[0].id,
+    status: data[0].status,
+    pickupTime: data[0].pickup_time,
+    gestart: data[0].created_at ? new Date(data[0].created_at) : null,
+  };
 }
 
 export async function createFrituurSessie(createdBy) {

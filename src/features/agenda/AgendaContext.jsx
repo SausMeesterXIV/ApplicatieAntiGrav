@@ -25,23 +25,20 @@ export function AgendaProvider({ children }) {
 
   const loadAgendaData = async userId => {
     setLoading(true);
-    try {
-      const [eventsData, countdownsData, notificationsData, aanwezigheidData] = await Promise.all([
-        db.fetchEvents(),
-        db.fetchCountdowns(),
-        db.fetchNotificaties(userId),
-        db.fetchAanwezigheden(),
-      ]);
-
-      setEvents(eventsData);
-      setCountdowns(countdownsData);
-      setNotifications(notificationsData);
-      setAanwezigheden(aanwezigheidData);
-    } catch (e) {
-      console.error('Error loading agenda data', e);
-    } finally {
-      setLoading(false);
-    }
+    // Elk deel apart: faalt er één (bv. meldingen), dan verschijnen events en aftelklokken toch
+    const delen = [
+      ['events', db.fetchEvents(), setEvents],
+      ['aftelklokken', db.fetchCountdowns(), setCountdowns],
+      ['meldingen', db.fetchNotificaties(userId), setNotifications],
+      ['aanwezigheid', db.fetchAanwezigheden(), setAanwezigheden],
+    ];
+    const resultaten = await Promise.allSettled(delen.map(([, belofte]) => belofte));
+    resultaten.forEach((r, i) => {
+      const [naam, , zet] = delen[i];
+      if (r.status === 'fulfilled') zet(r.value);
+      else console.error(`Agenda: ${naam} laden mislukt`, r.reason);
+    });
+    setLoading(false);
   };
 
   const handleSaveEvent = async event => {

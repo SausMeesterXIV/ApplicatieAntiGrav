@@ -11,11 +11,8 @@ import { showToast } from '../../components/Toast';
 // Het grote vierkant op het startscherm, veegbaar zoals een Instagram-post met meerdere foto's.
 // Kaarten: frietronde (enkel als er een ronde loopt), strepen, ranking.
 
-const ACTIEVE_RONDE = ['open', 'ordering', 'ordered'];
-
 export const HomeCarrousel = () => {
-  const { friesSessionStatus, frituurSessieId } = useFries();
-  const frietActief = !!frituurSessieId && ACTIEVE_RONDE.includes(friesSessionStatus);
+  const { rondeLoopt: frietActief } = useFries();
 
   const kaarten = [
     ...(frietActief ? [{ id: 'friet', Kaart: FrietKaart }] : []),

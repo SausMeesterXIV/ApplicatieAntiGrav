@@ -138,7 +138,12 @@ export const SettingsScreen = () => {
     }
   };
 
-  const rollen = (currentUser?.roles || []).join(' · ') || 'Leiding';
+  // Rollen onder je naam; "Hoofdleiding" ook als de rollenlijst leeg is (bv. vóór de migraties)
+  const labels = currentUser?.roles || [];
+  const rollen =
+    (isHoofdleiding(currentUser) && !labels.includes('Hoofdleiding') ? ['Hoofdleiding', ...labels] : labels).join(
+      ' · ',
+    ) || 'Leiding';
 
   return (
     <div className="flex flex-col min-h-full bg-gray-50 dark:bg-[#0f172a] text-inkt dark:text-white pb-nav-safe">

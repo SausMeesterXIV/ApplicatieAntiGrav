@@ -18,6 +18,7 @@ export const FriesProvider = ({ children }) => {
   const [friesSessionStatus, setFriesSessionStatusState] = useState('closed');
   const [friesPickupTime, setFriesPickupTimeState] = useState(null);
   const [frituurSessieId, setFrituurSessieId] = useState(null);
+  const [sessieGestart, setSessieGestart] = useState(null); // wanneer de lopende ronde geopend werd
   const [loading, setLoading] = useState(true);
 
   useFriesRealtime(session?.user?.id || null, frituurSessieId, setFriesOrders);
@@ -38,6 +39,7 @@ export const FriesProvider = ({ children }) => {
         setFrituurSessieId(sessieData.id);
         setFriesSessionStatusState(sessieData.status);
         setFriesPickupTimeState(sessieData.pickupTime);
+        setSessieGestart(sessieData.gestart);
       }
       setFriesOrders(ordersData || []);
       setFryItems(itemsData || []);
@@ -55,6 +57,7 @@ export const FriesProvider = ({ children }) => {
       if (status === 'open' && !frituurSessieId) {
         const newId = await db.createFrituurSessie(currentUser?.id || 'system');
         setFrituurSessieId(newId);
+        setSessieGestart(new Date());
       } else if (frituurSessieId) {
         await db.updateFrituurSessie(frituurSessieId, { status });
       }
@@ -299,12 +302,19 @@ export const FriesProvider = ({ children }) => {
       }
     : null;
 
+  // Loopt er nu een ronde? Een vergeten ronde (nooit afgesloten) telt na 18 uur niet meer mee op het startscherm.
+  const rondeLoopt =
+    !!frituurSessieId &&
+    ['open', 'ordering', 'ordered'].includes(friesSessionStatus) &&
+    (!sessieGestart || Date.now() - sessieGestart.getTime() < 18 * 60 * 60 * 1000);
+
   return (
     <FriesContext.Provider
       value={{
         currentUser,
         users,
         frituurSessieId,
+        rondeLoopt,
         friesOrders,
         activeFrituurSession,
         friesSessionStatus,
