@@ -1,6 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { App as CapacitorApp } from '@capacitor/app';
 import { usePushNotifications } from './features/berichten/usePushNotifications';
 import { ToastContainer } from './components/Toast';
 import { Analytics } from '@vercel/analytics/react';
@@ -374,26 +373,6 @@ const AppRoutes = () => {
 
 function App() {
   useEffect(() => {
-    // Luister naar deep links (bijv. vanuit e-mail op smartphone)
-    const setupDeepLinks = async () => {
-      CapacitorApp.addListener('appUrlOpen', async data => {
-        const url = new URL(data.url);
-
-        // Als de URL '/reset-password' bevat of een recovery token
-        if (url.pathname.includes('reset-password') || url.hash.includes('type=recovery')) {
-          // Forceer navigatie naar de reset pagina
-          window.location.href = data.url;
-        }
-      });
-    };
-
-    setupDeepLinks();
-    return () => {
-      CapacitorApp.removeAllListeners();
-    };
-  }, []);
-
-  useEffect(() => {
     const setAppHeight = () => {
       // Forceer de exacte innerHeight als CSS variabele
       document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
@@ -402,7 +381,7 @@ function App() {
     window.addEventListener('resize', setAppHeight);
     window.addEventListener('orientationchange', setAppHeight);
 
-    // Initiële calls (meerdere keren om Capacitor WebView vertragingen op te vangen)
+    // Initiële calls (meerdere keren om trage mobiele browsers op te vangen)
     setAppHeight();
     setTimeout(setAppHeight, 50);
     setTimeout(setAppHeight, 300);

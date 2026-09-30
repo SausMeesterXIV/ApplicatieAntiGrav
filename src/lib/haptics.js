@@ -1,4 +1,5 @@
-import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
+// Trillen via de standaard Vibration API van de browser.
+// Werkt op Android (Chrome); iPhone-browsers ondersteunen dit niet en doen dan gewoon niets.
 
 const HAPTIC_KEY = 'haptic_enabled';
 
@@ -13,14 +14,17 @@ export const setHapticEnabled = enabled => {
   localStorage.setItem(HAPTIC_KEY, String(enabled));
 };
 
-/** Trigger a lichte tik (voor knopdrukken) */
-export const hapticFeedback = async () => {
-  if (!isHapticEnabled()) return;
-  await Haptics.impact({ style: ImpactStyle.Medium });
+const tril = patroon => {
+  if (!isHapticEnabled() || typeof navigator === 'undefined' || !navigator.vibrate) return;
+  try {
+    navigator.vibrate(patroon);
+  } catch {
+    // sommige browsers weigeren trillen zonder gebruikersactie
+  }
 };
 
+/** Trigger a lichte tik (voor knopdrukken) */
+export const hapticFeedback = async () => tril(20);
+
 /** Trigger een succes-vibratie (voor bevestiging van streep) */
-export const hapticSuccess = async () => {
-  if (!isHapticEnabled()) return;
-  await Haptics.notification({ type: NotificationType.Success });
-};
+export const hapticSuccess = async () => tril([30, 50, 30]);
