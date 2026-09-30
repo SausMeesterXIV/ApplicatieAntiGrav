@@ -44,7 +44,7 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - **Archief**: afgesloten periodes terugbekijken.
 - **Streaks**: een **ranking** van wie het meest streepte in de huidige periode.
 - **Gewone leiding ziet**: eigen verbruik, eigen openstaande factuur en eigen historiek (eerdere facturen, betaald of niet betaald).
-- **Betalen**: toon op de factuur het bedrag, het rekeningnummer en een gestructureerde mededeling, plus een **EPC-QR-code** (SEPA-overschrijvings-QR) die je scant met je bank-app of Payconiq. Er gaat **geen geld via de app** en er is geen betaalprovider. Drankteam duidt aan wanneer een factuur betaald is.
+- **Betalen**: toon op de factuur het bedrag, het rekeningnummer en een gestructureerde mededeling, plus een **EPC-QR-code** (SEPA-overschrijvings-QR) die je scant met je bank-app of Payconiq. Er gaat **geen geld via de app** en er is geen betaalprovider. De app bewaart nooit bank- of kaartgegevens van leiding, enkel de rekening van KSA. Drankteam duidt aan wanneer een factuur betaald is, met de hand of door een **CSV-export van het bankuittreksel** in te lezen (koppeling via gestructureerde mededeling en bedrag; het bestand wordt niet opgeslagen).
 
 ### Friet — behouden
 - Werkt met **bestelrondes**: iedereen kan een ronde openen, leiding voegt bestellingen toe, en iedereen kan de ronde afsluiten.
