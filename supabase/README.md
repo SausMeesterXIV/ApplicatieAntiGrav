@@ -25,6 +25,7 @@ Zo weten we altijd hoe de beveiliging en de functies er vóór de migraties uitz
 | `20261001001000_friet_melding_voor_ander.sql` | Melding (en push) als iemand friet bestelt in jouw naam |
 | `20261001001100_opslag_fotos.sql` | Kastickets privé (enkel leiding); profielfoto's: enkel je eigen foto aanpassen |
 | `20261001001200_altijd_hoofdleiding.sql` | De laatste actieve hoofdleiding kan niet weg (rol, inactief of verwijderen) |
+| `20261001001300_herinnering_18u.sql` | Agenda-herinnering om precies 18u (zomer- en winteruur) de dag vooraf |
 
 Na migratie 1: controleer dat er een hoofdleiding is:
 
