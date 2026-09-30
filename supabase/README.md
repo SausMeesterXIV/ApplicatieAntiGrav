@@ -20,6 +20,7 @@ Zo weten we altijd hoe de beveiliging en de functies er vóór de migraties uitz
 | `20261001000500_berichten.sql` | Berichten naar groepen/werkgroepen, melding bij nieuw agenda-item |
 | `20261001000600_polls.sql` | Polls |
 | `20261001000700_push.sql` | Pushabonnementen, meldingen aan/uit, dagelijkse agenda-herinnering |
+| `20261001000800_friet_afsluiten.sql` | Frietronde afsluiten (functie die de app al gebruikte, nu vastgelegd met rechtencontrole) |
 
 Na migratie 1: controleer dat er een hoofdleiding is:
 
