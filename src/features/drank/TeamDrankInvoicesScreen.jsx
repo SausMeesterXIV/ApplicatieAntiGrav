@@ -5,6 +5,7 @@ import { useDrink } from './DrinkContext';
 import * as db from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
 import { ChevronBack } from '../../components/ChevronBack';
+import { UittrekselInlezen } from './UittrekselInlezen';
 
 const euro = n => `€${Number(n || 0).toFixed(2).replace('.', ',')}`;
 
@@ -50,6 +51,14 @@ export const TeamDrankInvoicesScreen = () => {
       setFacturen(prev => prev.map(f => (f.id === factuur.id ? factuur : f)));
       showToast('Status aanpassen mislukt', 'error');
     }
+  };
+
+  // Uit het bankuittreksel: over alle periodes heen op betaald zetten
+  const zetBetaald = async ids => {
+    const resultaten = await Promise.allSettled(ids.map(id => db.updateFactuurStatus(id, 'betaald')));
+    const gelukt = ids.filter((_, i) => resultaten[i].status === 'fulfilled');
+    setFacturen(prev => prev.map(f => (gelukt.includes(f.id) ? { ...f, status: 'betaald' } : f)));
+    if (gelukt.length < ids.length) throw new Error('Niet alle facturen aangepast');
   };
 
   const exporteer = () => {
@@ -138,6 +147,8 @@ export const TeamDrankInvoicesScreen = () => {
         >
           <span className="material-icons-round">download</span> Exporteer naar Excel
         </button>
+
+        {!laden && <UittrekselInlezen facturen={facturen} onBetaald={zetBetaald} />}
 
         {laden && <p className="text-center text-sm text-gray-500 py-6">Laden…</p>}
         {!laden && zichtbaar.length === 0 && <p className="text-center text-sm text-gray-500 py-6">Geen facturen.</p>}

@@ -107,18 +107,19 @@ export const MyInvoiceScreen = () => {
                           Scan met je bank-app of Payconiq. Er gaat geen geld via deze app.
                         </p>
                         <dl className="text-sm space-y-2">
+                          {/* [label, weergave, te kopiëren tekst] — bedrag zonder €-teken, zoals bank-apps het verwachten */}
                           {[
-                            ['Begunstigde', betaal.naam],
-                            ['Rekening', formatIban(betaal.iban)],
-                            ['Bedrag', euro(f.totaal_bedrag)],
-                            ['Mededeling', f.mededeling],
-                          ].map(([k, v]) => (
+                            ['Begunstigde', betaal.naam, null],
+                            ['Rekening', formatIban(betaal.iban), formatIban(betaal.iban)],
+                            ['Bedrag', euro(f.totaal_bedrag), Number(f.totaal_bedrag).toFixed(2).replace('.', ',')],
+                            ['Mededeling', f.mededeling, f.mededeling],
+                          ].map(([k, v, kopie]) => (
                             <div key={k} className="flex items-center justify-between gap-2">
                               <dt className="text-gray-500">{k}</dt>
                               <dd className="font-semibold font-mono text-right flex items-center gap-1">
                                 {v}
-                                {(k === 'Rekening' || k === 'Mededeling') && (
-                                  <button onClick={() => kopieer(v)} className="text-blue-600" title="Kopieer">
+                                {kopie && (
+                                  <button onClick={() => kopieer(kopie)} className="text-blue-600" title="Kopieer">
                                     <span className="material-icons-round text-base">content_copy</span>
                                   </button>
                                 )}
