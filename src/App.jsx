@@ -19,6 +19,7 @@ import { AgendaScreen } from './features/agenda/AgendaScreen';
 import { AgendaManageScreen } from './features/agenda/AgendaManageScreen';
 import { FriesScreen } from './features/friet/FriesScreen';
 import { FriesOverviewScreen } from './features/friet/FriesOverviewScreen';
+import { FriesSummaryScreen } from './features/friet/FriesSummaryScreen';
 import { FriesHistoryScreen } from './features/friet/FriesHistoryScreen';
 import { FriesComparisonScreen } from './features/friet/FriesComparisonScreen';
 import { StrepenScreen } from './features/drank/StrepenScreen';
@@ -128,6 +129,7 @@ const AppRoutes = () => {
 
           <Route path="frituur" element={<FriesScreen />} />
           <Route path="frituur/overzicht" element={<FriesOverviewScreen />} />
+          <Route path="frituur/samenvatting" element={<FriesSummaryScreen />} />
           <Route path="fries-comparison" element={<FriesComparisonScreen />} />
           <Route path="frituur/geschiedenis" element={<FriesHistoryScreen />} />
           <Route

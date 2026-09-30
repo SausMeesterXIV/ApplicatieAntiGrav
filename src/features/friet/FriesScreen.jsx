@@ -12,7 +12,7 @@ import { SkeletonCard } from '../../components/Skeleton';
 import { UserAvatar } from '../../components/UserAvatar';
 import { FriesItemCard } from './FriesItemCard';
 import { FRITUUR_STATUS, FRITUUR_DB_CATEGORIES } from '../../lib/constants';
-import { hasRole } from '../../lib/roleUtils';
+import { hasRecht } from '../../lib/roleUtils';
 
 const TABS = ['favorieten', 'frieten', 'snacks', 'sauzen', 'huisbereid', 'burgers', 'spaghetti'];
 
@@ -35,7 +35,8 @@ export const FriesScreen = () => {
   } = useFries();
 
   const loading = authLoading || friesLoading;
-  const isHoofdleiding = hasRole(currentUser, 'hoofdleiding');
+  // Friet-menu en -prijzen beheren: Drankteam (hoofdleiding heeft alle rechten)
+  const kanMenuBeheren = hasRecht(currentUser, 'drank_beheren');
 
   const sessionStatus = activeFrituurSession?.status || FRITUUR_STATUS.CLOSED;
   const pickupTime = activeFrituurSession?.pickupTime;
@@ -256,7 +257,7 @@ export const FriesScreen = () => {
               </button>
             )}
 
-            {!orderingFor && isHoofdleiding && (
+            {!orderingFor && kanMenuBeheren && (
               <button
                 onClick={() => setIsAdmin(!isAdmin)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-bold text-xs transition-colors ${isAdmin ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800/50' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'}`}

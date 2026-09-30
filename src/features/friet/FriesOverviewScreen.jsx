@@ -5,6 +5,7 @@ import { useFries } from './FriesContext';
 import { useAgenda } from '../agenda/AgendaContext';
 import { BottomSheet } from '../../components/Modal';
 import { showToast } from '../../components/Toast';
+import { PerPersoon } from './FriesRondeOverzicht';
 import { FRITUUR_STATUS } from '../../lib/constants';
 
 export const FriesOverviewScreen = () => {
@@ -23,6 +24,7 @@ export const FriesOverviewScreen = () => {
   const pickupTime = activeFrituurSession?.pickupTime;
 
   const [activeTab, setActiveTab] = useState('Alles');
+  const [weergave, setWeergave] = useState('item'); // 'item' | 'persoon'
   const [showReopenConfirmation, setShowReopenConfirmation] = useState(false);
   const [showTimeInput, setShowTimeInput] = useState(false);
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
@@ -165,6 +167,8 @@ export const FriesOverviewScreen = () => {
       return;
     }
 
+    // Momentopname van de ronde, zodat de samenvatting na het afsluiten nog alles toont
+    const ronde = activeOrders.map(o => ({ ...o }));
     setIsSubmitting(true);
     await onCompletePayment(amount, receiptFile);
     setIsSubmitting(false);
@@ -173,7 +177,7 @@ export const FriesOverviewScreen = () => {
     setActualAmount('');
     setReceiptFile(null);
     setReceiptPreview(null);
-    navigate('/frituur');
+    navigate('/frituur/samenvatting', { state: { orders: ronde, betaald: amount } });
   };
 
   const handleFileChange = e => {
@@ -250,6 +254,27 @@ export const FriesOverviewScreen = () => {
           </div>
         </div>
 
+        <div className="flex gap-2">
+          {[
+            ['item', 'Per item'],
+            ['persoon', 'Per persoon'],
+          ].map(([k, l]) => (
+            <button
+              key={k}
+              onClick={() => setWeergave(k)}
+              className={`flex-1 py-2 rounded-xl text-sm font-bold ${
+                weergave === k ? 'bg-blue-600 text-white' : 'bg-white dark:bg-[#1e293b] text-gray-600 dark:text-gray-300'
+              }`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+
+        {weergave === 'persoon' ? (
+          <PerPersoon orders={activeOrders} />
+        ) : (
+        <>
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
           {dynamicTabs.map(tab => (
             <button
@@ -305,6 +330,8 @@ export const FriesOverviewScreen = () => {
             </div>
           )}
         </div>
+        </>
+        )}
       </main>
 
       <div className="fixed bottom-[85px] left-0 right-0 px-4 z-40 flex justify-center pointer-events-none">
