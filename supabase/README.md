@@ -30,6 +30,9 @@ Zo weten we altijd hoe de beveiliging en de functies er vóór de migraties uitz
 | `20261001001500_echte_kost.sql` | Tijdens de periode schatting (aantal × prijs); bij afsluiten echte kost verdeeld over alle strepen |
 | `20261001001600_beveiliging.sql` | Niets voor niet-ingelogden, RLS op alle tabellen, strepen/frietbestellingen/meldingen afgeschermd |
 
+**Na alle migraties**: draai `queries/controleer_migraties.sql` (wijzigt niets). Elke rij is een controle;
+alles met `ok = false` staat bovenaan en moet opgelost worden voor je de app test.
+
 Na migratie 1: controleer dat er een hoofdleiding is:
 
 ```sql
