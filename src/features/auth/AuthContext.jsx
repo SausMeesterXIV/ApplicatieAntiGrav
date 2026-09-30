@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 
 import * as db from '../../lib/supabaseService';
+import { verrijkGebruiker } from '../../lib/roleUtils';
 
 const AuthContext = createContext(undefined);
 
@@ -9,7 +10,9 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [users, setUsers] = useState([]);
-  const [availableRoles, setAvailableRoles] = useState([]);
+  // null = rollentabellen nog niet gemigreerd (dan gelden de oude rolkolommen)
+  const [rolData, setRolData] = useState(null);
+  const [legacyRoles, setLegacyRoles] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,10 +43,12 @@ export function AuthProvider({ children }) {
 
   async function loadAuthData(userId) {
     try {
-      const usersData = await db.fetchAllProfiles();
-      setUsers(usersData);
+      const [profielen, rollen] = await Promise.all([db.fetchAllProfiles(), db.fetchRolData()]);
+      const verrijkt = profielen.map(p => verrijkGebruiker(p, rollen));
+      setRolData(rollen);
+      setUsers(verrijkt);
 
-      const cUser = usersData.find(u => u.id === userId);
+      const cUser = verrijkt.find(u => u.id === userId);
       if (!cUser || !cUser.actief) {
         console.warn('Profiel niet gevonden of inactief. Uitloggen...');
         await supabase.auth.signOut();
@@ -51,100 +56,8 @@ export function AuthProvider({ children }) {
       }
       setCurrentUser(cUser);
 
-      // Haal de rollen op uit de database
-      const loadedRoles = await db.fetchAvailableRoles();
-      if (loadedRoles && loadedRoles.length > 0) {
-        setAvailableRoles(loadedRoles);
-      } else {
-        // Alleen als de database leeg is, gebruiken we de hardcoded lijst
-        const defaultRoles = [
-          // Bestuur & Teams (Elk een eigen kleur)
-          {
-            id: '1',
-            label: 'Hoofdleiding',
-            icon: 'admin_panel_settings',
-            color: 'bg-red-100 text-red-700 border-red-200',
-            category: 'Bestuur',
-          },
-          {
-            id: '2',
-            label: 'Financiën',
-            icon: 'account_balance',
-            color: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-            category: 'Team',
-          },
-          {
-            id: '3',
-            label: 'Sfeerbeheer',
-            icon: 'celebration',
-            color: 'bg-purple-100 text-purple-700 border-purple-200',
-            category: 'Team',
-          },
-          {
-            id: '4',
-            label: 'Drank',
-            icon: 'local_bar',
-            color: 'bg-blue-100 text-blue-700 border-blue-200',
-            category: 'Team',
-          },
-          {
-            id: '5',
-            label: 'Materiaal',
-            icon: 'build',
-            color: 'bg-orange-100 text-orange-700 border-orange-200',
-            category: 'Team',
-          },
-          {
-            id: '6',
-            label: 'Kookploeg',
-            icon: 'restaurant',
-            color: 'bg-amber-100 text-amber-700 border-amber-200',
-            category: 'Team',
-          },
-          {
-            id: '14',
-            label: 'winkeltje',
-            icon: 'shopping_bag',
-            color: 'bg-pink-100 text-pink-700 border-pink-200',
-            category: 'Team',
-          },
-
-          // Leidingsgroepen (Allemaal hetzelfde zachte blauw)
-          {
-            id: '7',
-            label: 'Pagadders',
-            icon: 'groups',
-            color: 'bg-sky-50 text-sky-600 border-sky-100',
-            category: 'Groep',
-          },
-          {
-            id: '8',
-            label: 'Kabouters',
-            icon: 'groups',
-            color: 'bg-sky-50 text-sky-600 border-sky-100',
-            category: 'Groep',
-          },
-          {
-            id: '9',
-            label: 'Sloebers',
-            icon: 'groups',
-            color: 'bg-sky-50 text-sky-600 border-sky-100',
-            category: 'Groep',
-          },
-          {
-            id: '10',
-            label: 'Tieners',
-            icon: 'groups',
-            color: 'bg-sky-50 text-sky-600 border-sky-100',
-            category: 'Groep',
-          },
-          { id: '11', label: 'JIM', icon: 'groups', color: 'bg-sky-50 text-sky-600 border-sky-100', category: 'Groep' },
-          { id: '12', label: 'SIM', icon: 'groups', color: 'bg-sky-50 text-sky-600 border-sky-100', category: 'Groep' },
-          { id: '13', label: 'KIM', icon: 'groups', color: 'bg-sky-50 text-sky-600 border-sky-100', category: 'Groep' },
-        ];
-        setAvailableRoles(defaultRoles);
-        await db.saveAvailableRoles(defaultRoles);
-      }
+      // Voor de migratie: de oude rollenlijst uit app_settings (enkel weergave, niets hardcoded)
+      if (!rollen) setLegacyRoles(await db.fetchAvailableRoles().catch(() => []));
     } catch (e) {
       console.error('Error loading auth data', e);
     } finally {
@@ -152,32 +65,27 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const handleSaveRoles = async (userId, targetRoles) => {
-    try {
-      await db.updateProfile(userId, { roles: targetRoles });
-
-      // Update de lijst met gebruikers
-      setUsers(prev => prev.map(u => (u.id === userId ? { ...u, roles: targetRoles } : u)));
-
-      // Belangrijk: Update ook de currentUser als deze persoon zichzelf aanpast
-      if (currentUser?.id === userId) {
-        setCurrentUser(prev => (prev ? { ...prev, roles: targetRoles } : null));
-      }
-    } catch (error) {
-      console.error('Save roles error', error);
-      throw error;
-    }
+  // Na een wijziging in het rollenscherm: alles opnieuw ophalen en verrijken
+  const refreshRoles = async () => {
+    if (!session?.user?.id) return;
+    const [profielen, rollen] = await Promise.all([db.fetchAllProfiles(), db.fetchRolData()]);
+    const verrijkt = profielen.map(p => verrijkGebruiker(p, rollen));
+    setRolData(rollen);
+    setUsers(verrijkt);
+    setCurrentUser(verrijkt.find(u => u.id === session.user.id) || null);
   };
 
-  const handleSaveAvailableRoles = async roles => {
-    try {
-      setAvailableRoles(roles);
-      await db.saveAvailableRoles(roles);
-    } catch (error) {
-      console.error('Failed to save available roles:', error);
-      throw error;
-    }
-  };
+  const groepen = rolData?.groepen || [];
+  const werkgroepen = rolData?.werkgroepen || [];
+
+  // Compatibel met schermen die nog één lijst "rollen" verwachten (agenda, berichten)
+  const availableRoles = useMemo(() => {
+    if (!rolData) return legacyRoles;
+    return [
+      ...werkgroepen.map(w => ({ id: w.id, label: w.naam, icon: 'workspaces', category: 'Team' })),
+      ...groepen.map(g => ({ id: `groep-${g.id}`, label: g.naam, icon: 'groups', category: 'Groep' })),
+    ];
+  }, [rolData, legacyRoles]);
 
   return (
     <AuthContext.Provider
@@ -186,11 +94,13 @@ export function AuthProvider({ children }) {
         currentUser,
         setCurrentUser,
         users,
-        availableRoles,
-        loading,
         setUsers,
-        handleSaveRoles,
-        handleSaveAvailableRoles,
+        loading,
+        rollenGemigreerd: !!rolData,
+        groepen,
+        werkgroepen,
+        availableRoles,
+        refreshRoles,
       }}
     >
       {children}

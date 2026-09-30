@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as db from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
 import { useFriesRealtime } from '../../lib/useRealtime';
+import { hasRecht } from '../../lib/roleUtils';
 import { useAuth } from '../auth/AuthContext';
 import { useDrink } from '../drank/DrinkContext';
 import { useAgenda } from '../agenda/AgendaContext';
@@ -220,17 +221,8 @@ export const FriesProvider = ({ children }) => {
       // 5. Check prijsverschil op basis van server-data
       const expectedAmount = Number(result.expected_amount);
       if (Math.abs(actualAmount - expectedAmount) > 0.01) {
-        const targetUsers = users.filter(u => {
-          const roles = (u.roles || []).map(r => String(r).toLowerCase());
-          return (
-            roles.includes('hoofdleiding') ||
-            roles.includes('drank') ||
-            roles.includes('team drank') ||
-            u.rol === 'hoofdleiding' ||
-            u.rol === 'godmode' ||
-            u.rol === 'team_drank'
-          );
-        });
+        // Prijsverschil melden aan wie friet en drank beheert
+        const targetUsers = users.filter(u => u.actief && hasRecht(u, 'drank_beheren'));
 
         const formattedActual = `€${actualAmount.toFixed(2).replace('.', ',')}`;
         const formattedExpected = `€${expectedAmount.toFixed(2).replace('.', ',')}`;

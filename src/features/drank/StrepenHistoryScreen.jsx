@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { hasRecht } from '../../lib/roleUtils';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ChevronBack } from '../../components/ChevronBack';
@@ -11,10 +12,7 @@ export const StrepenHistoryScreen = ({ adminMode = false }) => {
   const { users, currentUser } = useAuth();
   const { streaks, handleRemoveCost } = useDrink(); // Haal ALTIJD de meest up-to-date streaks uit DrinkContext
 
-  const isTeamDrank =
-    currentUser?.rol === 'hoofdleiding' ||
-    currentUser?.rol === 'godmode' ||
-    currentUser?.roles?.some(r => String(r).toLowerCase().includes('drank'));
+  const isTeamDrank = hasRecht(currentUser, 'drank_beheren');
 
   const [deletingId, setDeletingId] = useState(null);
 

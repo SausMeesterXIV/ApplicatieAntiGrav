@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { hasRecht } from '../../lib/roleUtils';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useDrink } from './DrinkContext';
@@ -90,9 +91,7 @@ export const BillingPeriodsManageScreen = () => {
             <span className="material-icons-round">arrow_back</span>
           </button>
           <h1 className="text-xl font-bold flex-1">Periodebeheer</h1>
-          {(currentUser?.rol === 'hoofdleiding' ||
-            currentUser?.rol === 'team_drank' ||
-            currentUser?.rol === 'godmode') && (
+          {hasRecht(currentUser, 'drank_beheren') && (
             <button
               onClick={() => setShowAddModal(true)}
               className="bg-blue-600 text-white p-2 rounded-xl shadow-lg shadow-blue-500/20"

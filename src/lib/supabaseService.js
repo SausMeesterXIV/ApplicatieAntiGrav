@@ -762,8 +762,74 @@ export async function fetchAvailableRoles() {
   return [];
 }
 
-export async function saveAvailableRoles(roles) {
-  await updateSetting('available_roles', JSON.stringify(roles));
+// ==================== ROLLEN (groepen, werkgroepen, hoofdleiding) ====================
+
+/** Haalt groepen, werkgroepen en lidmaatschappen op. Geeft null als de tabellen nog niet gemigreerd zijn. */
+export async function fetchRolData() {
+  const [groepen, werkgroepen, profielGroepen, profielWerkgroepen] = await Promise.all([
+    supabase.from('groepen').select('*').order('volgorde'),
+    supabase.from('werkgroepen').select('*').order('naam'),
+    supabase.from('profiel_groepen').select('profile_id, groep_id'),
+    supabase.from('profiel_werkgroepen').select('profile_id, werkgroep_id'),
+  ]);
+  const fout = groepen.error || werkgroepen.error || profielGroepen.error || profielWerkgroepen.error;
+  if (fout) {
+    console.warn('Rollentabellen niet beschikbaar (migratie nog niet uitgevoerd?)', fout.message);
+    return null;
+  }
+  return {
+    groepen: groepen.data || [],
+    werkgroepen: werkgroepen.data || [],
+    profielGroepen: profielGroepen.data || [],
+    profielWerkgroepen: profielWerkgroepen.data || [],
+  };
+}
+
+export async function saveWerkgroep({ id, naam, rechten }) {
+  const row = { naam: naam.trim(), rechten: rechten || [] };
+  const query = id
+    ? supabase.from('werkgroepen').update(row).eq('id', id).select().single()
+    : supabase.from('werkgroepen').insert(row).select().single();
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteWerkgroep(id) {
+  const { error } = await supabase.from('werkgroepen').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/** Vervangt de groepen van één leider door de gegeven lijst. */
+export async function setProfielGroepen(profileId, groepIds) {
+  const { error: delError } = await supabase.from('profiel_groepen').delete().eq('profile_id', profileId);
+  if (delError) throw delError;
+  if (groepIds.length === 0) return;
+  const { error } = await supabase
+    .from('profiel_groepen')
+    .insert(groepIds.map(groep_id => ({ profile_id: profileId, groep_id })));
+  if (error) throw error;
+}
+
+/** Vervangt de werkgroepen van één leider door de gegeven lijst. */
+export async function setProfielWerkgroepen(profileId, werkgroepIds) {
+  const { error: delError } = await supabase.from('profiel_werkgroepen').delete().eq('profile_id', profileId);
+  if (delError) throw delError;
+  if (werkgroepIds.length === 0) return;
+  const { error } = await supabase
+    .from('profiel_werkgroepen')
+    .insert(werkgroepIds.map(werkgroep_id => ({ profile_id: profileId, werkgroep_id })));
+  if (error) throw error;
+}
+
+export async function setHoofdleiding(profileId, isHoofdleiding) {
+  const { error } = await supabase.from('profiles').update({ is_hoofdleiding: isHoofdleiding }).eq('id', profileId);
+  if (error) throw error;
+}
+
+export async function setProfielActief(profileId, actief) {
+  const { error } = await supabase.from('profiles').update({ actief }).eq('id', profileId);
+  if (error) throw error;
 }
 
 // Keep backward compat alias
