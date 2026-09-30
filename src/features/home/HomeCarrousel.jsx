@@ -9,12 +9,13 @@ import { hapticSuccess } from '../../lib/haptics';
 import { showToast } from '../../components/Toast';
 
 // Het grote vierkant op het startscherm, veegbaar zoals een Instagram-post met meerdere foto's.
-// Volgorde: ranking eerst, dan strepen. Worden er frieten opgenomen (ronde open), dan staat de frietkaart
-// helemaal vooraan; loopt de ronde nog maar is bestellen gesloten, dan komt ze na de ranking.
+// Volgorde: ranking eerst, dan strepen. De frietkaart staat vooraan als er frieten worden opgenomen,
+// als ze besteld zijn (afhaaluur in het groot) en tot een halfuur na het afhaaluur ("Smakelijk").
+// Daarna verdwijnt ze. Terwijl de bestelling wordt doorgegeven, staat ze na de ranking.
 
 export const HomeCarrousel = () => {
-  const { rondeLoopt, friesSessionStatus } = useFries();
-  const frietOpen = rondeLoopt && friesSessionStatus === 'open';
+  const { rondeLoopt, frietFase } = useFries();
+  const frietOpen = rondeLoopt && frietFase !== 'bestellen';
 
   const friet = { id: 'friet', Kaart: FrietKaart };
   const kaarten = [
@@ -143,7 +144,7 @@ const Frietzak = () => (
 
 const FrietKaart = ({ positie }) => {
   const navigate = useNavigate();
-  const { friesSessionStatus, friesPickupTime, friesOrders } = useFries();
+  const { frietFase, friesPickupTime, friesOrders } = useFries();
 
   const bestellingen = friesOrders.filter(o => o.status === 'open');
   const namen = [...new Set(bestellingen.map(o => (o.userName || '').split(' ')[0]).filter(Boolean))];
@@ -153,40 +154,76 @@ const FrietKaart = ({ positie }) => {
       : namen.length <= 2
         ? namen.join(' en ')
         : `${namen.slice(0, 2).join(', ')} en ${namen.length - 2} ${namen.length - 2 === 1 ? 'andere' : 'anderen'}`;
+  const aantal = `${bestellingen.length} ${bestellingen.length === 1 ? 'bestelling' : 'bestellingen'}`;
 
-  const open = friesSessionStatus === 'open';
-  const label = open
-    ? `Nu open${friesPickupTime ? ` · afhalen ${friesPickupTime}` : ''}`
-    : friesSessionStatus === 'ordering'
-      ? 'Wordt besteld'
-      : `Besteld${friesPickupTime ? ` · afhalen ${friesPickupTime}` : ''}`;
-  const titel = open
-    ? ['Frietronde', 'is open']
-    : friesSessionStatus === 'ordering'
-      ? ['Frieten', 'worden besteld']
-      : ['Frieten', 'zijn besteld'];
+  const Knop = ({ children }) => (
+    <button
+      type="button"
+      onClick={() => navigate('/frituur')}
+      className="mt-4 w-full rounded-2xl bg-inkt dark:bg-white py-3.5 text-base font-bold text-white dark:text-inkt active:scale-[0.99]"
+    >
+      {children}
+    </button>
+  );
 
+  // Besteld: het afhaaluur in het groot
+  if (frietFase === 'afhalen') {
+    return (
+      <article className="h-full rounded-[28px] bg-bol-friet dark:bg-bol-friet-d p-6 flex flex-col text-inkt dark:text-white">
+        <Kop label="Besteld" positie={positie} />
+        <div className="flex-1 flex flex-col justify-center">
+          {friesPickupTime ? (
+            <>
+              <p className="text-lg font-semibold text-amber-900/80 dark:text-amber-100/80">Frieten afhalen om</p>
+              <p className="text-[88px] leading-none font-extrabold tracking-tight tabular-nums">{friesPickupTime}</p>
+            </>
+          ) : (
+            <h2 className="text-[40px] leading-[0.95] font-extrabold tracking-tight">
+              Frieten
+              <br />
+              zijn besteld
+            </h2>
+          )}
+        </div>
+        <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
+          {aantal} · {wie}
+        </p>
+        <Knop>Bekijk de ronde</Knop>
+      </article>
+    );
+  }
+
+  // Tot een halfuur na het afhaaluur
+  if (frietFase === 'smakelijk') {
+    return (
+      <article className="h-full rounded-[28px] bg-bol-friet dark:bg-bol-friet-d p-6 flex flex-col text-inkt dark:text-white">
+        <Kop label="Frieten zijn er" positie={positie} />
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
+          <Frietzak />
+          <p className="text-[56px] leading-none font-extrabold tracking-tight">Smakelijk!</p>
+        </div>
+        <Knop>Wie had wat?</Knop>
+      </article>
+    );
+  }
+
+  // Open (bestellen) of wordt besteld
+  const open = frietFase === 'open';
   return (
     <article className="h-full rounded-[28px] bg-bol-friet dark:bg-bol-friet-d p-6 flex flex-col text-inkt dark:text-white">
-      <Kop label={label} positie={positie} />
+      <Kop label={open ? 'Nu open' : 'Wordt besteld'} positie={positie} />
       <div className="flex-1 flex justify-end items-center">
         <Frietzak />
       </div>
       <h2 className="text-[40px] leading-[0.95] font-extrabold tracking-tight">
-        {titel[0]}
+        {open ? 'Frietronde' : 'Frieten'}
         <br />
-        {titel[1]}
+        {open ? 'is open' : 'worden besteld'}
       </h2>
       <p className="mt-2 text-sm text-amber-900/80 dark:text-amber-100/80">
-        {bestellingen.length} {bestellingen.length === 1 ? 'bestelling' : 'bestellingen'} · {wie}
+        {aantal} · {wie}
       </p>
-      <button
-        type="button"
-        onClick={() => navigate('/frituur')}
-        className="mt-4 w-full rounded-2xl bg-inkt dark:bg-white py-3.5 text-base font-bold text-white dark:text-inkt active:scale-[0.99]"
-      >
-        {open ? 'Bestel mee' : 'Bekijk de ronde'}
-      </button>
+      <Knop>{open ? 'Bestel mee' : 'Bekijk de ronde'}</Knop>
     </article>
   );
 };

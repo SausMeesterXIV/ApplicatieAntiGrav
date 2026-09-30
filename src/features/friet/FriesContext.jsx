@@ -8,6 +8,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useDrink } from '../drank/DrinkContext';
 
 const FriesContext = createContext(undefined);
+const UUR = 60 * 60 * 1000;
 
 export const FriesProvider = ({ children }) => {
   const { session, currentUser, users } = useAuth();
@@ -302,11 +303,41 @@ export const FriesProvider = ({ children }) => {
       }
     : null;
 
-  // Loopt er nu een ronde? Een vergeten ronde (nooit afgesloten) telt na 18 uur niet meer mee op het startscherm.
-  const rondeLoopt =
-    !!frituurSessieId &&
-    ['open', 'ordering', 'ordered'].includes(friesSessionStatus) &&
-    (!sessieGestart || Date.now() - sessieGestart.getTime() < 18 * 60 * 60 * 1000);
+  // Afhaalmoment als Date: het uur (HH:MM) op de dag van de ronde; ligt het ruim vóór de start
+  // (bv. ronde om 23u30, afhalen om 00u15), dan is het de dag erna.
+  const afhaalMoment = (() => {
+    const m = /^(\d{1,2}):(\d{2})/.exec(friesPickupTime || '');
+    if (!m) return null;
+    const basis = sessieGestart || new Date();
+    const d = new Date(basis);
+    d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    if (d.getTime() < basis.getTime() - UUR) d.setDate(d.getDate() + 1);
+    return d;
+  })();
+
+  // Opnieuw rekenen terwijl er een ronde is (afhaaluur bereikt, "smakelijk" voorbij)
+  const [nu, setNu] = useState(() => Date.now());
+  useEffect(() => {
+    if (!frituurSessieId) return;
+    const t = setInterval(() => setNu(Date.now()), 30 * 1000);
+    return () => clearInterval(t);
+  }, [frituurSessieId]);
+
+  // Fase van de ronde voor het startscherm:
+  // 'open' (bestellen), 'bestellen' (wordt besteld), 'afhalen' (besteld, wachten op het afhaaluur),
+  // 'smakelijk' (tot een halfuur na het afhaaluur), of null (geen ronde op het startscherm).
+  // Een vergeten ronde (nooit afgesloten) telt na 18 uur niet meer mee.
+  const frietFase = (() => {
+    if (!frituurSessieId || (sessieGestart && nu - sessieGestart.getTime() > 18 * UUR)) return null;
+    if (friesSessionStatus === 'open') return 'open';
+    if (friesSessionStatus === 'ordering') return 'bestellen';
+    if (friesSessionStatus !== 'ordered') return null;
+    if (!afhaalMoment) return 'afhalen';
+    if (nu < afhaalMoment.getTime()) return 'afhalen';
+    if (nu < afhaalMoment.getTime() + 30 * 60 * 1000) return 'smakelijk';
+    return null;
+  })();
+  const rondeLoopt = frietFase !== null;
 
   return (
     <FriesContext.Provider
@@ -315,6 +346,8 @@ export const FriesProvider = ({ children }) => {
         users,
         frituurSessieId,
         rondeLoopt,
+        frietFase,
+        afhaalMoment,
         friesOrders,
         activeFrituurSession,
         friesSessionStatus,
