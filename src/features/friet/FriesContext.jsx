@@ -6,6 +6,7 @@ import { useFriesRealtime } from '../../lib/useRealtime';
 import { hasRecht } from '../../lib/roleUtils';
 import { useAuth } from '../auth/AuthContext';
 import { useDrink } from '../drank/DrinkContext';
+import { euro } from '../../lib/geld';
 
 const FriesContext = createContext(undefined);
 const UUR = 60 * 60 * 1000;
@@ -56,9 +57,23 @@ export const FriesProvider = ({ children }) => {
     setFriesSessionStatusState(status);
     try {
       if (status === 'open' && !frituurSessieId) {
-        const newId = await db.createFrituurSessie(currentUser?.id || 'system');
-        setFrituurSessieId(newId);
-        setSessieGestart(new Date());
+        try {
+          const newId = await db.createFrituurSessie(currentUser?.id || null);
+          setFrituurSessieId(newId);
+          setSessieGestart(new Date());
+        } catch (e) {
+          // Iemand anders opende net een ronde (de database laat er maar één tegelijk toe): die tonen
+          if (e?.code !== '23505') throw e;
+          const lopend = await db.fetchActiveFrituurSessie();
+          if (lopend) {
+            setFrituurSessieId(lopend.id);
+            setFriesSessionStatusState(lopend.status);
+            setFriesPickupTimeState(lopend.pickupTime);
+            setSessieGestart(lopend.gestart);
+            setFriesOrders(await db.fetchFrituurBestellingen());
+          }
+          showToast('Er was net al een ronde geopend: je bestelt mee in die ronde.', 'info');
+        }
       } else if (frituurSessieId) {
         await db.updateFrituurSessie(frituurSessieId, { status });
       }
@@ -107,13 +122,13 @@ export const FriesProvider = ({ children }) => {
         frituurSessieId,
         items,
         totalCost,
-        activePeriod?.id
+        activePeriod?.id,
       );
       // Realtime kan de echte bestelling al toegevoegd hebben: dan enkel de tijdelijke weghalen
       setFriesOrders(prev =>
         prev.some(o => o.id === realId)
           ? prev.filter(o => o.id !== tempId)
-          : prev.map(o => (o.id === tempId ? { ...o, id: realId } : o))
+          : prev.map(o => (o.id === tempId ? { ...o, id: realId } : o)),
       );
 
       if (isOwnOrder) {
@@ -215,10 +230,10 @@ export const FriesProvider = ({ children }) => {
         // Prijsverschil melden aan wie friet en drank beheert
         const targetUsers = users.filter(u => u.actief && hasRecht(u, 'drank_beheren'));
 
-        const formattedActual = `€${actualAmount.toFixed(2).replace('.', ',')}`;
-        const formattedExpected = `€${expectedAmount.toFixed(2).replace('.', ',')}`;
+        const formattedActual = `${euro(actualAmount)}`;
+        const formattedExpected = `${euro(expectedAmount)}`;
         const diff = actualAmount - expectedAmount;
-        const formattedDiff = `${diff > 0 ? '+' : ''}€${diff.toFixed(2).replace('.', ',')}`;
+        const formattedDiff = `${diff > 0 ? '+' : ''}${euro(diff)}`;
 
         const notifTitle = '🍟 Prijswijziging Frituur?';
         const notifContent = `Betaald: ${formattedActual} | Verwacht: ${formattedExpected}. Verschil: ${formattedDiff}.`;
@@ -231,7 +246,7 @@ export const FriesProvider = ({ children }) => {
               notifTitle,
               notifContent,
               currentUser.naam || 'Systeem',
-              ''
+              '',
             ).catch(() => {});
           });
         }
@@ -253,12 +268,12 @@ export const FriesProvider = ({ children }) => {
   const meldAanBestellers = async (titel, bericht) => {
     if (!currentUser) return;
     const ontvangers = [...new Set(friesOrders.filter(o => o.status === 'open').map(o => o.userId))].filter(
-      id => id !== currentUser.id
+      id => id !== currentUser.id,
     );
     await Promise.all(
       ontvangers.map(id =>
-        db.addNotificatie(currentUser.id, id, titel, bericht, currentUser.naam || 'Friet', '', 'order').catch(() => {})
-      )
+        db.addNotificatie(currentUser.id, id, titel, bericht, currentUser.naam || 'Friet', '', 'order').catch(() => {}),
+      ),
     );
   };
 

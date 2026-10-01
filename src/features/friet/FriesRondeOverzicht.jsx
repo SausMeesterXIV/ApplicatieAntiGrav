@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
-
-const euro = n => `€${Number(n || 0).toFixed(2).replace('.', ',')}`;
+import { euro } from '../../lib/geld';
 
 // Totalen per item (wat je aan de frituur bestelt)
 export function totalenPerItem(orders) {
@@ -13,7 +12,7 @@ export function totalenPerItem(orders) {
       prev.aantal += qty;
       prev.bedrag += (item.price || 0) * qty;
       map.set(key, prev);
-    })
+    }),
   );
   return [...map.values()].sort((a, b) => a.naam.localeCompare(b.naam));
 }
@@ -51,7 +50,10 @@ export const PerPersoon = ({ orders }) => {
     <div className="space-y-2">
       {personen.length === 0 && <p className="p-4 text-center text-sm text-gray-500">Nog geen bestellingen.</p>}
       {personen.map(p => (
-        <div key={p.naam} className="bg-white dark:bg-[#1e293b] p-3 rounded-xl border border-gray-200 dark:border-gray-800">
+        <div
+          key={p.naam}
+          className="bg-white dark:bg-[#1e293b] p-3 rounded-xl border border-gray-200 dark:border-gray-800"
+        >
           <div className="flex justify-between font-bold">
             <span>{p.naam}</span>
             <span>{euro(p.totaal)}</span>

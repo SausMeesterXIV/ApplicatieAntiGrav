@@ -8,6 +8,7 @@ import { showToast } from '../../components/Toast';
 import { hasRole } from '../../lib/roleUtils';
 import { NavCard } from '../../components/NavCard';
 import { SPECIAL_DRINKS } from '../../lib/constants';
+import { euro } from '../../lib/geld';
 
 export const TeamDrankDashboardScreen = () => {
   const navigate = useNavigate();
@@ -174,22 +175,10 @@ export const TeamDrankDashboardScreen = () => {
                 <p className="text-sm font-medium text-blue-100 uppercase tracking-wider mb-1">
                   Totaal Lopende Rekeningen
                 </p>
-                <h2 className="text-4xl font-black">€ {totaalOpenstaand.toFixed(2).replace('.', ',')}</h2>
+                <h2 className="text-4xl font-black">{euro(totaalOpenstaand)}</h2>
                 <div className="mt-4 pt-4 border-t border-white/20 flex justify-between text-sm font-semibold">
-                  <span>
-                    Strepen: €{' '}
-                    {drankrekeningen
-                      .reduce((a, b) => a + b.strepenKost, 0)
-                      .toFixed(2)
-                      .replace('.', ',')}
-                  </span>
-                  <span>
-                    Frituur: €{' '}
-                    {drankrekeningen
-                      .reduce((a, b) => a + b.frietenKost, 0)
-                      .toFixed(2)
-                      .replace('.', ',')}
-                  </span>
+                  <span>Strepen: {euro(drankrekeningen.reduce((a, b) => a + b.strepenKost, 0))}</span>
+                  <span>Frituur: {euro(drankrekeningen.reduce((a, b) => a + b.frietenKost, 0))}</span>
                 </div>
               </div>
             </section>
@@ -328,12 +317,12 @@ export const TeamDrankDashboardScreen = () => {
                   <div>
                     <span className="font-bold text-gray-900 dark:text-white block">{rek.userName}</span>
                     <span className="text-xs text-gray-400">
-                      Str: €{rek.strepenKost.toFixed(2)} | Fri: €{rek.frietenKost.toFixed(2)}
+                      Str: {euro(rek.strepenKost)} | Fri: {euro(rek.frietenKost)}
                     </span>
                   </div>
                   <div className="text-right">
                     <span className="font-black text-lg text-red-500 dark:text-red-400">
-                      € {(rek.strepenKost + rek.frietenKost).toFixed(2).replace('.', ',')}
+                      {euro(rek.strepenKost + rek.frietenKost)}
                     </span>
                   </div>
                 </div>
@@ -400,7 +389,7 @@ export const TeamDrankDashboardScreen = () => {
                             <div>
                               <span className="font-bold text-gray-900 dark:text-white block">{userName}</span>
                               <span className="text-xs font-medium text-gray-500">
-                                {s.amount}x {s.drinkName} (€{s.price.toFixed(2).replace('.', ',')})
+                                {s.amount}x {s.drinkName} ({euro(s.price)})
                               </span>
                             </div>
                             <button

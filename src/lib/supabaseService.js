@@ -195,7 +195,8 @@ export async function fetchPeriodeOverzicht(periodId = null, echteKost = null) {
   }));
 }
 
-const isFunctieOntbreekt = error => error?.code === 'PGRST202' || /Could not find the function/i.test(error?.message || '');
+const isFunctieOntbreekt = error =>
+  error?.code === 'PGRST202' || /Could not find the function/i.test(error?.message || '');
 
 export async function fetchAllBalances() {
   try {
@@ -319,8 +320,7 @@ export async function deleteEvent(id) {
 
 export const MAX_BIJLAGE_MB = 10;
 
-const bijlageFilter = ({ eventId, verslagId }) =>
-  eventId ? ['event_id', eventId] : ['verslag_id', verslagId];
+const bijlageFilter = ({ eventId, verslagId }) => (eventId ? ['event_id', eventId] : ['verslag_id', verslagId]);
 
 export async function fetchBijlagen(item) {
   const [kolom, id] = bijlageFilter(item);
@@ -400,9 +400,7 @@ export async function fetchVerslagen() {
 
 export async function saveVerslag({ id, titel, datum, inhoud, eventId }) {
   const row = { titel, datum, inhoud: inhoud || null, event_id: eventId || null };
-  const query = id
-    ? supabase.from('verslagen').update(row).eq('id', id)
-    : supabase.from('verslagen').insert(row);
+  const query = id ? supabase.from('verslagen').update(row).eq('id', id) : supabase.from('verslagen').insert(row);
   const { data, error } = await query.select().single();
   if (error) throw error;
   return data;
@@ -429,18 +427,60 @@ export async function fetchNotificaties(userId) {
   if (error?.code === '42703') ({ data, error } = await vraag('naam'));
   if (error) throw error;
 
-  return (data || []).map(n => mapNotificatie(n, n.profiles));
+  const gelezen = await fetchGelezen(userId, data || []);
+  return (data || []).map(n => mapNotificatie(n, n.profiles, gelezen));
+}
+
+// Lokaal onthouden gelezen meldingen (van vóór de tabel notificatie_gelezen, en als snelle buffer)
+function lokaalGelezen() {
+  try {
+    return JSON.parse(localStorage.getItem('antigrav_seen_notifs') || '[]').map(String);
+  } catch {
+    return [];
+  }
+}
+
+// Gelezen meldingen aan iedereen ('all') voor deze leider, uit de database: op elk toestel hetzelfde.
+// Wat enkel op dit toestel als gelezen stond, wordt eenmalig mee naar de database gezet.
+async function fetchGelezen(userId, meldingen) {
+  const { data, error } = await supabase.from('notificatie_gelezen').select('notificatie_id').eq('user_id', userId);
+  if (error) {
+    console.warn('Gelezen-status niet beschikbaar (migratie 002200?)', error.message);
+    return new Set();
+  }
+  const gelezen = new Set((data || []).map(r => String(r.notificatie_id)));
+  const lokaal = new Set(lokaalGelezen());
+  const nogTeBewaren = meldingen
+    .filter(n => n.ontvanger_id === 'all' && lokaal.has(String(n.id)) && !gelezen.has(String(n.id)))
+    .map(n => ({ notificatie_id: n.id, user_id: userId }));
+  if (nogTeBewaren.length) {
+    const { error: fout } = await supabase
+      .from('notificatie_gelezen')
+      .upsert(nogTeBewaren, { onConflict: 'notificatie_id,user_id', ignoreDuplicates: true });
+    if (!fout) nogTeBewaren.forEach(r => gelezen.add(String(r.notificatie_id)));
+  }
+  return gelezen;
+}
+
+/** Melding als gelezen markeren: persoonlijke via de eigen vlag, meldingen aan iedereen per leider. */
+export async function markeerGelezen(melding, userId) {
+  if (melding.ontvanger_id === 'all') {
+    const { error } = await supabase
+      .from('notificatie_gelezen')
+      .upsert(
+        { notificatie_id: melding.id, user_id: userId },
+        { onConflict: 'notificatie_id,user_id', ignoreDuplicates: true },
+      );
+    if (error) throw error;
+  } else {
+    await markNotificatieGelezen(melding.id);
+  }
 }
 
 // Eén vertaling voor geladen én live (realtime) meldingen. zender = { naam, is_hoofdleiding } indien bekend.
-export function mapNotificatie(n, zender) {
-  // Lokaal onthouden gelezen meldingen (voor meldingen aan 'all', die geen eigen gelezen-vlag hebben)
-  let seenIds = [];
-  try {
-    seenIds = JSON.parse(localStorage.getItem('antigrav_seen_notifs') || '[]');
-  } catch {
-    // geen of kapotte localStorage: niets onthouden
-  }
+// gelezen: Set met id's van meldingen aan iedereen die deze leider al las (uit de database).
+export function mapNotificatie(n, zender, gelezen = new Set()) {
+  const seenIds = lokaalGelezen();
   const type = n.type || 'official';
 
   return {
@@ -453,7 +493,7 @@ export function mapNotificatie(n, zender) {
     title: n.titel,
     content: n.bericht || '',
     time: formatTimeAgo(new Date(n.datum)),
-    isRead: !!n.gelezen || seenIds.includes(String(n.id)),
+    isRead: !!n.gelezen || gelezen.has(String(n.id)) || seenIds.includes(String(n.id)),
     action: n.action,
     icon: type === 'nudge' ? 'touch_app' : 'notifications',
     color: type === 'nudge' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600',

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useFries } from './FriesContext';
 import { ChevronBack } from '../../components/ChevronBack';
+import { euro } from '../../lib/geld';
 
 export const FriesHistoryScreen = () => {
   const navigate = useNavigate();
@@ -63,7 +64,7 @@ export const FriesHistoryScreen = () => {
                   {formatDate(group.date)}
                 </h3>
                 <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold px-2 py-0.5 rounded-lg">
-                  € {group.total.toFixed(2).replace('.', ',')}
+                  {euro(group.total)}
                 </span>
               </div>
 
@@ -97,7 +98,7 @@ export const FriesHistoryScreen = () => {
                           <span className="font-bold text-sm text-gray-900 dark:text-white">{order.userName}</span>
                         </div>
                         <span className="font-bold text-sm text-gray-900 dark:text-white">
-                          € {order.totalPrice.toFixed(2).replace('.', ',')}
+                          {euro(order.totalPrice)}
                         </span>
                       </div>
                       <div className="ml-10 space-y-0.5">
@@ -109,7 +110,7 @@ export const FriesHistoryScreen = () => {
                             <span>
                               {item.quantity}x {item.name}
                             </span>
-                            <span>€ {(item.price * item.quantity).toFixed(2).replace('.', ',')}</span>
+                            <span>{euro(item.price * item.quantity)}</span>
                           </div>
                         ))}
                       </div>
@@ -120,9 +121,7 @@ export const FriesHistoryScreen = () => {
                 {/* Total */}
                 <div className="px-4 py-3 bg-blue-50 dark:bg-blue-900/10 border-t border-blue-100 dark:border-blue-800/30 flex items-center justify-between">
                   <span className="font-bold text-sm text-blue-700 dark:text-blue-400">Totaal sessie</span>
-                  <span className="font-bold text-lg text-blue-700 dark:text-blue-400">
-                    € {group.total.toFixed(2).replace('.', ',')}
-                  </span>
+                  <span className="font-bold text-lg text-blue-700 dark:text-blue-400">{euro(group.total)}</span>
                 </div>
               </div>
             </div>

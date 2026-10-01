@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useDrink } from './DrinkContext';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
+import { euro } from '../../lib/geld';
 
 export const TeamDrankExcelPreviewScreen = () => {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export const TeamDrankExcelPreviewScreen = () => {
       d =>
         d.name.toLowerCase() === itemName.toLowerCase() ||
         d.name.toLowerCase().includes(itemName.toLowerCase()) ||
-        itemName.toLowerCase().includes(d.name.toLowerCase())
+        itemName.toLowerCase().includes(d.name.toLowerCase()),
     );
     return drink ? drink.price : 0;
   };
@@ -49,7 +50,7 @@ export const TeamDrankExcelPreviewScreen = () => {
         const stockRows = stockItems.map(item => {
           // Prefer matching by ID if available (from drinks data)
           const drink = drinks.find(
-            d => String(d.id) === String(item.id) || d.name.toLowerCase() === item.name.toLowerCase()
+            d => String(d.id) === String(item.id) || d.name.toLowerCase() === item.name.toLowerCase(),
           );
           const unitPrice = drink ? drink.price : 0;
           const totalPrice = item.count * unitPrice;
@@ -65,7 +66,7 @@ export const TeamDrankExcelPreviewScreen = () => {
 
         const totalStockValue = stockItems.reduce((sum, item) => {
           const drink = drinks.find(
-            d => String(d.id) === String(item.id) || d.name.toLowerCase() === item.name.toLowerCase()
+            d => String(d.id) === String(item.id) || d.name.toLowerCase() === item.name.toLowerCase(),
           );
           return sum + item.count * (drink?.price || 0);
         }, 0);
@@ -158,7 +159,7 @@ export const TeamDrankExcelPreviewScreen = () => {
                         {item.count}
                       </td>
                       <td className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 text-right font-bold">
-                        € {(item.count * p).toFixed(2).replace('.', ',')}
+                        {euro(item.count * p)}
                       </td>
                     </tr>
                   );
@@ -183,11 +184,7 @@ export const TeamDrankExcelPreviewScreen = () => {
                     TOTAAL WAARDE
                   </td>
                   <td className="bg-yellow-50 dark:bg-yellow-900/20 border border-gray-300 dark:border-gray-700 px-2 py-1 text-right text-green-700 dark:text-green-400">
-                    €{' '}
-                    {stockItems
-                      .reduce((sum, item) => sum + item.count * getPriceForStockItem(item.name), 0)
-                      .toFixed(2)
-                      .replace('.', ',')}
+                    {euro(stockItems.reduce((sum, item) => sum + item.count * getPriceForStockItem(item.name), 0))}
                   </td>
                 </tr>
               )}

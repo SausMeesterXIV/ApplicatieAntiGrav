@@ -80,7 +80,7 @@ export function AgendaProvider({ children }) {
         'all',
         n.title || n.titel,
         n.content || n.bericht,
-        currentUser.naam || currentUser.name || 'Systeem'
+        currentUser.naam || currentUser.name || 'Systeem',
       );
     } catch (error) {}
   };
@@ -97,11 +97,10 @@ export function AgendaProvider({ children }) {
     }
 
     try {
+      // In de database: persoonlijke meldingen via hun eigen vlag, meldingen aan iedereen per leider
+      // (tabel notificatie_gelezen), zodat de gelezen-status op elk toestel klopt
       const notif = notifications.find(n => String(n.id) === id);
-      // Alleen naar de database schrijven als het een persoonlijke melding is (ontvanger_id !== 'all')
-      if (notif && notif.ontvanger_id !== 'all') {
-        await db.markNotificatieGelezen(id);
-      }
+      if (notif && currentUser) await db.markeerGelezen(notif, currentUser.id);
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }
@@ -118,7 +117,6 @@ export function AgendaProvider({ children }) {
     }
   };
 
-
   // Aanwezigheid: status 'komt' | 'komt_niet' | 'misschien'; dezelfde status opnieuw kiezen wist ze
   const handleSetAanwezigheid = async (eventId, status) => {
     if (!currentUser) return;
@@ -130,7 +128,10 @@ export function AgendaProvider({ children }) {
       await db.setAanwezigheid(eventId, currentUser.id, nieuw);
     } catch (error) {
       console.error('Aanwezigheid opslaan mislukt', error);
-      setAanwezigheden(prev => [...prev.filter(a => !(a.event_id === eventId && a.user_id === currentUser.id)), ...(vorige ? [vorige] : [])]);
+      setAanwezigheden(prev => [
+        ...prev.filter(a => !(a.event_id === eventId && a.user_id === currentUser.id)),
+        ...(vorige ? [vorige] : []),
+      ]);
       showToast('Kon je aanwezigheid niet opslaan', 'error');
     }
   };

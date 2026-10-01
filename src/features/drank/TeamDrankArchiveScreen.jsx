@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDrink } from './DrinkContext';
 import * as db from '../../lib/supabaseService';
 import { ChevronBack } from '../../components/ChevronBack';
-
-const euro = n => `€${Number(n || 0).toFixed(2).replace('.', ',')}`;
+import { euro } from '../../lib/geld';
 
 // Drankteam: afgesloten periodes terugbekijken
 export const TeamDrankArchiveScreen = () => {
@@ -13,7 +12,9 @@ export const TeamDrankArchiveScreen = () => {
   const [facturen, setFacturen] = useState([]);
 
   useEffect(() => {
-    db.fetchFacturen().then(setFacturen).catch(() => {});
+    db.fetchFacturen()
+      .then(setFacturen)
+      .catch(() => {});
   }, []);
 
   const periodes = useMemo(
@@ -29,7 +30,7 @@ export const TeamDrankArchiveScreen = () => {
             open: f.filter(x => x.status !== 'betaald').reduce((s, x) => s + x.totaal_bedrag, 0),
           };
         }),
-    [billingPeriods, facturen]
+    [billingPeriods, facturen],
   );
 
   return (
@@ -45,7 +46,9 @@ export const TeamDrankArchiveScreen = () => {
       </header>
 
       <main className="flex-1 px-4 py-4 pb-nav-safe space-y-2">
-        {periodes.length === 0 && <p className="text-center text-sm text-gray-500 py-8">Nog geen afgesloten periodes.</p>}
+        {periodes.length === 0 && (
+          <p className="text-center text-sm text-gray-500 py-8">Nog geen afgesloten periodes.</p>
+        )}
         {periodes.map(p => (
           <button
             key={p.id}

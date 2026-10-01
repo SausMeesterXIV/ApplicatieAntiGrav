@@ -2,8 +2,7 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronBack } from '../../components/ChevronBack';
 import { PerItem, PerPersoon } from './FriesRondeOverzicht';
-
-const euro = n => `€${Number(n || 0).toFixed(2).replace('.', ',')}`;
+import { euro } from '../../lib/geld';
 
 // Na het afsluiten van een frietronde: totalen per item (voor de frituur) en per persoon (op de drankfactuur)
 export const FriesSummaryScreen = () => {

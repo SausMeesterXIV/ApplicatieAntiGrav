@@ -8,8 +8,7 @@ import * as db from '../../lib/supabaseService';
 import { epcPayload, formatIban } from '../../lib/epc';
 import { showToast } from '../../components/Toast';
 import { ChevronBack } from '../../components/ChevronBack';
-
-const euro = n => `€${Number(n || 0).toFixed(2).replace('.', ',')}`;
+import { euro } from '../../lib/geld';
 
 // Gewone leiding: eigen verbruik in de open periode, eigen facturen en betalen via overschrijving/EPC-QR.
 export const MyInvoiceScreen = () => {
@@ -31,7 +30,9 @@ export const MyInvoiceScreen = () => {
     db.fetchFacturen(currentUser.id)
       .then(setFacturen)
       .catch(() => {});
-    db.fetchBetaalgegevens().then(setBetaal).catch(() => {});
+    db.fetchBetaalgegevens()
+      .then(setBetaal)
+      .catch(() => {});
   }, [currentUser?.id, activePeriod?.id]);
 
   // Nog niet gefactureerd verbruik, per drank
@@ -74,7 +75,10 @@ export const MyInvoiceScreen = () => {
           <section className="space-y-2">
             <h2 className="text-sm font-bold text-red-600 uppercase tracking-wider px-1">Te betalen</h2>
             {onbetaald.map(f => (
-              <div key={f.id} className="bg-white dark:bg-[#1e2330] rounded-2xl border border-red-200 dark:border-red-900/40">
+              <div
+                key={f.id}
+                className="bg-white dark:bg-[#1e2330] rounded-2xl border border-red-200 dark:border-red-900/40"
+              >
                 <button
                   onClick={() => setOpenFactuur(openFactuur === f.id ? null : f.id)}
                   className="w-full p-4 flex items-center gap-3 text-left"
@@ -135,7 +139,9 @@ export const MyInvoiceScreen = () => {
                         Drankteam heeft nog geen rekeningnummer ingesteld. Mededeling: {f.mededeling}
                       </p>
                     )}
-                    <p className="text-xs text-gray-500">Drankteam zet je factuur op betaald zodra de betaling binnen is.</p>
+                    <p className="text-xs text-gray-500">
+                      Drankteam zet je factuur op betaald zodra de betaling binnen is.
+                    </p>
                   </div>
                 )}
               </div>
@@ -212,9 +218,7 @@ export const MyInvoiceScreen = () => {
                   </p>
                 </div>
                 <span className="font-bold">{euro(f.totaal_bedrag)}</span>
-                <span
-                  className={`material-icons-round ${teBetalen(f) ? 'text-red-500' : 'text-green-500'}`}
-                >
+                <span className={`material-icons-round ${teBetalen(f) ? 'text-red-500' : 'text-green-500'}`}>
                   {teBetalen(f) ? 'schedule' : 'check_circle'}
                 </span>
               </div>

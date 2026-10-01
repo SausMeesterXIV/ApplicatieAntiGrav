@@ -6,6 +6,7 @@ import { ChevronBack } from '../../components/ChevronBack';
 
 import { useDrink } from './DrinkContext';
 import { UserAvatar } from '../../components/UserAvatar';
+import { euro } from '../../lib/geld';
 
 export const StrepenHistoryScreen = ({ adminMode = false }) => {
   const navigate = useNavigate();
@@ -198,7 +199,7 @@ export const StrepenHistoryScreen = ({ adminMode = false }) => {
                             {bundle.drinkName}
                           </h4>
                           <span className="text-xs font-bold text-gray-900 dark:text-white ml-2 shrink-0">
-                            €{bundle.totalPrice.toFixed(2)}
+                            {euro(bundle.totalPrice)}
                           </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-x-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">

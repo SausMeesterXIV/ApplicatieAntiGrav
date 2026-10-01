@@ -4,6 +4,7 @@ import { useDrink } from './DrinkContext';
 import { useNavigate } from 'react-router-dom';
 import { ChevronBack } from '../../components/ChevronBack';
 import { ConsumptionOverviewScreen } from './ConsumptionOverviewScreen';
+import { euro } from '../../lib/geld';
 
 export const TeamDrankStreaksScreen = () => {
   const navigate = useNavigate();
@@ -111,7 +112,7 @@ export const TeamDrankStreaksScreen = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-gray-700 dark:text-gray-200">
-                      € {(streak.price * (streak.amount || 1)).toFixed(2).replace('.', ',')}
+                      {euro(streak.price * (streak.amount || 1))}
                     </span>
                     <button
                       onClick={() => onDeleteStreak(streak.id)}

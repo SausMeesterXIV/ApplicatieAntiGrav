@@ -8,7 +8,7 @@ with
 verwachte_tabellen(naam) as (values
   ('groepen'), ('werkgroepen'), ('profiel_groepen'), ('profiel_werkgroepen'),
   ('event_aanwezigheid'), ('voorraad_correcties'), ('polls'), ('poll_opties'), ('poll_stemmen'),
-  ('push_subscriptions'), ('verslagen'), ('bijlagen')
+  ('push_subscriptions'), ('verslagen'), ('bijlagen'), ('notificatie_gelezen')
 ),
 verwachte_functies(naam) as (values
   ('is_leiding'), ('is_hoofdleiding'), ('heeft_recht'), ('streep_drank'), ('corrigeer_voorraad'),

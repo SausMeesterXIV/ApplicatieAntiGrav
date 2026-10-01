@@ -1,4 +1,5 @@
 import React from 'react';
+import { euro } from '../../lib/geld';
 
 // Helper functie voor de styling per categorie
 const getCategoryStyling = category => {
@@ -103,9 +104,7 @@ export const FriesItemCard = ({
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">
-                    € {item.price.toFixed(2).replace('.', ',')}
-                  </p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">{euro(item.price)}</p>
                   {isAdmin && !orderingFor && (
                     <div className="flex items-center gap-1">
                       <button

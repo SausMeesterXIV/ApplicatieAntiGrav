@@ -11,6 +11,7 @@ import { updateProfile } from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
 import { hasRole } from '../../lib/roleUtils';
 import { UserAvatar } from '../../components/UserAvatar';
+import { euro } from '../../lib/geld';
 
 export const StrepenScreen = () => {
   const navigate = useNavigate();
@@ -75,7 +76,7 @@ export const StrepenScreen = () => {
   }, [drinks]);
 
   const activeQuickDrinkId = String(
-    currentUser?.quickDrinkId || (validQuickDrinks.length > 0 ? validQuickDrinks[0].id : '')
+    currentUser?.quickDrinkId || (validQuickDrinks.length > 0 ? validQuickDrinks[0].id : ''),
   );
 
   const isStillValid = validUntil => {
@@ -112,7 +113,7 @@ export const StrepenScreen = () => {
             <p className="text-xs font-medium text-blue-100 uppercase tracking-wider">
               {activePeriod ? `Voorlopige Rekening (${activePeriod.naam})` : 'Voorlopige Rekening'}
             </p>
-            <p className="text-2xl font-bold">€ {currentBalance.toFixed(2).replace('.', ',')}</p>
+            <p className="text-2xl font-bold">{euro(currentBalance)}</p>
           </div>
           <span className="material-icons-round text-white/70">chevron_right</span>
         </div>
@@ -215,7 +216,7 @@ export const StrepenScreen = () => {
                       (d.name === 'Frisdrank' ||
                         d.name === SPECIAL_DRINKS.PINT_FREEDOM ||
                         (d.isTemporary && isStillValid(d.validUntil || undefined))) &&
-                      d.name !== SPECIAL_DRINKS.BAK_FREEDOM
+                      d.name !== SPECIAL_DRINKS.BAK_FREEDOM,
                   )
                   .map(drink => (
                     <button
@@ -278,7 +279,7 @@ export const StrepenScreen = () => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xl font-bold bg-white/20 px-3 py-1 rounded-lg">
-                  € {((selectedDrink?.price || 0) * (displayCount === 0 ? 1 : displayCount)).toFixed(2)}
+                  {euro((selectedDrink?.price || 0) * (displayCount === 0 ? 1 : displayCount))}
                 </span>
                 <span className="material-icons-round text-white/70">chevron_right</span>
               </div>
@@ -315,11 +316,7 @@ export const StrepenScreen = () => {
 
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-black bg-amber-100 dark:bg-amber-800/40 text-amber-700 dark:text-amber-300 px-2.5 py-1.5 rounded-lg border border-amber-200 dark:border-amber-700">
-                      €{' '}
-                      {drinks
-                        .find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM)
-                        ?.price.toFixed(2)
-                        .replace('.', ',')}
+                      {euro(drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM)?.price)}
                     </span>
                     <div className="bg-amber-600 text-white w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg shadow-sm group-hover:scale-110 transition-transform">
                       +1

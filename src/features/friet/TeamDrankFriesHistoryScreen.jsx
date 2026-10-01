@@ -5,6 +5,7 @@ import { BottomSheet } from '../../components/Modal';
 import * as db from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
 import { Kasticket } from './Kasticket';
+import { euro } from '../../lib/geld';
 
 export const TeamDrankFriesHistoryScreen = () => {
   const navigate = useNavigate();
@@ -159,10 +160,10 @@ export const TeamDrankFriesHistoryScreen = () => {
                     </h3>
                     <div className="flex gap-4 mt-1 text-xs opacity-80">
                       <span>
-                        Betaald: <b>€{actualTotal.toFixed(2)}</b>
+                        Betaald: <b>{euro(actualTotal)}</b>
                       </span>
                       <span>
-                        Verwacht: <b>€{expectedTotal.toFixed(2)}</b>
+                        Verwacht: <b>{euro(expectedTotal)}</b>
                       </span>
                     </div>
                   </div>
@@ -239,7 +240,7 @@ export const TeamDrankFriesHistoryScreen = () => {
                               </p>
                             </div>
                             <span className="font-bold text-blue-600 dark:text-blue-400 text-sm ml-3 shrink-0">
-                              €{Number(order.totaal_prijs).toFixed(2)}
+                              {euro(Number(order.totaal_prijs))}
                             </span>
                           </div>
                         ))}

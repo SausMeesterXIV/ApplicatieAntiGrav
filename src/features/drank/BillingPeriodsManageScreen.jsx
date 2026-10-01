@@ -8,6 +8,7 @@ import * as db from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
 import { Modal, BottomSheet } from '../../components/Modal';
 import { SkeletonRow } from '../../components/Skeleton';
+import { euro } from '../../lib/geld';
 
 export const BillingPeriodsManageScreen = () => {
   const navigate = useNavigate();
@@ -144,7 +145,7 @@ export const BillingPeriodsManageScreen = () => {
                       className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full"
                       title="Echte kost, verdeeld over de strepen"
                     >
-                      € {period.echte_kost.toFixed(2).replace('.', ',')}
+                      {euro(period.echte_kost)}
                     </span>
                   )}
                   {!period.is_closed ? (

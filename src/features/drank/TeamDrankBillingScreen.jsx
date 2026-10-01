@@ -6,8 +6,7 @@ import { showToast } from '../../components/Toast';
 import { Modal } from '../../components/Modal';
 import { ChevronBack } from '../../components/ChevronBack';
 import { formatIban } from '../../lib/epc';
-
-const euro = n => `€${Number(n || 0).toFixed(2).replace('.', ',')}`;
+import { euro } from '../../lib/geld';
 
 // Drankteam: overzicht van de open periode, correcties, rekeninggegevens en de periode afsluiten.
 // De bedragen komen uit periode_overzicht() in de database: exact wat op de factuur komt.
@@ -47,7 +46,9 @@ export const TeamDrankBillingScreen = () => {
   };
 
   useEffect(() => {
-    db.fetchBetaalgegevens().then(setBetaal).catch(() => {});
+    db.fetchBetaalgegevens()
+      .then(setBetaal)
+      .catch(() => {});
   }, []);
 
   // Opnieuw berekenen bij een andere periode of echte kost (kort wachten tot het typen stopt)
@@ -64,7 +65,13 @@ export const TeamDrankBillingScreen = () => {
     const bedrag = parseFloat(String(correctieBedrag).replace(',', '.'));
     if (isNaN(bedrag) || !activePeriod) return showToast('Ongeldig bedrag', 'warning');
     try {
-      await db.addBillingCorrection(correctie.userId, activePeriod.id, bedrag, correctieNotitie || undefined, correctie.naam);
+      await db.addBillingCorrection(
+        correctie.userId,
+        activePeriod.id,
+        bedrag,
+        correctieNotitie || undefined,
+        correctie.naam,
+      );
       showToast(`Correctie van ${euro(bedrag)} toegevoegd`, 'success');
       setCorrectie(null);
       setCorrectieBedrag('');
@@ -162,7 +169,9 @@ export const TeamDrankBillingScreen = () => {
           <div className="flex-1">
             <p className="font-semibold">Rekening voor betalingen</p>
             <p className="text-xs text-gray-500">
-              {betaal.iban ? `${betaal.naam} · ${formatIban(betaal.iban)}` : 'Nog niet ingesteld: nodig voor de betaal-QR'}
+              {betaal.iban
+                ? `${betaal.naam} · ${formatIban(betaal.iban)}`
+                : 'Nog niet ingesteld: nodig voor de betaal-QR'}
             </p>
           </div>
           <span className="material-icons-round text-gray-300">edit</span>
@@ -202,7 +211,9 @@ export const TeamDrankBillingScreen = () => {
           onClick={sluitAf}
           disabled={bezig || !activePeriod}
           className={`w-full py-3 rounded-xl font-bold disabled:opacity-50 ${
-            bevestig ? 'bg-red-600 text-white animate-pulse' : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
+            bevestig
+              ? 'bg-red-600 text-white animate-pulse'
+              : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
           }`}
         >
           {bezig

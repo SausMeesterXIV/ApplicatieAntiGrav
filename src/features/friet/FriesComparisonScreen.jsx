@@ -6,6 +6,7 @@ import * as db from '../../lib/supabaseService';
 import { SkeletonCard, SkeletonRow } from '../../components/Skeleton';
 import { supabase } from '../../lib/supabase';
 import { Kasticket } from './Kasticket';
+import { euro } from '../../lib/geld';
 
 export const FriesComparisonScreen = () => {
   const navigate = useNavigate();
@@ -118,18 +119,19 @@ export const FriesComparisonScreen = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-white/70 text-xs font-bold uppercase tracking-wider mb-1">Verwacht (App)</p>
-              <p className="text-2xl font-black">€ {expectedTotal.toFixed(2).replace('.', ',')}</p>
+              <p className="text-2xl font-black">{euro(expectedTotal)}</p>
             </div>
             <div className="text-right">
               <p className="text-white/70 text-xs font-bold uppercase tracking-wider mb-1">Werkelijk (Betaald)</p>
-              <p className="text-2xl font-black">€ {actualTotal.toFixed(2).replace('.', ',')}</p>
+              <p className="text-2xl font-black">{euro(actualTotal)}</p>
             </div>
           </div>
 
           <div className="mt-6 pt-4 border-t border-white/20 flex justify-between items-center">
             <p className="font-bold">Verschil</p>
             <p className={`text-xl font-black ${difference > 0 ? 'text-white' : 'text-white'}`}>
-              {difference > 0 ? '+' : ''}€ {difference.toFixed(2).replace('.', ',')}
+              {difference > 0 ? '+' : ''}
+              {euro(difference)}
             </p>
           </div>
         </div>
@@ -187,10 +189,10 @@ export const FriesComparisonScreen = () => {
                     </td>
                     <td className="p-3 text-sm font-bold text-gray-700 dark:text-gray-200">{item.name}</td>
                     <td className="p-3 text-right text-xs text-gray-500 dark:text-gray-400 font-medium">
-                      € {item.pricePerUnit.toFixed(2).replace('.', ',')}
+                      {euro(item.pricePerUnit)}
                     </td>
                     <td className="p-3 text-right text-sm font-bold text-gray-900 dark:text-white">
-                      € {item.totalPrice.toFixed(2).replace('.', ',')}
+                      {euro(item.totalPrice)}
                     </td>
                   </tr>
                 ))}
@@ -200,9 +202,7 @@ export const FriesComparisonScreen = () => {
                   <td colSpan={3} className="p-3 text-right text-sm uppercase text-gray-500 dark:text-gray-400">
                     Verwacht Totaal
                   </td>
-                  <td className="p-3 text-right text-sm text-blue-600 dark:text-blue-400">
-                    € {expectedTotal.toFixed(2).replace('.', ',')}
-                  </td>
+                  <td className="p-3 text-right text-sm text-blue-600 dark:text-blue-400">{euro(expectedTotal)}</td>
                 </tr>
               </tfoot>
             </table>

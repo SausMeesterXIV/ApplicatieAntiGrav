@@ -6,6 +6,7 @@ import { BottomSheet } from '../../components/Modal';
 import { showToast } from '../../components/Toast';
 import { PerPersoon } from './FriesRondeOverzicht';
 import { FRITUUR_STATUS } from '../../lib/constants';
+import { euro } from '../../lib/geld';
 
 export const FriesOverviewScreen = () => {
   const navigate = useNavigate();
@@ -139,7 +140,10 @@ export const FriesOverviewScreen = () => {
     onSetPickupTime(tempPickupTime);
     onSessionChange(FRITUUR_STATUS.ORDERED);
 
-    meldAanBestellers('Frieten besteld! 🍟', `De bestelling is doorgegeven. Jullie mogen de frieten gaan afhalen om ${tempPickupTime}.`);
+    meldAanBestellers(
+      'Frieten besteld! 🍟',
+      `De bestelling is doorgegeven. Jullie mogen de frieten gaan afhalen om ${tempPickupTime}.`,
+    );
 
     setShowTimeInput(false);
   };
@@ -221,7 +225,7 @@ export const FriesOverviewScreen = () => {
           <div className="flex justify-between items-start mb-6">
             <div>
               <p className="text-white/80 text-sm font-medium mb-1">Totaal te betalen</p>
-              <h2 className="text-4xl font-bold text-white">€ {totalAmount.toFixed(2).replace('.', ',')}</h2>
+              <h2 className="text-4xl font-bold text-white">{euro(totalAmount)}</h2>
             </div>
             <div className="text-right">
               <p className="text-xs text-white/80 mb-1">
@@ -251,7 +255,9 @@ export const FriesOverviewScreen = () => {
               key={k}
               onClick={() => setWeergave(k)}
               className={`flex-1 py-2 rounded-xl text-sm font-bold ${
-                weergave === k ? 'bg-blue-600 text-white' : 'bg-white dark:bg-[#1e293b] text-gray-600 dark:text-gray-300'
+                weergave === k
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white dark:bg-[#1e293b] text-gray-600 dark:text-gray-300'
               }`}
             >
               {l}
@@ -262,63 +268,61 @@ export const FriesOverviewScreen = () => {
         {weergave === 'persoon' ? (
           <PerPersoon orders={activeOrders} />
         ) : (
-        <>
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {dynamicTabs.map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap border transition-all ${
-                activeTab === tab
-                  ? 'bg-white dark:bg-[#1e293b] border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
-                  : 'bg-gray-100 dark:bg-[#1e293b]/50 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex justify-between items-end px-1">
-            <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              {activeTab === 'Alles' ? 'ITEMS' : activeTab.toUpperCase()}
-            </h3>
-            <span className="text-xs bg-gray-200 dark:bg-[#1e293b] text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-md">
-              {filteredItems.reduce((acc, i) => acc + i.count, 0)} items
-            </span>
-          </div>
-
-          {filteredItems.length === 0 ? (
-            <div className="text-center py-10 text-gray-400">
-              <p>Nog geen items in deze categorie.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredItems.map(item => (
-                <div
-                  key={item.id}
-                  className="bg-white dark:bg-[#1e293b] p-4 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center justify-between group shadow-sm transition-colors"
+          <>
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+              {dynamicTabs.map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap border transition-all ${
+                    activeTab === tab
+                      ? 'bg-white dark:bg-[#1e293b] border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
+                      : 'bg-gray-100 dark:bg-[#1e293b]/50 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                  }`}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-lg bg-gray-50 dark:bg-[#0f172a] border border-blue-100 dark:border-blue-500/30 flex items-center justify-center shrink-0">
-                      <span className="text-blue-600 dark:text-blue-400 font-bold text-lg">{item.count}</span>
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-gray-900 dark:text-white text-base">{item.name}</h4>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 shrink-0">
-                    <span className="text-gray-500 dark:text-gray-400 font-medium text-sm">
-                      € {item.price.toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-                </div>
+                  {tab}
+                </button>
               ))}
             </div>
-          )}
-        </div>
-        </>
+
+            <div className="space-y-4">
+              <div className="flex justify-between items-end px-1">
+                <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {activeTab === 'Alles' ? 'ITEMS' : activeTab.toUpperCase()}
+                </h3>
+                <span className="text-xs bg-gray-200 dark:bg-[#1e293b] text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-md">
+                  {filteredItems.reduce((acc, i) => acc + i.count, 0)} items
+                </span>
+              </div>
+
+              {filteredItems.length === 0 ? (
+                <div className="text-center py-10 text-gray-400">
+                  <p>Nog geen items in deze categorie.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredItems.map(item => (
+                    <div
+                      key={item.id}
+                      className="bg-white dark:bg-[#1e293b] p-4 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center justify-between group shadow-sm transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-lg bg-gray-50 dark:bg-[#0f172a] border border-blue-100 dark:border-blue-500/30 flex items-center justify-center shrink-0">
+                          <span className="text-blue-600 dark:text-blue-400 font-bold text-lg">{item.count}</span>
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-gray-900 dark:text-white text-base">{item.name}</h4>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 shrink-0">
+                        <span className="text-gray-500 dark:text-gray-400 font-medium text-sm">{euro(item.price)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         )}
       </main>
 
@@ -437,7 +441,7 @@ export const FriesOverviewScreen = () => {
                   <span>{sessionStatus === FRITUUR_STATUS.OPEN ? 'Opnemen Stoppen' : 'Sessie Starten'}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">€ {totalAmount.toFixed(2).replace('.', ',')}</span>
+                  <span className="text-lg">{euro(totalAmount)}</span>
                   <span className="material-icons-round group-hover:translate-x-1 transition-transform">
                     arrow_forward
                   </span>
@@ -454,9 +458,7 @@ export const FriesOverviewScreen = () => {
             <p className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1">
               Verwacht bedrag (App)
             </p>
-            <p className="text-2xl font-black text-blue-700 dark:text-blue-300">
-              € {totalAmount.toFixed(2).replace('.', ',')}
-            </p>
+            <p className="text-2xl font-black text-blue-700 dark:text-blue-300">{euro(totalAmount)}</p>
           </div>
 
           <div className="space-y-2">

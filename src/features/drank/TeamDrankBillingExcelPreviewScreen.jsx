@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 
 import * as db from '../../lib/supabaseService';
+import { euro } from '../../lib/geld';
 
 export const TeamDrankBillingExcelPreviewScreen = ({ onBack }) => {
   const navigate = useNavigate();
@@ -104,9 +105,9 @@ export const TeamDrankBillingExcelPreviewScreen = ({ onBack }) => {
         ];
         const kostRow = [
           { v: 'Factuurkosten:', t: 's' },
-          { v: `€ ${echteKost.toFixed(2)}`, t: 's' },
+          { v: `${euro(echteKost)}`, t: 's' },
           { v: 'Prijs/streep:', t: 's' },
-          { v: prijsPerStreep > 0 ? `€ ${prijsPerStreep.toFixed(2)}` : 'N.v.t.', t: 's' },
+          { v: prijsPerStreep > 0 ? `${euro(prijsPerStreep)}` : 'N.v.t.', t: 's' },
           '',
           '',
         ];
@@ -237,13 +238,12 @@ export const TeamDrankBillingExcelPreviewScreen = ({ onBack }) => {
         {selectedPeriod && (
           <div className="bg-green-50 dark:bg-green-900/10 border-b border-green-200 dark:border-green-800 px-4 py-2 text-xs flex justify-between">
             <span className="text-gray-500">
-              Factuurkosten:{' '}
-              <strong className="text-gray-900 dark:text-white">€ {echteKost.toFixed(2).replace('.', ',')}</strong>
+              Factuurkosten: <strong className="text-gray-900 dark:text-white">{euro(echteKost)}</strong>
             </span>
             <span className="text-gray-500">
               Prijs/streep:{' '}
               <strong className="text-green-700 dark:text-green-400">
-                {prijsPerStreep > 0 ? `€ ${prijsPerStreep.toFixed(2).replace('.', ',')}` : 'N.v.t.'}
+                {prijsPerStreep > 0 ? `${euro(prijsPerStreep)}` : 'N.v.t.'}
               </strong>
             </span>
           </div>
@@ -286,15 +286,15 @@ export const TeamDrankBillingExcelPreviewScreen = ({ onBack }) => {
                       {user.userStrepen}
                     </td>
                     <td className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 text-right">
-                      € {user.berekendBedrag.toFixed(2).replace('.', ',')}
+                      {euro(user.berekendBedrag)}
                     </td>
                     <td
                       className={`bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 text-right ${user.totalCorrection !== 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400'}`}
                     >
-                      {user.totalCorrection !== 0 ? `€ ${user.totalCorrection.toFixed(2).replace('.', ',')}` : '—'}
+                      {user.totalCorrection !== 0 ? `${euro(user.totalCorrection)}` : '—'}
                     </td>
                     <td className="bg-white dark:bg-[#1e293b] border border-gray-300 dark:border-gray-700 px-2 py-1 text-right font-bold">
-                      € {user.totaalSchuld.toFixed(2).replace('.', ',')}
+                      {euro(user.totaalSchuld)}
                     </td>
                   </tr>
                 ))
@@ -318,21 +318,13 @@ export const TeamDrankBillingExcelPreviewScreen = ({ onBack }) => {
                     {totalStrepen}
                   </td>
                   <td className="bg-yellow-50 dark:bg-yellow-900/20 border border-gray-300 dark:border-gray-700 px-2 py-1 text-right">
-                    €{' '}
-                    {billingData
-                      .reduce((s, u) => s + u.berekendBedrag, 0)
-                      .toFixed(2)
-                      .replace('.', ',')}
+                    {euro(billingData.reduce((s, u) => s + u.berekendBedrag, 0))}
                   </td>
                   <td className="bg-yellow-50 dark:bg-yellow-900/20 border border-gray-300 dark:border-gray-700 px-2 py-1 text-right text-orange-600">
-                    €{' '}
-                    {billingData
-                      .reduce((s, u) => s + u.totalCorrection, 0)
-                      .toFixed(2)
-                      .replace('.', ',')}
+                    {euro(billingData.reduce((s, u) => s + u.totalCorrection, 0))}
                   </td>
                   <td className="bg-yellow-50 dark:bg-yellow-900/20 border border-gray-300 dark:border-gray-700 px-2 py-1 text-right text-green-700 dark:text-green-400">
-                    € {totalOutstanding.toFixed(2).replace('.', ',')}
+                    {euro(totalOutstanding)}
                   </td>
                 </tr>
               )}
@@ -375,7 +367,7 @@ export const TeamDrankBillingExcelPreviewScreen = ({ onBack }) => {
                   <div className="text-left">
                     <h3 className="font-bold text-gray-900 dark:text-white text-sm">Exporteer Rekeningen</h3>
                     <p className="text-[10px] text-gray-500">
-                      {billingData.length} leden • € {totalOutstanding.toFixed(2).replace('.', ',')} totaal
+                      {billingData.length} leden • {euro(totalOutstanding)} totaal
                     </p>
                   </div>
                 </div>

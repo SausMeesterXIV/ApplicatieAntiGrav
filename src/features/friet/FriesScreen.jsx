@@ -12,6 +12,7 @@ import { UserAvatar } from '../../components/UserAvatar';
 import { FriesItemCard } from './FriesItemCard';
 import { FRITUUR_STATUS, FRITUUR_DB_CATEGORIES } from '../../lib/constants';
 import { hasRecht } from '../../lib/roleUtils';
+import { euro } from '../../lib/geld';
 
 const TABS = ['favorieten', 'frieten', 'snacks', 'sauzen', 'huisbereid', 'burgers', 'spaghetti'];
 
@@ -171,7 +172,7 @@ export const FriesScreen = () => {
   };
 
   const filteredUsers = users.filter(
-    u => (u.naam || '').toLowerCase().includes(userSearchQuery.toLowerCase()) && u.id !== currentUser?.id
+    u => (u.naam || '').toLowerCase().includes(userSearchQuery.toLowerCase()) && u.id !== currentUser?.id,
   );
   const selectUserForOrder = user => {
     setOrderingFor(user);
@@ -406,9 +407,7 @@ export const FriesScreen = () => {
                   <span className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wide">
                     Vandaag, {order.date.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' })}
                   </span>
-                  <div className="font-bold text-2xl text-gray-900 dark:text-white mt-1">
-                    € {order.totalPrice.toFixed(2).replace('.', ',')}
-                  </div>
+                  <div className="font-bold text-2xl text-gray-900 dark:text-white mt-1">{euro(order.totalPrice)}</div>
                 </div>
                 <span
                   className={`text-[10px] px-2 py-1 rounded-md font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400`}
@@ -426,7 +425,7 @@ export const FriesScreen = () => {
                     <span>
                       {item.quantity}x {item.name}
                     </span>
-                    <span className="text-gray-400">€ {(item.price * item.quantity).toFixed(2)}</span>
+                    <span className="text-gray-400">{euro(item.price * item.quantity)}</span>
                   </div>
                 ))}
               </div>
@@ -591,7 +590,7 @@ export const FriesScreen = () => {
               {/* LIJST MET ITEMS */}
               {(searchQuery
                 ? FRITUUR_DB_CATEGORIES.filter(cat =>
-                    items.some(i => i.category === cat && i.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                    items.some(i => i.category === cat && i.name.toLowerCase().includes(searchQuery.toLowerCase())),
                   ).flatMap(cat => [
                     ...items
                       .filter(i => i.category === cat && i.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -644,7 +643,10 @@ export const FriesScreen = () => {
             onClick={() => {
               onSetPickupTime(tempPickupTime);
               onSessionChange(FRITUUR_STATUS.ORDERED);
-              meldAanBestellers('Frieten besteld! 🍟', `De bestelling is doorgegeven. Jullie mogen de frieten gaan afhalen om ${tempPickupTime}.`);
+              meldAanBestellers(
+                'Frieten besteld! 🍟',
+                `De bestelling is doorgegeven. Jullie mogen de frieten gaan afhalen om ${tempPickupTime}.`,
+              );
               setShowTimeInput(false);
             }}
             className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all"
@@ -666,7 +668,7 @@ export const FriesScreen = () => {
                 <span className={`text-xs font-bold uppercase ${orderingFor ? 'text-orange-600' : 'text-gray-400'}`}>
                   Totaal {orderingFor ? `voor ${orderingFor.naam}` : ''}
                 </span>
-                <div className="text-2xl font-bold text-blue-600">€ {total.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-blue-600">{euro(total)}</div>
               </div>
             </div>
             <button

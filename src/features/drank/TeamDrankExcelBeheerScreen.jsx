@@ -5,6 +5,7 @@ import { useDrink } from './DrinkContext';
 import * as db from '../../lib/supabaseService';
 
 import { showToast } from '../../components/Toast';
+import { euro } from '../../lib/geld';
 
 // "row-col"
 
@@ -577,13 +578,7 @@ export const TeamDrankExcelBeheerScreen = () => {
         {/* Right corner: status */}
         <div className="ml-auto px-3 text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-3 h-full">
           {activeSheet === 'consumpties' && consumptiesData.length > 0 && (
-            <span>
-              Σ = €{' '}
-              {consumptiesData
-                .reduce((s, i) => s + i.price, 0)
-                .toFixed(2)
-                .replace('.', ',')}
-            </span>
+            <span>Σ = {euro(consumptiesData.reduce((s, i) => s + i.price, 0))}</span>
           )}
           <span>
             Blad: {activeSheet === 'consumpties' ? 'Consumpties' : activeSheet === 'dranken' ? 'Dranken' : 'Leden'}

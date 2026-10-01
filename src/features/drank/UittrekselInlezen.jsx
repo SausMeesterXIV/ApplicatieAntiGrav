@@ -1,11 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { leesBestand, parseCsv, zoekBetalingen } from '../../lib/uittreksel';
 import { showToast } from '../../components/Toast';
-
-const euro = n =>
-  `€${Number(n || 0)
-    .toFixed(2)
-    .replace('.', ',')}`;
+import { euro } from '../../lib/geld';
 
 // Drankteam: CSV-export van de KSA-rekening inlezen en betaalde facturen aanduiden.
 // Het bestand blijft in de browser; enkel de status van de gekozen facturen gaat naar de database.

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { showToast } from '../../components/Toast';
 import { useDrink } from './DrinkContext';
 import * as db from '../../lib/supabaseService';
+import { euro } from '../../lib/geld';
 
 export const StrepenAdminPanel = ({ onDrinkDeleted }) => {
   const { dranken: drinks, setDrinks: onUpdateDrinks } = useDrink();
@@ -72,7 +73,7 @@ export const StrepenAdminPanel = ({ onDrinkDeleted }) => {
   const handleDeleteDrink = async id => {
     if (
       !window.confirm(
-        'Weet je zeker dat je deze drank wilt verwijderen? Het is veiliger om het gewoon niet meer te gebruiken, verwijderen kan kapotte facturen veroorzaken als de drank al gestreept is.'
+        'Weet je zeker dat je deze drank wilt verwijderen? Het is veiliger om het gewoon niet meer te gebruiken, verwijderen kan kapotte facturen veroorzaken als de drank al gestreept is.',
       )
     )
       return;
@@ -215,7 +216,7 @@ export const StrepenAdminPanel = ({ onDrinkDeleted }) => {
                 <>
                   <span className="flex-1 text-sm font-bold text-gray-900 dark:text-white truncate">{drink.name}</span>
                   <span className="text-sm font-medium bg-white dark:bg-gray-700 px-2 py-1 rounded-md shadow-sm border border-gray-100 dark:border-gray-600 transition-colors">
-                    € {drink.price.toFixed(2)}
+                    {euro(drink.price)}
                   </span>
                   <button
                     onClick={() => {

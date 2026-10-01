@@ -6,8 +6,7 @@ import * as db from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
 import { ChevronBack } from '../../components/ChevronBack';
 import { UittrekselInlezen } from './UittrekselInlezen';
-
-const euro = n => `€${Number(n || 0).toFixed(2).replace('.', ',')}`;
+import { euro } from '../../lib/geld';
 
 // Drankteam: facturen per afgesloten periode, betaald zetten, Excel-export.
 export const TeamDrankInvoicesScreen = () => {
