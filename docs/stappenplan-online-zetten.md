@@ -12,15 +12,19 @@ Supabase-dashboard > je project > **Integrations** > **Cron** > aanzetten.
 
 > Doe dit vóór de migraties, anders wordt de agenda-herinnering van 18u niet ingepland.
 
-### Stap 2. Inloggen met de Supabase-tool
-Typ in Claude Code:
+### Stap 2. Toegangssleutel (access token) voor de Supabase-tool
+(`npx supabase login` werkt niet vanuit Claude Code: het vraagt een gewone terminal.)
 
-```
-! npx supabase login
-```
+1. Ga naar <https://supabase.com/dashboard/account/tokens> (ingelogd als eigenaar van het project).
+2. **Generate new token**, naam bv. `ksa-app-claude`, en kopieer de token (begint met `sbp_`).
+3. Zet hem in `.env.local` (zie stap 3) als:
 
-Je browser opent. Log in met het account dat eigenaar is van het project en klik op **Authorize**.
+   ```
+   SUPABASE_ACCESS_TOKEN=sbp_...
+   ```
+
 Hiermee kan Claude de instellingen, geheime sleutels en edge functions regelen.
+Als alles online staat, kan je de token op dezelfde pagina intrekken (**Revoke**).
 
 ### Stap 3. Databaseverbinding in een lokaal bestand zetten
 1. Supabase-dashboard > knop **Connect** (bovenaan) > tabblad **Connection string** > kies **Session pooler**.
