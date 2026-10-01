@@ -171,12 +171,10 @@ const FrietKaart = ({ positie }) => {
           {friesPickupTime ? (
             <>
               <p className="text-lg font-semibold text-amber-900/80 dark:text-amber-100/80">Frieten afhalen om</p>
-              <p className="text-[length:clamp(56px,20vw,88px)] leading-none font-extrabold tracking-tight tabular-nums">
-                {friesPickupTime}
-              </p>
+              <p className="text-[88px] leading-none font-extrabold tracking-tight tabular-nums">{friesPickupTime}</p>
             </>
           ) : (
-            <h2 className="text-[length:clamp(30px,10vw,40px)] leading-[0.95] font-extrabold tracking-tight">
+            <h2 className="text-[40px] leading-[0.95] font-extrabold tracking-tight">
               Frieten
               <br />
               zijn besteld
@@ -198,7 +196,7 @@ const FrietKaart = ({ positie }) => {
         <Kop label="Frieten zijn er" positie={positie} />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
           <Frietzak />
-          <p className="text-[length:clamp(36px,12vw,56px)] leading-none font-extrabold tracking-tight">Smakelijk!</p>
+          <p className="text-[56px] leading-none font-extrabold tracking-tight">Smakelijk!</p>
         </div>
         <Knop>Wie had wat?</Knop>
       </article>
@@ -213,7 +211,7 @@ const FrietKaart = ({ positie }) => {
       <div className="flex-1 flex justify-end items-center">
         <Frietzak />
       </div>
-      <h2 className="text-[length:clamp(30px,10vw,40px)] leading-[0.95] font-extrabold tracking-tight">
+      <h2 className="text-[40px] leading-[0.95] font-extrabold tracking-tight">
         {open ? 'Frietronde' : 'Frieten'}
         <br />
         {open ? 'is open' : 'worden besteld'}
