@@ -256,8 +256,13 @@ const StrepenKaart = ({ positie }) => {
     return [snelste, ...rest.slice(0, 2)];
   }, [dranken, streaks, currentUser?.id, currentUser?.quickDrinkId]);
 
+  // Per ongeluk dubbel tikken (binnen 0,6 s op dezelfde drank) telt als één streep
+  const laatsteTik = useRef({});
   const streep = drank => {
     if (!currentUser) return;
+    const nu = Date.now();
+    if (nu - (laatsteTik.current[drank.id] || 0) < 600) return;
+    laatsteTik.current[drank.id] = nu;
     handleAddCost(currentUser.id, drank.id, 1, currentUser.naam);
     hapticSuccess();
     showToast(`+1 ${drank.name}`, 'success');

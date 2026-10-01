@@ -44,8 +44,12 @@ export const StrepenScreen = () => {
     setDrinkCounts(prev => ({ ...prev, [String(selectedDrink.id)]: Math.max(0, val) }));
   };
 
+  // Per ongeluk dubbel tikken (binnen 0,6 s) telt als één keer toevoegen
+  const laatsteTik = React.useRef(0);
   const handleAddStripe = async () => {
     if (!selectedDrink) return;
+    if (Date.now() - laatsteTik.current < 600) return;
+    laatsteTik.current = Date.now();
 
     // Visuele feedback trigger
     setShowFloatingPlus(true);

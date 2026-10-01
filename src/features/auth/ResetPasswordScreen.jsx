@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { showToast } from '../../components/Toast';
+import { authFout } from '../../lib/authFouten';
 
 export const ResetPasswordScreen = () => {
   const navigate = useNavigate();
@@ -53,7 +54,7 @@ export const ResetPasswordScreen = () => {
       showToast('Wachtwoord succesvol gewijzigd!', 'success');
       navigate('/');
     } catch (error) {
-      showToast(error.message || 'Fout bij het resetten van wachtwoord', 'error');
+      showToast(authFout(error, 'Fout bij het resetten van je wachtwoord'), 'error');
     } finally {
       setLoading(false);
     }

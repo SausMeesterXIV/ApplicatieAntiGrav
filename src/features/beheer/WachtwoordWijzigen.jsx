@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Modal } from '../../components/Modal';
 import { showToast } from '../../components/Toast';
+import { authFout } from '../../lib/authFouten';
 
 // Wachtwoord wijzigen voor de ingelogde gebruiker
 export const WachtwoordWijzigen = ({ isOpen, onClose }) => {
@@ -21,7 +22,7 @@ export const WachtwoordWijzigen = ({ isOpen, onClose }) => {
     setBezig(true);
     const { error } = await supabase.auth.updateUser({ password: nieuw });
     setBezig(false);
-    if (error) return showToast('Wijzigen mislukt: ' + error.message, 'error');
+    if (error) return showToast(authFout(error, 'Wijzigen mislukt'), 'error');
     showToast('Wachtwoord gewijzigd', 'success');
     sluit();
   };

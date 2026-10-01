@@ -155,10 +155,54 @@ export const VerslagenScreen = () => {
 
 const VerslagFormulier = ({ verslag, onClose, onSaved }) => {
   const { events } = useAgenda();
-  const [titel, setTitel] = useState(verslag.titel || '');
-  const [datum, setDatum] = useState(verslag.datum || vandaag());
-  const [inhoud, setInhoud] = useState(verslag.inhoud || '');
-  const [eventId, setEventId] = useState(verslag.event_id || '');
+  // Concept op dit toestel: typen gaat niet verloren bij sluiten, wegnavigeren of een lege batterij
+  const conceptSleutel = `ksa-verslag-concept-${verslag.id || 'nieuw'}`;
+  const [concept] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(conceptSleutel) || 'null');
+    } catch {
+      return null;
+    }
+  });
+  const [titel, setTitel] = useState(concept?.titel ?? verslag.titel ?? '');
+  const [datum, setDatum] = useState(concept?.datum ?? verslag.datum ?? vandaag());
+  const [inhoud, setInhoud] = useState(concept?.inhoud ?? verslag.inhoud ?? '');
+  const [eventId, setEventId] = useState(concept?.eventId ?? verslag.event_id ?? '');
+  const gewijzigd =
+    titel !== (verslag.titel || '') || inhoud !== (verslag.inhoud || '') || eventId !== (verslag.event_id || '');
+
+  useEffect(() => {
+    if (concept) showToast('Je niet-opgeslagen concept is teruggezet', 'info');
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        if (gewijzigd) localStorage.setItem(conceptSleutel, JSON.stringify({ titel, datum, inhoud, eventId }));
+        else localStorage.removeItem(conceptSleutel);
+      } catch {
+        // geen opslag op dit toestel: enkel de waarschuwing hieronder
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [titel, datum, inhoud, eventId, gewijzigd]);
+
+  // Waarschuwing bij herladen of de app/tab sluiten met niet-opgeslagen tekst
+  useEffect(() => {
+    if (!gewijzigd) return;
+    const waarschuw = e => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', waarschuw);
+    return () => window.removeEventListener('beforeunload', waarschuw);
+  }, [gewijzigd]);
+
+  const sluit = () => {
+    if (gewijzigd)
+      showToast('Niet opgeslagen: je tekst staat klaar als concept als je het formulier opnieuw opent', 'info');
+    onClose();
+  };
   const [bestanden, setBestanden] = useState([]); // enkel bij een nieuw verslag; bij bewerken via <Bijlagen>
   const [bezig, setBezig] = useState(false);
 
@@ -180,6 +224,11 @@ const VerslagFormulier = ({ verslag, onClose, onSaved }) => {
           showToast(e.message || `Uploaden van ${file.name} mislukt`, 'error');
         }
       }
+      try {
+        localStorage.removeItem(conceptSleutel);
+      } catch {
+        // niets te wissen
+      }
       showToast('Verslag opgeslagen', 'success');
       await onSaved(opgeslagen.id);
     } catch (e) {
@@ -194,7 +243,7 @@ const VerslagFormulier = ({ verslag, onClose, onSaved }) => {
     'w-full px-3 py-2.5 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-gray-700 text-sm';
 
   return (
-    <BottomSheet isOpen onClose={onClose} title={verslag.id ? 'Verslag aanpassen' : 'Nieuw verslag'}>
+    <BottomSheet isOpen onClose={sluit} title={verslag.id ? 'Verslag aanpassen' : 'Nieuw verslag'}>
       <div className="space-y-3 pb-4">
         <input
           value={titel}

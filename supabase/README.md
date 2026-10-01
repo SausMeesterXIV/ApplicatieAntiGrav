@@ -32,6 +32,8 @@ Zo weten we altijd hoe de beveiliging en de functies er vóór de migraties uitz
 | `20261001001700_startscherm_bollen.sql` | Volgorde van de bollen op het startscherm, per leider |
 | `20261001001800_keepalive.sql` | `ping()` voor de dagelijkse wektaak (project pauzeert niet meer) |
 | `20261001001900_push_webhook.sql` | Elke nieuwe melding naar send-push (vervangt de dashboard-webhook); sleutel in de Vault |
+| `20261001002000_functierechten.sql` | Geen functies meer uitvoerbaar via PUBLIC/zonder login; vast search_path (Security Advisor) |
+| `20261001002100_triggerfuncties.sql` | Triggerfuncties niet aanroepbaar voor ingelogden (Security Advisor) |
 
 **Na alle migraties**: draai `queries/controleer_migraties.sql` (wijzigt niets). Elke rij is een controle;
 alles met `ok = false` staat bovenaan en moet opgelost worden voor je de app test.

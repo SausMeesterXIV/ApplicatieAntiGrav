@@ -1,8 +1,8 @@
 
 [auth.email.template.confirmation]
-subject = "Welkom bij de KSA app! Bevestig je account 🚀"
+subject = "Welkom bij de KSA-app! Bevestig je account"
 content_path = "./supabase/templates/confirmation.html"
 
 [auth.email.template.recovery]
-subject = "Wachtwoord herstellen voor KSA app"
+subject = "Wachtwoord herstellen voor de KSA-app"
 content_path = "./supabase/templates/recovery.html"

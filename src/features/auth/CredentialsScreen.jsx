@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { showToast } from '../../components/Toast';
+import { authFout } from '../../lib/authFouten';
 
 export const CredentialsScreen = () => {
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ export const CredentialsScreen = () => {
       if (error.status === 429) {
         showToast('Te veel aanvragen. Probeer het over een uur opnieuw.', 'error');
       } else {
-        showToast(error.message || 'Fout bij verzenden reset link', 'error');
+        showToast(authFout(error, 'Fout bij verzenden van de link'), 'error');
       }
     } finally {
       setLoading(false);
@@ -87,7 +88,7 @@ export const CredentialsScreen = () => {
         }
       }
     } catch (error) {
-      showToast(error.message || 'Fout bij het inloggen', 'error');
+      showToast(authFout(error, 'Fout bij het inloggen'), 'error');
     } finally {
       setLoading(false);
     }
@@ -127,7 +128,7 @@ export const CredentialsScreen = () => {
         showToast('Account aangemaakt! Bevestig je e-mailadres via de link in je mailbox (kijk ook in spam).', 'success');
       }
     } catch (error) {
-      showToast(error.message || 'Fout bij het registreren', 'error');
+      showToast(authFout(error, 'Fout bij het registreren'), 'error');
     } finally {
       setLoading(false);
     }

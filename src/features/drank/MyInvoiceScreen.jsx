@@ -48,7 +48,9 @@ export const MyInvoiceScreen = () => {
   const frietOpen = friesOrders.filter(o => o.userId === currentUser?.id && !o.factuurId);
 
   const totaal = overzicht?.totaal ?? balances[currentUser?.id] ?? 0;
-  const onbetaald = facturen.filter(f => f.status !== 'betaald');
+  // Een factuur van € 0 (of minder, bv. na een correctie) hoeft niet betaald te worden: geen QR-code
+  const teBetalen = f => f.status !== 'betaald' && Number(f.totaal_bedrag) > 0;
+  const onbetaald = facturen.filter(teBetalen);
 
   const kopieer = async tekst => {
     try {
@@ -204,14 +206,16 @@ export const MyInvoiceScreen = () => {
                   <p className="text-xs text-gray-500">
                     {f.status === 'betaald'
                       ? `Betaald${f.betaald_op ? ` op ${new Date(f.betaald_op).toLocaleDateString('nl-BE')}` : ''}`
-                      : 'Nog niet betaald'}
+                      : teBetalen(f)
+                        ? 'Nog niet betaald'
+                        : 'Niets te betalen'}
                   </p>
                 </div>
                 <span className="font-bold">{euro(f.totaal_bedrag)}</span>
                 <span
-                  className={`material-icons-round ${f.status === 'betaald' ? 'text-green-500' : 'text-red-500'}`}
+                  className={`material-icons-round ${teBetalen(f) ? 'text-red-500' : 'text-green-500'}`}
                 >
-                  {f.status === 'betaald' ? 'check_circle' : 'schedule'}
+                  {teBetalen(f) ? 'schedule' : 'check_circle'}
                 </span>
               </div>
             ))}
