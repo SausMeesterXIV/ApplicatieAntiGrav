@@ -9,10 +9,16 @@ export default async function handler(req, res) {
     return res.status(401).json({ ok: false, fout: 'Niet toegestaan' });
   }
 
-  const url = process.env.VITE_SUPABASE_URL;
-  const sleutel = process.env.VITE_SUPABASE_ANON_KEY;
+  // VITE_-namen (zoals de app) of zonder voorvoegsel (als die op Vercel enkel bij het bouwen beschikbaar zijn)
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const sleutel = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
   if (!url || !sleutel) {
-    return res.status(500).json({ ok: false, fout: 'VITE_SUPABASE_URL of VITE_SUPABASE_ANON_KEY ontbreekt op Vercel' });
+    return res.status(500).json({
+      ok: false,
+      fout: 'Supabase-URL of anon key ontbreekt voor deze functie op Vercel (SUPABASE_URL en SUPABASE_ANON_KEY)',
+      // enkel de namen, nooit de waarden
+      gevondenVariabelen: Object.keys(process.env).filter(k => /SUPABASE|VAPID|CRON/i.test(k)),
+    });
   }
 
   try {
