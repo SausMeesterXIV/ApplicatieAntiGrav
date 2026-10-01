@@ -49,7 +49,7 @@ export const MyInvoiceScreen = () => {
   const frietOpen = friesOrders.filter(o => o.userId === currentUser?.id && !o.factuurId);
 
   const totaal = overzicht?.totaal ?? balances[currentUser?.id] ?? 0;
-  // Een factuur van € 0 (of minder, bv. na een correctie) hoeft niet betaald te worden: geen QR-code
+  // Een factuur van €0 (of minder, bv. na een correctie) hoeft niet betaald te worden: geen QR-code
   const teBetalen = f => f.status !== 'betaald' && Number(f.totaal_bedrag) > 0;
   const onbetaald = facturen.filter(teBetalen);
 

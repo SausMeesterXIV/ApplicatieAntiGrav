@@ -148,7 +148,7 @@ export const TeamDrankBillingScreen = () => {
             </span>
             <input
               inputMode="decimal"
-              placeholder="€ 0,00"
+              placeholder="€0,00"
               value={echteKostTekst}
               onChange={e => setEchteKostTekst(e.target.value)}
               className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
