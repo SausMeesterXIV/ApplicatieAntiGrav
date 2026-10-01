@@ -185,6 +185,24 @@
   }
 }
 
+/* Schermhoogte die klopt op elke gsm. 100vh is in Safari op iPhone hoger dan wat je ziet
+   (adres- en knoppenbalk tellen niet mee), waardoor onderaan iets wegvalt. */
+.min-h-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.h-screen {
+  height: 100vh;
+  height: 100dvh;
+}
+/* Binnen de app: de ruimte boven de menubalk (gemeten in MainLayout), niet het hele scherm */
+#main-scroll-container .min-h-screen {
+  min-height: var(--inhoud-hoogte, 100dvh);
+}
+#main-scroll-container .h-screen {
+  height: var(--inhoud-hoogte, 100dvh);
+}
+
 /* Scrollen zonder zichtbare schuifbalk (bollenrij, carrousel, hoofdinhoud) */
 .no-scrollbar {
   scrollbar-width: none;

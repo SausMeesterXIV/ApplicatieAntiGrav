@@ -54,7 +54,11 @@ export const ToastContainer = () => {
   };
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2 pointer-events-none w-[90%] max-w-sm">
+    // Onder de notch / statusbalk van de iPhone (safe area), anders 1rem van boven
+    <div
+      className="fixed left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2 pointer-events-none w-[90%] max-w-sm"
+      style={{ top: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+    >
       {toasts.map(toast => (
         <div
           key={toast.id}

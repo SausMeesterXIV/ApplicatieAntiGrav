@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { usePushNotifications } from './features/berichten/usePushNotifications';
 import { ToastContainer } from './components/Toast';
@@ -142,16 +142,39 @@ const MainLayout = () => {
   const { pathname } = useLocation();
   const breed = pathname === '/';
 
+  // Hoogte van het zichtbare inhoudsvlak (scherm min menubalk) als CSS-variabele --inhoud-hoogte:
+  // schermen met min-h-screen/h-screen passen zich daaraan aan (zie index.css), zodat niets onder de menubalk valt.
+  const inhoud = useRef(null);
+  useEffect(() => {
+    const el = inhoud.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const zet = () => document.documentElement.style.setProperty('--inhoud-hoogte', `${el.clientHeight}px`);
+    zet();
+    const waarnemer = new ResizeObserver(zet);
+    waarnemer.observe(el);
+    return () => waarnemer.disconnect();
+  }, []);
+
   return (
+    // Echte zichtbare hoogte (niet 100vh: in Safari op iPhone is dat hoger dan het scherm en valt de menubalk weg)
     <div
       className="text-base w-full flex flex-col lg:flex-row overflow-hidden bg-gray-50 dark:bg-[#0f172a]"
-      style={{ height: '100vh' }}
+      style={{
+        height: 'var(--app-height, 100dvh)',
+        // Liggende iPhone: niet onder de notch aan de zijkant
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
+      }}
     >
       <aside className="hidden lg:block w-60 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0f172a]">
         <Zijbalk notifications={notifications} />
       </aside>
 
-      <div id="main-scroll-container" className="flex-1 min-w-0 w-full overflow-y-auto no-scrollbar">
+      <div
+        ref={inhoud}
+        id="main-scroll-container"
+        className="flex-1 min-h-0 min-w-0 w-full overflow-y-auto no-scrollbar"
+      >
         <div className={`w-full mx-auto lg:px-6 lg:py-4 ${breed ? 'lg:max-w-6xl' : 'lg:max-w-3xl'}`}>
           <ErrorBoundary>
             <Suspense fallback={<Laden />}>
