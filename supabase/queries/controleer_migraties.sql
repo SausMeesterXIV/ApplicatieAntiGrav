@@ -22,7 +22,8 @@ verwachte_triggers(tabel, naam) as (values
   ('polls', 'melding_nieuwe_poll'), ('poll_stemmen', 'controleer_stem'),
   ('frituur_bestellingen', 'friet_prijs_uit_menu'), ('frituur_bestellingen', 'melding_friet_voor_ander'),
   ('frituur_bestellingen', 'bescherm_frietbestelling'), ('notificaties', 'melding_echte_afzender'),
-  ('verslagen', 'verslag_bijwerken'), ('verslagen', 'melding_nieuw_verslag')
+  ('verslagen', 'verslag_bijwerken'), ('verslagen', 'melding_nieuw_verslag'),
+  ('frituur_bestellingen', 'melding_friet_geannuleerd')
 ),
 controles as (
   -- 1. Registratie enkel met @ksa-aalter.be (trigger op auth.users)

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { euro } from '../src/lib/geld.js';
+import { euro, afrondingsverschil } from '../src/lib/geld.js';
 
 test('bedragen in Belgische notatie, getal tegen het euroteken', () => {
   assert.equal(euro(1.5), '€1,50');
@@ -18,4 +18,10 @@ test('negatieve bedragen en afronding', () => {
 test('ongeldige invoer wordt €0,00', () => {
   assert.equal(euro(undefined), '€0,00');
   assert.equal(euro('abc'), '€0,00');
+});
+
+test('afrondingsverschil: € 100 over 7 strepen (1 streep elk) geeft 3 cent te veel', () => {
+  assert.equal(afrondingsverschil(Array(7).fill(14.29), 100), 0.03);
+  assert.equal(afrondingsverschil([33.33, 33.33, 33.33], 100), -0.01);
+  assert.equal(afrondingsverschil([50, 50], 100), 0);
 });

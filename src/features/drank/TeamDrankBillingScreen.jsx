@@ -6,7 +6,7 @@ import { showToast } from '../../components/Toast';
 import { Modal } from '../../components/Modal';
 import { ChevronBack } from '../../components/ChevronBack';
 import { formatIban } from '../../lib/epc';
-import { euro } from '../../lib/geld';
+import { euro, afrondingsverschil, afrondingsTekst } from '../../lib/geld';
 
 // Drankteam: overzicht van de open periode, correcties, rekeninggegevens en de periode afsluiten.
 // De bedragen komen uit periode_overzicht() in de database: exact wat op de factuur komt.
@@ -159,6 +159,11 @@ export const TeamDrankBillingScreen = () => {
               ? `Prijs per streep: ${euro(echteKost / totaalStrepen)}. De bedragen hieronder zijn wat op de facturen komt.`
               : 'De bedragen hieronder zijn de schatting (aantal × prijs).'}
           </p>
+          {echteKost && totaalStrepen > 0 && !laden && (
+            <p className="text-xs text-gray-500">
+              {afrondingsTekst(afrondingsverschil(rijen.map(r => r.drank_bedrag), echteKost))}
+            </p>
+          )}
         </section>
 
         <button

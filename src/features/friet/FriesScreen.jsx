@@ -89,7 +89,8 @@ export const FriesScreen = () => {
   };
 
   const showTodayAsHistory = sessionStatus === FRITUUR_STATUS.ORDERED;
-  const myOwnOrders = myOrders.filter(o => o.userId === currentUser?.id);
+  // Eigen bestellingen én die je voor een ander plaatste: die mag je annuleren zolang de ronde loopt
+  const myOwnOrders = myOrders.filter(o => o.userId === currentUser?.id || o.besteldDoor === currentUser?.id);
   const todayOrders = myOwnOrders.filter(o => isToday(o.date) && o.status === 'open' && !showTodayAsHistory);
 
   const updateQuantity = (item, delta) => {
@@ -406,6 +407,7 @@ export const FriesScreen = () => {
                 <div>
                   <span className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wide">
                     Vandaag, {order.date.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' })}
+                    {order.userId !== currentUser?.id && ` · voor ${order.userName}`}
                   </span>
                   <div className="font-bold text-2xl text-gray-900 dark:text-white mt-1">{euro(order.totalPrice)}</div>
                 </div>

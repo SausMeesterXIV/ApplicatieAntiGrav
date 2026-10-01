@@ -65,10 +65,14 @@ export async function fetchDranken() {
   return (data || []).filter(isActiveDrank).map(mapDrank);
 }
 
+// Datum als YYYY-MM-DD in lokale tijd (toISOString rekent in UTC en schuift items vóór 2u naar de vorige dag)
+const lokaleDatum = d =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 // Vaste dranken altijd; tijdelijke dranken enkel tot en met hun valid_until-datum
 function isActiveDrank(d) {
   if (!d.is_temporary || !d.valid_until) return true;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = lokaleDatum(new Date());
   return d.valid_until.slice(0, 10) >= today;
 }
 
@@ -136,7 +140,9 @@ export async function addConsumptie(userId, drankId, aantal = 1, periodId, userN
     p_user_id: userId,
     p_drank_id: drankId,
     p_aantal: aantal,
-    p_period_id: periodId || null,
+    // Altijd de periode die nu open staat (server kiest). Een periode-id uit het geheugen of de offline
+    // wachtrij kan intussen afgesloten zijn; de streep zou dan nooit op een factuur komen.
+    p_period_id: null,
   });
 
   if (error) throw error;
@@ -265,10 +271,6 @@ export async function setAanwezigheid(eventId, userId, status) {
     .upsert({ event_id: eventId, user_id: userId, status, updated_at: new Date().toISOString() });
   if (error) throw error;
 }
-
-// Datum als YYYY-MM-DD in lokale tijd (toISOString rekent in UTC en schuift items vóór 2u naar de vorige dag)
-const lokaleDatum = d =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export async function saveEvent(event) {
   const payload = {
@@ -596,6 +598,7 @@ export async function fetchFrituurBestellingen(sessieId) {
     id: b.id,
     userId: b.user_id,
     userName: b.user_name || 'Onbekend',
+    besteldDoor: b.besteld_door || null, // wie de bestelling plaatste (kan een ander zijn)
     items: b.items || [],
     totalPrice: Number(b.totaal_prijs || 0),
     date: new Date(b.created_at),
@@ -803,7 +806,7 @@ export async function saveCountdowns(countdowns) {
   const payload = countdowns.map(c => ({
     id: c.id,
     title: c.title,
-    target_date: c.targetDate instanceof Date ? c.targetDate.toISOString().split('T')[0] : String(c.targetDate),
+    target_date: c.targetDate instanceof Date ? lokaleDatum(c.targetDate) : String(c.targetDate),
   }));
 
   const { data: existing } = await supabase.from('countdowns').select('id');

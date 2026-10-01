@@ -35,6 +35,7 @@ Zo weten we altijd hoe de beveiliging en de functies er vóór de migraties uitz
 | `20261001002000_functierechten.sql` | Geen functies meer uitvoerbaar via PUBLIC/zonder login; vast search_path (Security Advisor) |
 | `20261001002100_triggerfuncties.sql` | Triggerfuncties niet aanroepbaar voor ingelogden (Security Advisor) |
 | `20261001002200_gelezen_en_frietronde.sql` | Gelezen-status van meldingen per persoon (elk toestel); hoogstens één lopende frietronde |
+| `20261001002300_streep_open_periode_en_meldingen.sql` | Strepen altijd in de open periode (ook offline gezette); meldingen enkel voor actieve leiding; wie voor een ander friet bestelde, mag annuleren (met melding) |
 
 **Na alle migraties**: draai `queries/controleer_migraties.sql` (wijzigt niets). Elke rij is een controle;
 alles met `ok = false` staat bovenaan en moet opgelost worden voor je de app test.

@@ -180,6 +180,21 @@ const AppRoutes = () => {
     );
   }
 
+  // Ingelogd, maar het profiel kon niet geladen worden (meestal geen internet): geen half startscherm tonen
+  if (session && !currentUser) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] items-center justify-center gap-4 p-6 text-center">
+        <p className="font-bold text-gray-900 dark:text-white">
+          {navigator.onLine ? 'Je gegevens konden niet geladen worden.' : 'Geen internetverbinding.'}
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Controleer je verbinding en probeer opnieuw.</p>
+        <button onClick={() => window.location.reload()} className="px-5 py-3 rounded-2xl bg-inkt text-white font-bold">
+          Opnieuw proberen
+        </button>
+      </div>
+    );
+  }
+
   return (
     <Suspense fallback={<Laden />}>
       <Routes>

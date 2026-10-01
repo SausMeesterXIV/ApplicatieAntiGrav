@@ -106,6 +106,7 @@ export const FriesProvider = ({ children }) => {
       id: tempId,
       userId: orderForUser.id,
       userName: orderUserName,
+      besteldDoor: currentUser.id,
       items,
       totalPrice: totalCost,
       date: new Date(),

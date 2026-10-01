@@ -6,7 +6,7 @@ import * as db from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
 import { ChevronBack } from '../../components/ChevronBack';
 import { UittrekselInlezen } from './UittrekselInlezen';
-import { euro } from '../../lib/geld';
+import { euro, afrondingsverschil, afrondingsTekst } from '../../lib/geld';
 
 // Drankteam: facturen per afgesloten periode, betaald zetten, Excel-export.
 export const TeamDrankInvoicesScreen = () => {
@@ -40,6 +40,9 @@ export const TeamDrankInvoicesScreen = () => {
 
   const totaal = vanPeriode.reduce((s, f) => s + f.totaal_bedrag, 0);
   const open = vanPeriode.filter(f => f.status !== 'betaald').reduce((s, f) => s + f.totaal_bedrag, 0);
+  // Enkel bij een echte kost: verschil tussen de som van de drankbedragen en die kost
+  const echteKost = periode?.echte_kost > 0 ? periode.echte_kost : null;
+  const verschil = echteKost ? afrondingsverschil(vanPeriode.map(f => f.drank_bedrag), echteKost) : null;
 
   const wisselStatus = async factuur => {
     const nieuw = factuur.status === 'betaald' ? 'onbetaald' : 'betaald';
@@ -78,6 +81,15 @@ export const TeamDrankInvoicesScreen = () => {
           f.betaald_op ? new Date(f.betaald_op).toLocaleDateString('nl-BE') : '',
         ]),
     ];
+    if (echteKost) {
+      rijen.push(
+        [],
+        ['Echte kost', '', '', echteKost],
+        ['Som drank op facturen', '', '', vanPeriode.reduce((s, f) => s + f.drank_bedrag, 0)],
+        ['Afrondingsverschil', '', '', verschil],
+        [afrondingsTekst(verschil)],
+      );
+    }
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rijen), 'Facturen');
     XLSX.writeFile(wb, `KSA_Facturen_${(periode?.naam || 'periode').replace(/[^\w-]+/g, '_')}.xlsx`);
@@ -138,6 +150,23 @@ export const TeamDrankInvoicesScreen = () => {
             <p className="text-xl font-black text-red-600">{euro(open)}</p>
           </div>
         </section>
+
+        {echteKost && (
+          <section className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 text-sm space-y-1">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Echte kost</span>
+              <span className="font-semibold">{euro(echteKost)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Afrondingsverschil</span>
+              <span className="font-semibold">
+                {verschil > 0 ? '+' : ''}
+                {euro(verschil)}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500">{afrondingsTekst(verschil)}</p>
+          </section>
+        )}
 
         <button
           onClick={exporteer}
