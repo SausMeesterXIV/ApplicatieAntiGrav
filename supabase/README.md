@@ -31,6 +31,7 @@ Zo weten we altijd hoe de beveiliging en de functies er vóór de migraties uitz
 | `20261001001600_beveiliging.sql` | Niets voor niet-ingelogden, RLS op alle tabellen, strepen/frietbestellingen/meldingen afgeschermd |
 | `20261001001700_startscherm_bollen.sql` | Volgorde van de bollen op het startscherm, per leider |
 | `20261001001800_keepalive.sql` | `ping()` voor de dagelijkse wektaak (project pauzeert niet meer) |
+| `20261001001900_push_webhook.sql` | Elke nieuwe melding naar send-push (vervangt de dashboard-webhook); sleutel in de Vault |
 
 **Na alle migraties**: draai `queries/controleer_migraties.sql` (wijzigt niets). Elke rij is een controle;
 alles met `ok = false` staat bovenaan en moet opgelost worden voor je de app test.
@@ -63,9 +64,9 @@ update public.profiles set is_hoofdleiding = true where email = 'jouw.naam@ksa-a
    ```
    npx supabase functions deploy send-push --project-ref <project-ref>
    ```
-5. **Database Webhook** (Dashboard > Database > Webhooks > Create):
-   - Tabel: `notificaties`, event: **Insert**
-   - Type: **Supabase Edge Functions**, functie: `send-push`, methode POST
+5. **Webhook**: niet via het dashboard maar via migratie `001900` (pg_net). Zet eenmalig de service-sleutel in de Vault:
+   `select vault.create_secret('<service_role key>', 'send_push_service_key');`
+   (Project Settings > API Keys > Legacy > service_role). Zonder sleutel gebeurt er niets.
 6. **Cron** voor de herinneringen (Dashboard > Integrations > Cron > aanzetten).
    Voer daarna het laatste `do $$ … $$`-blok van `20261001000700_push.sql` nog eens uit
    als het de eerste keer een melding "pg_cron niet beschikbaar" gaf.

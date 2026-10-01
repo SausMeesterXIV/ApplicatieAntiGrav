@@ -58,18 +58,8 @@ Als alles online staat, kan je de token op dezelfde pagina intrekken (**Revoke**
 ## Deel 3 — Afwerken (jij, ± 10 minuten)
 
 ### Stap 5. Webhook voor pushmeldingen
-Dashboard > **Database** > **Webhooks** > **Create a new hook**:
-
-| Veld | Waarde |
-|---|---|
-| Naam | `send-push` |
-| Tabel | `notificaties` |
-| Events | **Insert** |
-| Type | **Supabase Edge Functions** |
-| Functie | `send-push`, methode POST |
-| Auth header | "Add auth header with service key" aanzetten (als die optie er staat) |
-
-Opslaan.
+**Niet meer nodig.** De webhook-module van het dashboard bestond niet in dit project; Claude heeft hem
+als migratie gebouwd (`001900_push_webhook.sql`, sleutel versleuteld in de Vault) en getest.
 
 ### Stap 6. Vercel-instellingen
 Vercel > je project > **Settings** > **Environment Variables**:
