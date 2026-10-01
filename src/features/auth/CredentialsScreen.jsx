@@ -196,7 +196,7 @@ export const CredentialsScreen = () => {
                 onChange={e => setPassword(e.target.value)}
                 className="w-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-2xl px-5 py-4 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
                 placeholder="••••••••"
-                minLength={6}
+                minLength={8}
               />
             </div>
 
