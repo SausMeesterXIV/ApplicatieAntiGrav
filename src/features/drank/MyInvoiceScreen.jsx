@@ -9,6 +9,8 @@ import { epcPayload, formatIban } from '../../lib/epc';
 import { showToast } from '../../components/Toast';
 import { ChevronBack } from '../../components/ChevronBack';
 import { euro } from '../../lib/geld';
+import { fetchPosten, isOpen, isTeLaat } from '../../lib/financien';
+import { datumKort } from '../financien/datum';
 
 // Gewone leiding: eigen verbruik in de open periode, eigen facturen en betalen via overschrijving/EPC-QR.
 export const MyInvoiceScreen = () => {
@@ -21,6 +23,7 @@ export const MyInvoiceScreen = () => {
   const [facturen, setFacturen] = useState([]);
   const [betaal, setBetaal] = useState({ naam: '', iban: '', bic: '' });
   const [openFactuur, setOpenFactuur] = useState(null);
+  const [andere, setAndere] = useState([]); // andere betalingen (t-shirts, truien, activiteiten, …)
 
   useEffect(() => {
     if (!currentUser) return;
@@ -33,6 +36,9 @@ export const MyInvoiceScreen = () => {
     db.fetchBetaalgegevens()
       .then(setBetaal)
       .catch(() => {});
+    fetchPosten()
+      .then(rows => setAndere(rows.filter(r => r.soort === 'betaling' && r.user_id === currentUser.id)))
+      .catch(() => setAndere([]));
   }, [currentUser?.id, activePeriod?.id]);
 
   // Nog niet gefactureerd verbruik, per drank
@@ -95,53 +101,48 @@ export const MyInvoiceScreen = () => {
 
                 {openFactuur === f.id && (
                   <div className="px-4 pb-4 space-y-3">
-                    {betaal.iban ? (
-                      <>
-                        <div className="bg-white p-3 rounded-xl mx-auto w-fit">
-                          <QRCode
-                            value={epcPayload({
-                              naam: betaal.naam,
-                              iban: betaal.iban,
-                              bic: betaal.bic,
-                              bedrag: f.totaal_bedrag,
-                              mededeling: f.mededeling,
-                            })}
-                            size={184}
-                          />
-                        </div>
-                        <p className="text-xs text-center text-gray-500">
-                          Scan met je bank-app of Payconiq. Er gaat geen geld via deze app.
-                        </p>
-                        <dl className="text-sm space-y-2">
-                          {/* [label, weergave, te kopiëren tekst] — bedrag zonder €-teken, zoals bank-apps het verwachten */}
-                          {[
-                            ['Begunstigde', betaal.naam, null],
-                            ['Rekening', formatIban(betaal.iban), formatIban(betaal.iban)],
-                            ['Bedrag', euro(f.totaal_bedrag), Number(f.totaal_bedrag).toFixed(2).replace('.', ',')],
-                            ['Mededeling', f.mededeling, f.mededeling],
-                          ].map(([k, v, kopie]) => (
-                            <div key={k} className="flex items-center justify-between gap-2">
-                              <dt className="text-gray-500">{k}</dt>
-                              <dd className="font-semibold font-mono text-right flex items-center gap-1">
-                                {v}
-                                {kopie && (
-                                  <button onClick={() => kopieer(kopie)} className="text-blue-600" title="Kopieer">
-                                    <span className="material-icons-round text-base">content_copy</span>
-                                  </button>
-                                )}
-                              </dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </>
-                    ) : (
-                      <p className="text-sm text-gray-500">
-                        Drankteam heeft nog geen rekeningnummer ingesteld. Mededeling: {f.mededeling}
-                      </p>
-                    )}
+                    <BetaalInfo bedrag={f.totaal_bedrag} mededeling={f.mededeling} betaal={betaal} kopieer={kopieer} />
                     <p className="text-xs text-gray-500">
                       Drankteam zet je factuur op betaald zodra de betaling binnen is.
                     </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </section>
+        )}
+
+        {/* Andere betalingen (t-shirts, truien, activiteiten, …) die nog openstaan */}
+        {andere.some(isOpen) && (
+          <section className="space-y-2">
+            <h2 className="text-sm font-bold text-red-600 uppercase tracking-wider px-1">Andere betalingen</h2>
+            {andere.filter(isOpen).map(b => (
+              <div
+                key={b.id}
+                className="bg-white dark:bg-[#1e2330] rounded-2xl border border-red-200 dark:border-red-900/40"
+              >
+                <button
+                  onClick={() => setOpenFactuur(openFactuur === b.id ? null : b.id)}
+                  className="w-full p-4 flex items-center gap-3 text-left"
+                >
+                  <div className="flex-1">
+                    <p className="font-bold">{b.titel}</p>
+                    <p className={`text-xs ${isTeLaat(b) ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                      {b.vervaldatum
+                        ? `${isTeLaat(b) ? 'Te laat: ' : ''}te betalen voor ${datumKort(b.vervaldatum)}`
+                        : 'Nog niet betaald'}
+                      {b.opmerking ? ` · ${b.opmerking}` : ''}
+                    </p>
+                  </div>
+                  <p className="text-xl font-black">{euro(b.bedrag)}</p>
+                  <span className="material-icons-round text-gray-400">
+                    {openFactuur === b.id ? 'expand_less' : 'expand_more'}
+                  </span>
+                </button>
+                {openFactuur === b.id && (
+                  <div className="px-4 pb-4 space-y-3">
+                    <BetaalInfo bedrag={b.bedrag} mededeling={b.mededeling} betaal={betaal} kopieer={kopieer} />
+                    <p className="text-xs text-gray-500">Financiën zet dit op betaald zodra de betaling binnen is.</p>
                   </div>
                 )}
               </div>
@@ -201,6 +202,30 @@ export const MyInvoiceScreen = () => {
           </div>
         </section>
 
+        {andere.some(b => !isOpen(b)) && (
+          <section>
+            <h2 className="text-lg font-bold mb-2 px-1">Andere betalingen</h2>
+            <div className="bg-white dark:bg-[#1e2330] rounded-2xl border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
+              {andere
+                .filter(b => !isOpen(b))
+                .map(b => (
+                  <div key={b.id} className="p-4 flex items-center gap-3">
+                    <div className="flex-1">
+                      <p className="font-semibold">{b.titel}</p>
+                      <p className="text-xs text-gray-500">
+                        {b.status === 'betaald'
+                          ? `Betaald${b.betaald_op ? ` op ${new Date(b.betaald_op).toLocaleDateString('nl-BE')}` : ''}`
+                          : 'Niets te betalen'}
+                      </p>
+                    </div>
+                    <span className="font-bold">{euro(b.bedrag)}</span>
+                    <span className="material-icons-round text-green-500">check_circle</span>
+                  </div>
+                ))}
+            </div>
+          </section>
+        )}
+
         <section>
           <h2 className="text-lg font-bold mb-2 px-1">Mijn facturen</h2>
           <div className="bg-white dark:bg-[#1e2330] rounded-2xl border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
@@ -229,3 +254,40 @@ export const MyInvoiceScreen = () => {
     </div>
   );
 };
+
+// Bedrag, rekening, gestructureerde mededeling en EPC-QR (zelfde voor drank en andere betalingen)
+const BetaalInfo = ({ bedrag, mededeling, betaal, kopieer }) =>
+  betaal.iban ? (
+    <>
+      <div className="bg-white p-3 rounded-xl mx-auto w-fit">
+        <QRCode
+          value={epcPayload({ naam: betaal.naam, iban: betaal.iban, bic: betaal.bic, bedrag, mededeling })}
+          size={184}
+        />
+      </div>
+      <p className="text-xs text-center text-gray-500">Scan met je bank-app of Payconiq. Er gaat geen geld via deze app.</p>
+      <dl className="text-sm space-y-2">
+        {/* [label, weergave, te kopiëren tekst] — bedrag zonder €-teken, zoals bank-apps het verwachten */}
+        {[
+          ['Begunstigde', betaal.naam, null],
+          ['Rekening', formatIban(betaal.iban), formatIban(betaal.iban)],
+          ['Bedrag', euro(bedrag), Number(bedrag).toFixed(2).replace('.', ',')],
+          ['Mededeling', mededeling, mededeling],
+        ].map(([k, v, kopie]) => (
+          <div key={k} className="flex items-center justify-between gap-2">
+            <dt className="text-gray-500">{k}</dt>
+            <dd className="font-semibold font-mono text-right flex items-center gap-1">
+              {v}
+              {kopie && (
+                <button onClick={() => kopieer(kopie)} className="text-blue-600" title="Kopieer">
+                  <span className="material-icons-round text-base">content_copy</span>
+                </button>
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </>
+  ) : (
+    <p className="text-sm text-gray-500">Er is nog geen rekeningnummer ingesteld. Mededeling: {mededeling}</p>
+  );
