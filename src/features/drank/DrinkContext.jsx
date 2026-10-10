@@ -15,6 +15,10 @@ export function DrinkProvider({ children }) {
   const [billingPeriods, setBillingPeriods] = useState([]);
   const [stockItems, setStockItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Telt op zodra een streep echt in de database toegevoegd of verwijderd is: de ranking ververst daarop
+  // (niet op de lokale lijst, die al verandert vóór de database klaar is).
+  const [strepenVersie, setStrepenVersie] = useState(0);
+  const strepenGewijzigd = () => setStrepenVersie(v => v + 1);
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -39,6 +43,7 @@ export function DrinkProvider({ children }) {
       setBalances(balancesData);
       setStockItems(stockData);
       setActivePeriod(periodsData.find(p => !p.is_closed) || null);
+      strepenGewijzigd();
     } catch (e) {
       console.error('Error loading drink data', e);
     } finally {
@@ -67,6 +72,7 @@ export function DrinkProvider({ children }) {
       try {
         const realId = await db.addConsumptie(streak.userId, streak.drinkId, streak.quantity, streak.periodId, streak.userName);
         setStreaks(prev => prev.map(s => (s.id === streak.tempId ? { ...s, id: realId } : s)));
+        strepenGewijzigd();
       } catch (e) {
         console.error('Offline streep doorsturen mislukt', streak, e);
         const pogingen = (streak.pogingen || 0) + 1;
@@ -145,6 +151,7 @@ export function DrinkProvider({ children }) {
     try {
       const realId = await db.addConsumptie(userId, drinkId.toString(), quantity, activePeriod?.id, userNaam);
       setStreaks(prev => prev.map(s => (s.id === tempId ? { ...s, id: realId } : s)));
+      strepenGewijzigd();
     } catch (error) {
       // Revert optimistic update on failure
       setStreaks(prev => prev.filter(s => s.id !== tempId));
@@ -193,6 +200,7 @@ export function DrinkProvider({ children }) {
 
     try {
       await db.deleteConsumptie(streakId);
+      strepenGewijzigd();
       showToast('Streepje verwijderd', 'success');
     } catch (error) {
       // Revert
@@ -214,6 +222,7 @@ export function DrinkProvider({ children }) {
       value={{
         dranken,
         streaks,
+        strepenVersie,
         balances,
         activePeriod,
         billingPeriods,

@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useDrink } from '../drank/DrinkContext';
 import { useFries } from '../friet/FriesContext';
 import * as db from '../../lib/supabaseService';
-import { SPECIAL_DRINKS } from '../../lib/constants';
+import { SPECIAL_DRINKS, inVasteVolgorde } from '../../lib/constants';
 import { hapticSuccess } from '../../lib/haptics';
 import { showToast } from '../../components/Toast';
 
@@ -243,22 +243,19 @@ const StrepenKaart = ({ positie }) => {
     [streaks, currentUser?.id],
   );
 
-  // Snelle drank (instelbaar) + je twee meest gestreepte andere dranken
+  // Snelle drank (instelbaar, standaard Freedom) + de twee volgende dranken in vaste volgorde.
+  // Vast, zodat er na een streep geen knop van plaats verspringt.
   const [snel, ...anderen] = useMemo(() => {
-    const geldig = dranken.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM);
+    const geldig = inVasteVolgorde(dranken.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM));
     if (!geldig.length) return [];
     // Zelf gekozen snelle drank, anders Freedom
     const snelste =
       geldig.find(d => String(d.id) === String(currentUser?.quickDrinkId)) ||
       geldig.find(d => d.name === SPECIAL_DRINKS.PINT_FREEDOM) ||
       geldig[0];
-    const telling = {};
-    streaks
-      .filter(s => s.userId === currentUser?.id)
-      .forEach(s => (telling[s.drinkId] = (telling[s.drinkId] || 0) + (s.amount || 1)));
-    const rest = geldig.filter(d => d.id !== snelste.id).sort((a, b) => (telling[b.id] || 0) - (telling[a.id] || 0));
+    const rest = geldig.filter(d => d.id !== snelste.id);
     return [snelste, ...rest.slice(0, 2)];
-  }, [dranken, streaks, currentUser?.id, currentUser?.quickDrinkId]);
+  }, [dranken, currentUser?.quickDrinkId]);
 
   // Per ongeluk dubbel tikken (binnen 0,6 s op dezelfde drank) telt als één streep
   const laatsteTik = useRef({});
@@ -326,15 +323,15 @@ const StrepenKaart = ({ positie }) => {
 const RankingKaart = ({ positie }) => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { streaks } = useDrink();
+  const { strepenVersie } = useDrink();
   const [ranking, setRanking] = useState(null);
 
-  // Opnieuw ophalen als er gestreept wordt
+  // Opnieuw ophalen telkens een streep echt in de database staat of eruit verwijderd is
   useEffect(() => {
     db.fetchRanking()
       .then(setRanking)
       .catch(() => setRanking([]));
-  }, [streaks.length]);
+  }, [strepenVersie]);
 
   const top = (ranking || []).slice(0, 3);
   const mijnPlek = (ranking || []).findIndex(r => r.user_id === currentUser?.id);

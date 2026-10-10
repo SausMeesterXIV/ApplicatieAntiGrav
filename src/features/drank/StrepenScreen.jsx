@@ -6,7 +6,7 @@ import { useDrink } from './DrinkContext';
 import { ChevronBack } from '../../components/ChevronBack';
 import { hapticSuccess } from '../../lib/haptics';
 import { StrepenAdminPanel } from './StrepenAdminPanel';
-import { SPECIAL_DRINKS } from '../../lib/constants';
+import { SPECIAL_DRINKS, inVasteVolgorde } from '../../lib/constants';
 import { updateProfile } from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
 import { hasRole } from '../../lib/roleUtils';
@@ -72,9 +72,7 @@ export const StrepenScreen = () => {
   // in het alfabet) klaar zonder dat je hem zag.
   const keuzeDranken = useMemo(
     () =>
-      drinks
-        .filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM)
-        .sort((a, b) => (b.name === SPECIAL_DRINKS.PINT_FREEDOM) - (a.name === SPECIAL_DRINKS.PINT_FREEDOM)),
+      inVasteVolgorde(drinks.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM)),
     [drinks],
   );
 

@@ -5,7 +5,7 @@ import { useDrink } from '../drank/DrinkContext';
 import { supabase } from '../../lib/supabase';
 import * as db from '../../lib/supabaseService';
 import { isHoofdleiding } from '../../lib/roleUtils';
-import { SPECIAL_DRINKS } from '../../lib/constants';
+import { SPECIAL_DRINKS, inVasteVolgorde } from '../../lib/constants';
 import { showToast } from '../../components/Toast';
 import { BottomSheet } from '../../components/Modal';
 import { isHapticEnabled, setHapticEnabled as saveHapticPref, hapticFeedback } from '../../lib/haptics';
@@ -79,7 +79,7 @@ export const SettingsScreen = () => {
   }, []);
 
   const aantalBollen = useMemo(() => bollenVoor(currentUser, gekozenVolgorde(currentUser)).length, [currentUser]);
-  const drankKeuzes = dranken.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM);
+  const drankKeuzes = inVasteVolgorde(dranken.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM));
   const snelleDrank =
     drankKeuzes.find(d => String(d.id) === String(currentUser?.quickDrinkId)) ||
     drankKeuzes.find(d => d.name === SPECIAL_DRINKS.PINT_FREEDOM) ||

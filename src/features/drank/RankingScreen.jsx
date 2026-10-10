@@ -12,7 +12,7 @@ const MEDAILLE = ['bg-yellow-100 text-yellow-700', 'bg-gray-200 text-gray-700', 
 export const RankingScreen = () => {
   const navigate = useNavigate();
   const { users, currentUser } = useAuth();
-  const { activePeriod, streaks } = useDrink();
+  const { activePeriod, strepenVersie } = useDrink();
   const [ranking, setRanking] = useState([]);
   const [laden, setLaden] = useState(true);
 
@@ -22,8 +22,8 @@ export const RankingScreen = () => {
       .then(setRanking)
       .catch(e => console.error('Ranking laden mislukt', e))
       .finally(() => setLaden(false));
-    // opnieuw laden wanneer er gestreept wordt
-  }, [streaks.length, activePeriod?.id]);
+    // opnieuw laden telkens een streep echt toegevoegd of verwijderd is (ook door Drankteam)
+  }, [strepenVersie, activePeriod?.id]);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white">
