@@ -33,15 +33,22 @@ export const PerItem = ({ orders }) => {
   );
 };
 
-// Per persoon: wie bestelde wat, en hoeveel komt op de drankfactuur
+// Per persoon: wie bestelde wat, en hoeveel komt op de drankfactuur (iemand zonder account: apart, bij Drankteam)
 export const PerPersoon = ({ orders }) => {
   const personen = useMemo(() => {
     const map = new Map();
     orders.forEach(o => {
-      const p = map.get(o.userId) || { naam: o.userName || 'Onbekend', items: [], totaal: 0 };
+      const sleutel = o.userId || `extern:${o.externNaam || o.userName}`;
+      const p = map.get(sleutel) || {
+        sleutel,
+        naam: o.userName || 'Onbekend',
+        extern: !o.userId,
+        items: [],
+        totaal: 0,
+      };
       p.items.push(...(o.items || []));
       p.totaal += o.totalPrice || 0;
-      map.set(o.userId, p);
+      map.set(sleutel, p);
     });
     return [...map.values()].sort((a, b) => a.naam.localeCompare(b.naam));
   }, [orders]);
@@ -51,11 +58,16 @@ export const PerPersoon = ({ orders }) => {
       {personen.length === 0 && <p className="p-4 text-center text-sm text-gray-500">Nog geen bestellingen.</p>}
       {personen.map(p => (
         <div
-          key={p.naam}
+          key={p.sleutel}
           className="bg-white dark:bg-[#1e293b] p-3 rounded-xl border border-gray-200 dark:border-gray-800"
         >
           <div className="flex justify-between font-bold">
-            <span>{p.naam}</span>
+            <span>
+              {p.naam}
+              {p.extern && (
+                <span className="ml-1 text-xs font-semibold text-orange-600">(zonder account, niet op factuur)</span>
+              )}
+            </span>
             <span>{euro(p.totaal)}</span>
           </div>
           <p className="text-xs text-gray-500 mt-1">

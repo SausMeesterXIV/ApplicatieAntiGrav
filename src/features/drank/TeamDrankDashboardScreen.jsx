@@ -233,6 +233,13 @@ export const TeamDrankDashboardScreen = () => {
                     iconColorClass="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
                     onClick={() => navigate('/strepen/facturatie/archief')}
                   />
+                  <NavCard
+                    title="Oudleiding"
+                    description="Code om te registreren, wachtwoorden, accounts"
+                    icon="elderly"
+                    iconColorClass="bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400"
+                    onClick={() => navigate('/strepen/oudleiding')}
+                  />
                 </div>
               </div>
             </section>

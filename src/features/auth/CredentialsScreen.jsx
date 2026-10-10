@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { showToast } from '../../components/Toast';
 import { authFout } from '../../lib/authFouten';
+import { naarLoginEmail, gebruikersnaamGeldig, registreerOudleiding } from '../../lib/oudleiding';
 
 export const CredentialsScreen = () => {
   const navigate = useNavigate();
@@ -11,6 +12,9 @@ export const CredentialsScreen = () => {
   const [naam, setNaam] = useState('');
   const [loading, setLoading] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
+  // Oudleiding registreert met gebruikersnaam en de code van Drankteam (geen @ksa-aalter.be-mail)
+  const [isOudleiding, setIsOudleiding] = useState(false);
+  const [code, setCode] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
 
   // Validatie logica
@@ -21,10 +25,17 @@ export const CredentialsScreen = () => {
     const cleanedEmail = emailAddr.trim().toLowerCase();
     return cleanedEmail.endsWith(REQUIRED_DOMAIN) || cleanedEmail === TEST_EMAIL;
   };
+  // Inloggen: leiding met e-mail, oudleiding met gebruikersnaam (zonder @)
+  const isGebruikersnaam = invoer => !invoer.includes('@');
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
       showToast('Vul eerst je email in.', 'error');
+      return;
+    }
+
+    if (isGebruikersnaam(email)) {
+      showToast('Oudleiding: vraag Drankteam om een nieuw wachtwoord.', 'info');
       return;
     }
 
@@ -60,8 +71,8 @@ export const CredentialsScreen = () => {
   const handleLogin = async e => {
     e.preventDefault();
 
-    if (!isValidEmailDomain(email)) {
-      showToast(`Inloggen mislukt: gebruik je ${REQUIRED_DOMAIN} email.`, 'error');
+    if (!isGebruikersnaam(email) && !isValidEmailDomain(email)) {
+      showToast(`Inloggen mislukt: gebruik je ${REQUIRED_DOMAIN} email (oudleiding: je gebruikersnaam).`, 'error');
       return;
     }
 
@@ -69,7 +80,7 @@ export const CredentialsScreen = () => {
     try {
       // Spatie of hoofdletter van het gsm-toetsenbord laten het inloggen anders mislukken
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: naarLoginEmail(email),
         password,
       });
       if (error) throw error;
@@ -101,6 +112,23 @@ export const CredentialsScreen = () => {
       return;
     }
 
+    if (isOudleiding) {
+      if (!gebruikersnaamGeldig(email.trim().toLowerCase())) {
+        showToast('Gebruikersnaam: 3 tot 30 tekens, enkel kleine letters, cijfers, punt, - of _', 'error');
+        return;
+      }
+      setLoading(true);
+      try {
+        await registreerOudleiding({ naam: naam.trim(), gebruikersnaam: email, wachtwoord: password, code });
+        showToast('Welkom terug! Je account voor oudleiding is klaar.', 'success');
+      } catch (error) {
+        showToast(authFout(error, error.message || 'Fout bij het registreren'), 'error');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (!isValidEmailDomain(email)) {
       showToast(`Registreren verplicht met een ${REQUIRED_DOMAIN} email adres.`, 'error');
       return;
@@ -125,7 +153,10 @@ export const CredentialsScreen = () => {
       if (data.session) {
         showToast('Account aangemaakt! Je bent nu ingelogd.', 'success');
       } else {
-        showToast('Account aangemaakt! Bevestig je e-mailadres via de link in je mailbox (kijk ook in spam).', 'success');
+        showToast(
+          'Account aangemaakt! Bevestig je e-mailadres via de link in je mailbox (kijk ook in spam).',
+          'success'
+        );
       }
     } catch (error) {
       showToast(authFout(error, 'Fout bij het registreren'), 'error');
@@ -144,7 +175,11 @@ export const CredentialsScreen = () => {
             </div>
             <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">KSA LeidingsApp</h1>
             <p className="text-gray-500 dark:text-gray-400 font-medium">
-              {isRegister ? 'Maak een nieuw account aan' : 'Log in om verder te gaan'}
+              {isRegister
+                ? isOudleiding
+                  ? 'Account voor oudleiding, met de code van Drankteam'
+                  : 'Maak een nieuw account aan'
+                : 'Log in om verder te gaan'}
             </p>
           </div>
 
@@ -166,23 +201,28 @@ export const CredentialsScreen = () => {
             )}
             <div>
               <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2 ml-1">
-                Email
+                {isRegister ? (isOudleiding ? 'Gebruikersnaam' : 'Email') : 'Email of gebruikersnaam'}
               </label>
               <input
-                type="email"
+                type="text"
+                inputMode="email"
                 required
-                autoComplete="email"
+                autoComplete={isRegister && isOudleiding ? 'username' : 'email'}
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-2xl px-5 py-4 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
-                placeholder="voornaam.achternaam@ksa-aalter.be"
+                placeholder={isRegister && isOudleiding ? 'bv. jan.peeters' : 'voornaam.achternaam@ksa-aalter.be'}
               />
               {/* Visuele hint voor de gebruiker */}
               <p className="mt-2 ml-1 text-[10px] text-gray-400 dark:text-gray-500 italic">
-                * Verplicht met @ksa-aalter.be email adres
+                {isRegister && isOudleiding
+                  ? '* Kleine letters, cijfers, punt, - of _. Hiermee log je later in.'
+                  : isRegister
+                    ? '* Verplicht met @ksa-aalter.be email adres'
+                    : '* Leiding: je @ksa-aalter.be-adres. Oudleiding: je gebruikersnaam.'}
               </p>
             </div>
             <div>
@@ -200,6 +240,25 @@ export const CredentialsScreen = () => {
                 minLength={8}
               />
             </div>
+
+            {isRegister && isOudleiding && (
+              <div>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2 ml-1">
+                  Code van Drankteam
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  value={code}
+                  onChange={e => setCode(e.target.value)}
+                  className="w-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-2xl px-5 py-4 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
+                  placeholder="Vraag de code aan Drankteam"
+                />
+              </div>
+            )}
 
             {!isRegister && (
               <div className="flex items-center justify-between pt-2 px-1">
@@ -247,11 +306,24 @@ export const CredentialsScreen = () => {
 
           <div className="flex flex-col items-center gap-4 pt-4">
             <button
-              onClick={() => setIsRegister(!isRegister)}
+              onClick={() => {
+                setIsRegister(!isRegister);
+                setIsOudleiding(false);
+              }}
               className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
             >
               {isRegister ? '← Terug naar inloggen' : 'Nog geen account? Registreer hier'}
             </button>
+            {isRegister && (
+              <button
+                onClick={() => setIsOudleiding(!isOudleiding)}
+                className="text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors"
+              >
+                {isOudleiding
+                  ? 'Ik ben leiding (met @ksa-aalter.be)'
+                  : 'Oudleiding zonder @ksa-aalter.be? Registreer met een code'}
+              </button>
+            )}
             <button
               onClick={() => navigate('/credits')}
               className="text-xs font-bold text-gray-400 hover:text-blue-500 transition-colors uppercase tracking-widest"

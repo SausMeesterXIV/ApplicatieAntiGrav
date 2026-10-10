@@ -9,7 +9,7 @@ export const RECHTEN = {
   drank_beheren: 'Drank: strepen voor anderen, dranken, voorraad, facturatie, friet-menu',
   berichten_sturen: 'Berichten sturen naar iedereen, groepen of werkgroepen',
   polls_maken: 'Polls maken',
-  financien: 'Financiën (later)',
+  financien: 'Financiën: overzicht van wie wat moet betalen, andere betalingen, Google Sheet',
   winkeltje_beheren: 'Winkeltje (later)',
 };
 
@@ -28,7 +28,11 @@ const HOOFDLEIDING_NAMEN = ['hoofdleiding', 'admin', 'godmode'];
 
 export const isHoofdleiding = user => !!user?.isHoofdleiding;
 
-export const hasRecht = (user, recht) => !!user && (!!user.isHoofdleiding || (user.rechten || []).includes(recht));
+// Oudleiding heeft nooit extra rechten (ook niet als er nog een werkgroep aan hangt)
+export const hasRecht = (user, recht) =>
+  !!user && !user.isOudleiding && (!!user.isHoofdleiding || (user.rechten || []).includes(recht));
+
+export const isOudleiding = user => !!user?.isOudleiding;
 
 // hasAccess(user, 'drank') / ('hoofdleiding') / ('sfeerbeheer') / of rechtstreeks een recht
 export const hasAccess = (user, rolOfRecht) => {
@@ -57,10 +61,16 @@ export function verrijkGebruiker(user, rolData) {
   return {
     ...user,
     isHoofdleiding: isHoofd,
+    isOudleiding: !!user.is_oudleiding,
     groepIds,
     werkgroepIds,
     rechten,
-    roles: [...(isHoofd ? ['Hoofdleiding'] : []), ...groepen.map(g => g.naam), ...werkgroepen.map(w => w.naam)],
+    roles: [
+      ...(isHoofd ? ['Hoofdleiding'] : []),
+      ...(user.is_oudleiding ? ['Oudleiding'] : []),
+      ...groepen.map(g => g.naam),
+      ...werkgroepen.map(w => w.naam),
+    ],
   };
 }
 
@@ -69,5 +79,13 @@ function verrijkUitOudeRollen(user) {
   const rol = String(user.rol || '').toLowerCase();
   const isHoofd = HOOFDLEIDING_NAMEN.includes(rol) || labels.some(l => HOOFDLEIDING_NAMEN.includes(l));
   const rechten = [...new Set([rol, ...labels].map(l => LEGACY_NAAR_RECHT[l]).filter(Boolean))];
-  return { ...user, isHoofdleiding: isHoofd, groepIds: [], werkgroepIds: [], rechten, roles: user.roles || [] };
+  return {
+    ...user,
+    isHoofdleiding: isHoofd,
+    isOudleiding: !!user.is_oudleiding,
+    groepIds: [],
+    werkgroepIds: [],
+    rechten,
+    roles: user.roles || [],
+  };
 }

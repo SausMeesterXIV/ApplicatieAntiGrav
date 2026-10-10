@@ -1,12 +1,13 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../features/auth/AuthContext';
 
 // Hoofdmenu: op gsm een balk onderaan (enkel iconen), op een computer een zijbalk links (met namen).
 const NAV_ITEMS = [
   { id: 'home', icon: 'home', label: 'Start' },
   { id: 'strepen', icon: 'sports_bar', label: 'Strepen' },
   { id: 'notificaties', icon: 'notifications', label: 'Meldingen', badge: true },
-  { id: 'agenda', icon: 'calendar_today', label: 'Agenda' },
+  { id: 'agenda', icon: 'calendar_today', label: 'Agenda', enkelLeiding: true },
   { id: 'settings', icon: 'settings', label: 'Instellingen' },
 ];
 
@@ -16,11 +17,14 @@ const useMenu = notifications => {
   const activeTab = location.pathname.split('/')[1] || 'home';
   const hasUnread = React.useMemo(() => notifications.some(n => !n.isRead), [notifications]);
   const ga = item => navigate(`/${item.id === 'home' ? '' : item.id}`);
-  return { activeTab, hasUnread, ga };
+  // Oudleiding: geen agenda
+  const { currentUser } = useAuth();
+  const items = NAV_ITEMS.filter(i => !(i.enkelLeiding && currentUser?.isOudleiding));
+  return { activeTab, hasUnread, ga, items };
 };
 
 export const BottomNav = ({ notifications = [] }) => {
-  const { activeTab, hasUnread, ga } = useMenu(notifications);
+  const { activeTab, hasUnread, ga, items } = useMenu(notifications);
 
   return (
     <nav
@@ -29,7 +33,7 @@ export const BottomNav = ({ notifications = [] }) => {
       aria-label="Hoofdmenu"
     >
       <div className="flex justify-between items-center">
-        {NAV_ITEMS.map(item => {
+        {items.map(item => {
           const actief = activeTab === item.id;
           return (
             <button
@@ -55,7 +59,7 @@ export const BottomNav = ({ notifications = [] }) => {
 };
 
 export const Zijbalk = ({ notifications = [] }) => {
-  const { activeTab, hasUnread, ga } = useMenu(notifications);
+  const { activeTab, hasUnread, ga, items } = useMenu(notifications);
 
   return (
     <nav aria-label="Hoofdmenu" className="h-full flex flex-col gap-8 px-4 py-8">
@@ -66,7 +70,7 @@ export const Zijbalk = ({ notifications = [] }) => {
         <span className="block text-2xl font-extrabold tracking-tight text-inkt dark:text-white">ksa aalter</span>
       </button>
       <ul className="space-y-1">
-        {NAV_ITEMS.map(item => {
+        {items.map(item => {
           const actief = activeTab === item.id;
           return (
             <li key={item.id}>

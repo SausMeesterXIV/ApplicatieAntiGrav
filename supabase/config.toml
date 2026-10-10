@@ -6,3 +6,7 @@ content_path = "./supabase/templates/confirmation.html"
 [auth.email.template.recovery]
 subject = "Wachtwoord herstellen voor de KSA-app"
 content_path = "./supabase/templates/recovery.html"
+
+# Oudleiding registreert vóór het inloggen: de functie controleert zelf de code en de rechten
+[functions.oudleiding]
+verify_jwt = false

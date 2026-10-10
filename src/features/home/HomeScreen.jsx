@@ -25,9 +25,11 @@ const middernacht = d => {
 
 // Rol onder "Hoi …": hoofdleiding, anders je eerste werkgroep, anders gewoon leiding
 const rolLabel = user =>
-  isHoofdleiding(user)
-    ? 'hoofdleiding'
-    : (user?.roles || []).find(r => r !== 'Hoofdleiding')?.toLowerCase() || 'leiding';
+  user?.isOudleiding
+    ? 'oudleiding'
+    : isHoofdleiding(user)
+      ? 'hoofdleiding'
+      : (user?.roles || []).find(r => r !== 'Hoofdleiding')?.toLowerCase() || 'leiding';
 
 export const HomeScreen = () => {
   const navigate = useNavigate();
@@ -111,33 +113,36 @@ export const HomeScreen = () => {
           <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:gap-8 lg:items-start">
             <HomeCarrousel />
 
-            <div className="space-y-6">
-              <section className="space-y-3" aria-labelledby="eerstvolgend">
-                <div className="flex items-baseline justify-between">
-                  <h2 id="eerstvolgend" className="text-lg font-bold">
-                    Eerstvolgend
-                  </h2>
-                  <button type="button" onClick={() => navigate('/agenda')} className="text-sm font-semibold">
-                    Hele agenda
-                  </button>
-                </div>
-                {eerstvolgend.length === 0 ? (
-                  <p className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d px-4 py-5 text-sm text-gray-500 dark:text-gray-400">
-                    Niets gepland. Zet iets in de agenda met de + op het agendascherm.
-                  </p>
-                ) : (
-                  <ul className="space-y-3">
-                    {eerstvolgend.map(e => (
-                      <li key={e.id}>
-                        <EventRij event={e} onClick={() => navigate('/agenda')} />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
+            {/* Agenda en aftelling: enkel voor leiding */}
+            {!currentUser?.isOudleiding && (
+              <div className="space-y-6">
+                <section className="space-y-3" aria-labelledby="eerstvolgend">
+                  <div className="flex items-baseline justify-between">
+                    <h2 id="eerstvolgend" className="text-lg font-bold">
+                      Eerstvolgend
+                    </h2>
+                    <button type="button" onClick={() => navigate('/agenda')} className="text-sm font-semibold">
+                      Hele agenda
+                    </button>
+                  </div>
+                  {eerstvolgend.length === 0 ? (
+                    <p className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d px-4 py-5 text-sm text-gray-500 dark:text-gray-400">
+                      Niets gepland. Zet iets in de agenda met de + op het agendascherm.
+                    </p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {eerstvolgend.map(e => (
+                        <li key={e.id}>
+                          <EventRij event={e} onClick={() => navigate('/agenda')} />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
 
-              {aftelling && <KampAftelling aftelling={aftelling} />}
-            </div>
+                {aftelling && <KampAftelling aftelling={aftelling} />}
+              </div>
+            )}
           </div>
         )}
       </main>

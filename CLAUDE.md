@@ -4,10 +4,12 @@
 Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter. Leiding gebruikt ze om drank te strepen en af te rekenen, friet te bestellen, de agenda van grote evenementen en leidingsvergaderingen te volgen, berichten te ontvangen en te stemmen in polls.
 
 ## Gebruikers, groepen en rollen
-- Alleen leiding heeft een account.
+- Leiding heeft een account, en **oudleiding** ook (zie hieronder).
 - **Registratie**: iedereen met de link kan registreren met e-mail + wachtwoord, maar **alleen met een e-mailadres dat eindigt op `@ksa-aalter.be`**. Controleer dit **server-side** (Supabase auth hook of database-trigger), niet enkel in de frontend.
 - Iemand kan **meerdere rollen tegelijk** hebben.
 - **Groepen** (vaste lijst, van jong naar oud): Pagadders, Kabouters, Sloebers, Tieners, Jim, Sim, Kim.
+- **Precies één groep per leider**, opnieuw te kiezen elk werkjaar: bij de eerste keer in de app en vanaf **1 september** vraagt de app je groep (scherm "Wat is je groep?"). Daarna past enkel de hoofdleiding ze nog aan. Werkgroepen: geen, één of meer.
+- **Oudleiding**: heeft geen `@ksa-aalter.be`-mail meer en logt in met **gebruikersnaam + wachtwoord** (intern `<gebruikersnaam>@oudleiding.ksa-aalter.be`, er wordt nooit naar gemaild). Ze registreren zelf met een **code die Drankteam instelt** (edge function `oudleiding`; na 10 foute codes een uur geblokkeerd). Ze zien enkel: strepen (ook de ranking, samen met leiding), hun drankrekening (betalen met QR) en friet. Geen agenda, verslagen, polls, foto's of meldingen aan alle leiding. Wachtwoord vergeten: Drankteam stelt een nieuw in. Leiding die stopt, zet de hoofdleiding op "Oudleiding" (account en historiek blijven).
 - **Werkgroepen**: vrij in te stellen door de hoofdleiding in de app, bv. Drankteam of Sfeerbeheer.
 - **Hoofdleiding** is ook admin.
 - **Alleen hoofdleiding** kent groepen en werkgroepen toe aan leiding.
@@ -26,8 +28,15 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 | Zelf strepen zetten | Alle leiding (voor zichzelf); eigen streep verwijderen tot 1 uur na het zetten |
 | Strepen zetten en verwijderen voor anderen | Drankteam (op elk moment, via hun dashboard) |
 | Dranken, prijzen, voorraad, facturatie, archief | Drankteam |
+| Drankfactuur op betaald zetten | Drankteam + Financiën + hoofdleiding |
+| Financiën: overzicht van iedereen, andere betalingen, herinneringen, Google Sheet | Werkgroep met recht Financiën + hoofdleiding |
+| Eigen openstaande bedragen en voorlopige drankrekening zien | Alle leiding en oudleiding (enkel de eigen) |
+| Strepen, ranking, friet bestellen | Alle leiding en oudleiding |
+| Oudleiding: registratiecode, nieuw wachtwoord, account aan/uit | Drankteam + hoofdleiding |
+| Iemand op oudleiding zetten | Hoofdleiding |
+| Friet zonder account op betaald zetten | Drankteam |
 | Frietbestelronde openen/afsluiten | Alle leiding |
-| Friet bestellen voor een ander | Alle leiding (die persoon krijgt een melding) |
+| Friet bestellen voor een ander | Alle leiding (die persoon krijgt een melding); voor iemand zonder account: naam typen (Drankteam krijgt een melding) |
 | Friet-menu en -prijzen beheren | Hoofdleiding + Drankteam |
 | Berichten sturen | Hoofdleiding + rollen die de hoofdleiding daarvoor aanduidt |
 | Nudges sturen | Alle leiding |
@@ -68,7 +77,27 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - **Archief**: afgesloten periodes terugbekijken.
 - **Streaks**: een **ranking** van wie het meest streepte in de huidige periode.
 - **Gewone leiding ziet**: eigen verbruik, eigen openstaande factuur en eigen historiek (eerdere facturen, betaald of niet betaald).
-- **Betalen**: toon op de factuur het bedrag, het rekeningnummer en een gestructureerde mededeling, plus een **EPC-QR-code** (SEPA-overschrijvings-QR) die je scant met je bank-app of Payconiq. Er gaat **geen geld via de app** en er is geen betaalprovider. De app bewaart nooit bank- of kaartgegevens van leiding, enkel de rekening van KSA. Drankteam duidt aan wanneer een factuur betaald is, met de hand of door een **CSV-export van het bankuittreksel** in te lezen (koppeling via gestructureerde mededeling en bedrag; het bestand wordt niet opgeslagen).
+- **Betalen**: toon op de factuur het bedrag, het rekeningnummer en een gestructureerde mededeling, plus een **EPC-QR-code** (SEPA-overschrijvings-QR) die je scant met je bank-app of Payconiq. Er gaat **geen geld via de app** en er is geen betaalprovider. De app bewaart nooit bank- of kaartgegevens van leiding, enkel de rekening van KSA. Drankteam (of Financiën) duidt aan wanneer een factuur betaald is, met de hand of door een **CSV-export van het bankuittreksel** in te lezen (koppeling via gestructureerde mededeling en bedrag; het bestand wordt niet opgeslagen).
+
+### Financiën — nieuw
+- **Overzichtstab** (recht `financien` + hoofdleiding): wie moet nog wat betalen en wat is al binnen. De formele boekhouding blijft in aparte Excels in de Drive.
+- Twee soorten bedragen per leider, samen in één overzicht (`financien_overzicht()`):
+  - **Drankfacturen**: rechtstreeks die van Drankteam (bij het afsluiten van een periode). Bedragen pas je niet aan in Financiën.
+  - **Andere betalingen** (t-shirts, truien, activiteiten, …): één betaling voor een selectie leiding (alle leiding, een groep, een werkgroep of gekozen personen) met hetzelfde bedrag, per leider aan te passen. Optionele deadline ("te betalen voor"); te laat = rood.
+- Elke leider krijgt per bedrag een **eigen gestructureerde mededeling** (andere betalingen: nummerreeks vanaf 5 000 000 000, botst nooit met de drankfacturen) en **dezelfde EPC-QR** naar de KSA-rekening.
+- Geen gedeeltelijke betalingen: betaald of niet betaald (met datum en opmerking).
+- **Herinneringen**: met één knop een melding (en push) naar wie nog niet betaalde, per betaling of per leider; optioneel ook bij het aanmaken.
+- **Bankuittreksel**: het CSV-inlezen werkt voor drankfacturen én andere betalingen.
+- **Mijn rekening** (alle leiding): eigen open drankfacturen, eigen andere betalingen met QR en deadline, en de voorlopige rekening van de lopende drankperiode.
+- **Google Sheet, in twee richtingen** (edge function `financien-sheet`, logica in `supabase/functions/_shared/financienSheet.js`, getest in `tests/financienSheet.test.js`):
+  - tabblad *Betalingen*: één rij per bedrag per leider; aanpasbaar in de Sheet: Betaald, Betaald op, Opmerking en het bedrag van andere betalingen. Een nieuwe rij (Omschrijving + Leider + Bedrag) wordt een nieuwe andere betaling.
+  - tabblad *Overzicht*: per leider wat openstaat (enkel lezen).
+  - tabblad *Strepen*: aantal strepen per leider per drank in de lopende periode, met totalen per drank en de prijs per streep uit de app (enkel lezen). Elke streep (erbij of eraf) en elke prijswijziging staat er binnen enkele seconden; bij het afsluiten van een periode begint het opnieuw. Zo kan Financiën/Drankteam de prijs per streep ook in de Sheet berekenen.
+  - app → Sheet: binnen enkele seconden (databasetrigger + pg_net). Sheet → app: elke 30 seconden (pg_cron) of met "Nu synchroniseren".
+  - wijzigingen worden herkend door te vergelijken met de vorige synchronisatie; past iemand dezelfde cel tegelijk in de app en in de Sheet aan, dan wint de app. Verwijderen gebeurt enkel in de app.
+  - **Noodplan (terug naar de Sheet zoals vroeger)**: schakelaar "Koppeling met de app" AAN/UIT in de Sheet zelf (tabblad Uitleg, cel B2) én in de app. Op UIT raakt de app het rekenblad niet meer aan; werkt ook als de app plat ligt. Terug op AAN: eerst een reservekopie, dan neemt de app de aanpassingen uit de Sheet over (betaald, datums, opmerkingen, bedragen, nieuwe rijen) en zet ze terug wat de app beheert (verwijderde rijen, grijze kolommen, Overzicht, Strepen).
+  - **Reservekopie**: elke dag een losse, niet-gekoppelde kopie van het rekenblad in dezelfde Drive-map, 14 dagen bewaard.
+  - **Veiligheid**: zijn de kolommen van Betalingen veranderd (bv. een kolom ingevoegd), dan weigert de app te synchroniseren tot ze terug kloppen.
 
 ### Friet — behouden
 - Werkt met **bestelrondes**: iedereen kan een ronde openen, leiding voegt bestellingen toe, en iedereen kan de ronde afsluiten.
@@ -76,6 +105,7 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - **Prijzen**: de prijs van een bestelling komt altijd uit het menu (server-side afgedwongen). Enkel hoofdleiding en Drankteam passen prijzen aan, ook van bestellingen achteraf.
 - **Bestellen voor een ander**: elke leider mag voor een ander bestellen. Die persoon krijgt altijd een melding (en push) met wie besteld heeft, wat en voor welk bedrag.
 - Het bedrag komt **op de drankfactuur** van de leider.
+- **Iemand zonder account** (lief, vriend, oudleiding zonder app): bij "Bestel in de naam van iemand anders" typ je de naam. Dat komt op **geen drankfactuur**: Drankteam krijgt een melding en houdt in Friet beheer > "Zonder account" bij wie al betaald heeft.
 - **Kasticket**: foto bij het afsluiten; enkel zichtbaar voor leiding (privé-opslag, tijdelijke links).
 - Na het afsluiten volgt een overzicht per item (totalen voor de frituur) en per persoon.
 
@@ -101,9 +131,9 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - **Registratie-uitzondering**: naast `@ksa-aalter.be` mag enkel het testaccount `it.takes.jaguarke@gmail.com` registreren (ook server-side zo afdwingen).
 - **Streaks-ranking**: zichtbaar voor alle leiding.
 - **Geen vaste rollen in de code**: werkgroepen (bv. Drankteam, Sfeerbeheer) maakt de hoofdleiding zelf aan in de app. Enkel de 7 groepen en de hoofdleiding zijn vast.
-- **Later**: Winkeltje en Financieel dashboard blijven in de code staan, maar vallen buiten de MVP.
+- **Later**: Winkeltje blijft in de code staan, maar valt buiten de MVP.
 - **Behouden**: Friet-vergelijking en `CreditsScreen`.
-- **Weggelaten**: Google Sheets-sync (Excel-export volstaat).
+- **Google Sheets**: enkel voor Financiën, in twee richtingen (zie Financiën). Voor drank blijft de Excel-export.
 - **Alles gratis**: geen betaalde diensten. Pushmeldingen via standaard Web Push (VAPID) en de gratis tier van Supabase, zonder Firebase.
 - **Enkel een webapp (PWA)**: geen native app, geen Capacitor. Trillen gebeurt via de Vibration API van de browser.
 - **Hosting**: Vercel. Vercel Analytics en Speed Insights blijven.

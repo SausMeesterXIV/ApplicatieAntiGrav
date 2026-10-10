@@ -19,14 +19,16 @@ export const NewMessageScreen = () => {
   const teams = useMemo(() => werkgroepen.map(w => ({ id: w.id, label: w.naam })), [werkgroepen]);
 
   const anderen = users.filter(u => u.actief && u.id !== currentUser?.id);
+  const leiding = anderen.filter(u => !u.isOudleiding);
   // null = niet op voorhand te tellen (open facturen van anderen zijn niet zichtbaar voor iedereen)
   const recipientCount = useMemo(() => {
-    if (targetType === 'all') return anderen.length;
+    if (targetType === 'all') return leiding.length;
+    if (targetType === 'oudleiding') return anderen.length - leiding.length;
     if (targetType === 'individual') return selectedUsers.length;
     if (targetType === 'group') return selectedTarget ? anderen.filter(u => u.groepIds.map(String).includes(selectedTarget)).length : 0;
     if (targetType === 'team') return selectedTarget ? anderen.filter(u => u.werkgroepIds.includes(selectedTarget)).length : 0;
     return null;
-  }, [targetType, selectedTarget, selectedUsers, anderen]);
+  }, [targetType, selectedTarget, selectedUsers, anderen, leiding]);
 
   const [isOfficial, setIsOfficial] = useState(true);
   const [subject, setSubject] = useState('');
@@ -53,7 +55,14 @@ export const NewMessageScreen = () => {
 
     setIsSending(true);
     try {
-      const doel = { all: 'alle', group: 'groep', team: 'werkgroep', individual: 'personen', balance: 'open_factuur' }[targetType];
+      const doel = {
+        all: 'alle',
+        group: 'groep',
+        team: 'werkgroep',
+        individual: 'personen',
+        balance: 'open_factuur',
+        oudleiding: 'oudleiding',
+      }[targetType];
       const aantal = await db.stuurBericht({
         doel,
         doelId: selectedTarget || null,
@@ -98,6 +107,7 @@ export const NewMessageScreen = () => {
               { id: 'team', label: 'Werkgroep', icon: 'engineering' },
               { id: 'individual', label: 'Personen', icon: 'person' },
               { id: 'balance', label: 'Open factuur', icon: 'payments' },
+              { id: 'oudleiding', label: 'Oudleiding', icon: 'elderly' },
             ].map(t => (
               <button
                 key={t.id}

@@ -605,6 +605,9 @@ export async function fetchFrituurBestellingen(sessieId) {
     status: b.status, // Directe cast naar DB type
     periodId: b.period_id || undefined,
     factuurId: b.factuur_id || null,
+    // Friet voor iemand zonder account: geen userId, enkel een naam (komt op geen drankfactuur)
+    externNaam: b.extern_naam || null,
+    externBetaald: !!b.extern_betaald,
   }));
 }
 

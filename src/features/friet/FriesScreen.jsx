@@ -201,6 +201,31 @@ export const FriesScreen = () => {
           />
         </header>
         <main className="flex-1 overflow-y-auto p-4 space-y-2">
+          {/* Iemand zonder account (lief, vriend, oudleiding zonder app): naam typen */}
+          {userSearchQuery.trim().length >= 2 && (
+            <button
+              type="button"
+              onClick={() => selectUserForOrder({ extern: true, naam: userSearchQuery.trim() })}
+              className="w-full flex items-center gap-3 p-3 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-left"
+            >
+              <span className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
+                <span className="material-icons-round text-orange-600">person_add</span>
+              </span>
+              <span>
+                <span className="block font-bold text-gray-900 dark:text-white">
+                  Bestel voor „{userSearchQuery.trim()}" (zonder account)
+                </span>
+                <span className="block text-xs text-gray-500">
+                  Komt op geen drankfactuur. Drankteam krijgt een melding en regelt de betaling.
+                </span>
+              </span>
+            </button>
+          )}
+          {userSearchQuery.trim().length < 2 && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 px-1 pb-1">
+              Iemand zonder account? Typ de naam en kies „zonder account".
+            </p>
+          )}
           {filteredUsers.map(user => (
             <div
               key={user.id}
@@ -242,7 +267,10 @@ export const FriesScreen = () => {
               {orderingFor && (
                 <div className="flex items-center gap-1 text-orange-600 dark:text-orange-300">
                   <span className="material-icons-round text-xs">person</span>
-                  <span className="text-xs font-bold uppercase">Voor: {orderingFor.naam}</span>
+                  <span className="text-xs font-bold uppercase">
+                    Voor: {orderingFor.naam}
+                    {orderingFor.extern && ' (zonder account)'}
+                  </span>
                 </div>
               )}
             </div>

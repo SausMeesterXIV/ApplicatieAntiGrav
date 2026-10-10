@@ -6,6 +6,7 @@ import * as db from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
 import { Kasticket } from './Kasticket';
 import { euro } from '../../lib/geld';
+import { ExternFriet } from './ExternFriet';
 
 export const TeamDrankFriesHistoryScreen = () => {
   const navigate = useNavigate();
@@ -120,6 +121,8 @@ export const TeamDrankFriesHistoryScreen = () => {
       </header>
 
       <main className="p-4 space-y-4">
+        <ExternFriet />
+
         {sessions.length === 0 ? (
           <div className="text-center py-20 text-gray-400">Nog geen frituursessies gevonden.</div>
         ) : (
@@ -234,7 +237,12 @@ export const TeamDrankFriesHistoryScreen = () => {
                             className="flex justify-between items-start bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800"
                           >
                             <div className="flex-1">
-                              <p className="font-bold text-gray-900 dark:text-white text-sm">{order.user_name}</p>
+                              <p className="font-bold text-gray-900 dark:text-white text-sm">
+                                {order.user_name}
+                                {order.extern_naam && (
+                                  <span className="ml-1 text-xs font-semibold text-orange-600">(zonder account)</span>
+                                )}
+                              </p>
                               <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
                                 {(order.items || []).map(i => `${i.quantity}x ${i.name}`).join(', ')}
                               </p>

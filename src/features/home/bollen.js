@@ -1,10 +1,12 @@
 // Bollen bovenaan het startscherm (zoals Instagram-stories).
-// Vaste bollen ziet iedereen; rol-bollen enkel wie dat recht heeft (hoofdleiding ziet alles).
+// Vaste bollen ziet alle leiding (oudleiding enkel Friet); rol-bollen enkel wie dat recht heeft (hoofdleiding ziet alles).
 // De volgorde kiest elke leider zelf (Instellingen > Volgorde bollen); bewaard op het profiel.
 import { hasRecht, isHoofdleiding } from '../../lib/roleUtils';
 import { updateProfile } from '../../lib/supabaseService';
 
 const iedereen = () => true;
+// Leidingszaken: niet voor oudleiding (die ziet enkel friet, strepen en de eigen rekening)
+const leiding = user => !user?.isOudleiding;
 const metRecht = recht => user => hasRecht(user, recht);
 
 // kleur: Tailwind-klassen voor de bol (licht en donker). Rol-bollen zijn donker met witte letters.
@@ -25,7 +27,7 @@ export const BOLLEN = [
     label: 'Agenda',
     route: '/agenda',
     kleur: 'bg-bol-agenda dark:bg-bol-agenda-d',
-    zichtbaar: iedereen,
+    zichtbaar: leiding,
   },
   {
     id: 'polls',
@@ -33,7 +35,7 @@ export const BOLLEN = [
     label: 'Polls',
     route: '/polls',
     kleur: 'bg-bol-polls dark:bg-bol-polls-d',
-    zichtbaar: iedereen,
+    zichtbaar: leiding,
   },
   {
     id: 'verslagen',
@@ -41,7 +43,7 @@ export const BOLLEN = [
     label: 'Verslagen',
     route: '/verslagen',
     kleur: 'bg-bol-verslagen dark:bg-bol-verslagen-d',
-    zichtbaar: iedereen,
+    zichtbaar: leiding,
   },
   {
     id: 'fotos',
@@ -49,7 +51,7 @@ export const BOLLEN = [
     label: "Foto's",
     route: '/fotos',
     kleur: 'bg-bol-fotos dark:bg-bol-fotos-d',
-    zichtbaar: iedereen,
+    zichtbaar: leiding,
   },
   {
     id: 'teamdrank',

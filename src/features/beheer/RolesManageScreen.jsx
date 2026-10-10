@@ -7,6 +7,7 @@ import { BottomSheet } from '../../components/Modal';
 import { UserAvatar } from '../../components/UserAvatar';
 import { ChevronBack } from '../../components/ChevronBack';
 import { RECHTEN } from '../../lib/roleUtils';
+import { groepWerkjaar, gebruikersnaamVan } from '../../lib/oudleiding';
 
 // Enkel hoofdleiding komt hier (RoleRoute in App.jsx); de database dwingt hetzelfde af via RLS.
 export const RolesManageScreen = () => {
@@ -49,7 +50,13 @@ export const RolesManageScreen = () => {
         )}
 
         {rollenGemigreerd && tab === 'leiding' && (
-          <LeidingTab users={users} currentUser={currentUser} groepen={groepen} werkgroepen={werkgroepen} onSaved={refreshRoles} />
+          <LeidingTab
+            users={users}
+            currentUser={currentUser}
+            groepen={groepen}
+            werkgroepen={werkgroepen}
+            onSaved={refreshRoles}
+          />
         )}
         {rollenGemigreerd && tab === 'werkgroepen' && (
           <WerkgroepenTab users={users} werkgroepen={werkgroepen} onSaved={refreshRoles} />
@@ -138,7 +145,7 @@ const LeidingTab = ({ users, currentUser, groepen, werkgroepen, onSaved }) => {
                 {!u.actief && <span className="ml-2 text-xs font-bold text-red-500">inactief</span>}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                {u.roles.length ? u.roles.join(' · ') : 'Nog geen groep of werkgroep'}
+                {u.roles.length ? u.roles.join(' · ') : 'Nog geen groep'}
               </p>
             </div>
             <span className="material-icons-round text-gray-300">chevron_right</span>
@@ -163,18 +170,29 @@ const LeidingTab = ({ users, currentUser, groepen, werkgroepen, onSaved }) => {
 };
 
 const LeiderBewerken = ({ leider, isZelf, groepen, werkgroepen, onClose, onSaved }) => {
-  const [groepIds, setGroepIds] = useState(leider.groepIds);
+  // Leiding zit in precies één groep; oudleiding in geen enkele (en heeft geen werkgroepen of rechten)
+  const [groepId, setGroepId] = useState(leider.groepIds[0] ?? null);
   const [werkgroepIds, setWerkgroepIds] = useState(leider.werkgroepIds);
   const [hoofdleiding, setHoofdleiding] = useState(leider.isHoofdleiding);
+  const [oudleiding, setOudleiding] = useState(leider.isOudleiding);
   const [actief, setActief] = useState(leider.actief);
   const [bezig, setBezig] = useState(false);
+  const gebruikersnaam = gebruikersnaamVan(leider.email);
 
   const opslaan = async () => {
+    if (!oudleiding && !groepId && leider.rol !== 'godmode') return showToast('Kies de groep van deze leider', 'warning');
     setBezig(true);
     try {
-      await db.setProfielGroepen(leider.id, groepIds);
-      await db.setProfielWerkgroepen(leider.id, werkgroepIds);
-      if (hoofdleiding !== leider.isHoofdleiding) await db.setHoofdleiding(leider.id, hoofdleiding);
+      const groepVeranderd = groepId !== (leider.groepIds[0] ?? null) || leider.groepIds.length !== 1;
+      await db.setProfielGroepen(leider.id, oudleiding || !groepId ? [] : [groepId]);
+      await db.setProfielWerkgroepen(leider.id, oudleiding ? [] : werkgroepIds);
+      if (oudleiding !== leider.isOudleiding) {
+        await db.updateProfile(leider.id, { is_oudleiding: oudleiding, is_hoofdleiding: false });
+      } else if (hoofdleiding !== leider.isHoofdleiding) {
+        await db.setHoofdleiding(leider.id, hoofdleiding);
+      }
+      // Groep door de hoofdleiding gekozen: de leider moet ze dit werkjaar niet meer zelf kiezen
+      if (!oudleiding && groepId && groepVeranderd) await db.updateProfile(leider.id, { groep_werkjaar: groepWerkjaar() });
       if (actief !== leider.actief) await db.setProfielActief(leider.id, actief);
       await onSaved();
       showToast(`${leider.naam} bijgewerkt`, 'success');
@@ -188,49 +206,81 @@ const LeiderBewerken = ({ leider, isZelf, groepen, werkgroepen, onClose, onSaved
   };
 
   return (
-    <BottomSheet isOpen onClose={onClose} title={leider.naam} subtitle={leider.email}>
+    <BottomSheet
+      isOpen
+      onClose={onClose}
+      title={leider.naam}
+      subtitle={gebruikersnaam ? `Gebruikersnaam: ${gebruikersnaam}` : leider.email}
+    >
       <div className="space-y-5 pb-4">
-        <section>
-          <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Groep</h3>
-          <div className="flex flex-wrap gap-2">
-            {groepen.map(g => (
-              <Chip key={g.id} actief={groepIds.includes(g.id)} onClick={() => setGroepIds(toggle(groepIds, g.id))}>
-                {g.naam}
-              </Chip>
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Werkgroepen</h3>
-          {werkgroepen.length === 0 ? (
-            <p className="text-sm text-gray-500">Nog geen werkgroepen. Maak ze aan in het tabblad Werkgroepen.</p>
-          ) : (
+        {!oudleiding && (
+          <section>
+            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Groep (precies één)</h3>
             <div className="flex flex-wrap gap-2">
-              {werkgroepen.map(w => (
-                <Chip
-                  key={w.id}
-                  actief={werkgroepIds.includes(w.id)}
-                  onClick={() => setWerkgroepIds(toggle(werkgroepIds, w.id))}
-                >
-                  {w.naam}
+              {groepen.map(g => (
+                <Chip key={g.id} actief={groepId === g.id} onClick={() => setGroepId(g.id)}>
+                  {g.naam}
                 </Chip>
               ))}
             </div>
-          )}
-        </section>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Elke leider kiest zelf opnieuw bij het begin van het werkjaar (1 september).
+            </p>
+          </section>
+        )}
+
+        {!oudleiding && (
+          <section>
+            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Werkgroepen</h3>
+            {werkgroepen.length === 0 ? (
+              <p className="text-sm text-gray-500">Nog geen werkgroepen. Maak ze aan in het tabblad Werkgroepen.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {werkgroepen.map(w => (
+                  <Chip
+                    key={w.id}
+                    actief={werkgroepIds.includes(w.id)}
+                    onClick={() => setWerkgroepIds(toggle(werkgroepIds, w.id))}
+                  >
+                    {w.naam}
+                  </Chip>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="divide-y divide-gray-100 dark:divide-gray-800">
           <Schakelaar
-            label="Hoofdleiding"
-            uitleg={isZelf ? 'Je kan jezelf geen hoofdleiding afnemen.' : 'Hoofdleiding is admin en heeft alle rechten.'}
-            aan={hoofdleiding}
-            onChange={setHoofdleiding}
+            label="Oudleiding"
+            uitleg={
+              isZelf
+                ? 'Je kan jezelf niet op oudleiding zetten.'
+                : 'Ziet enkel strepen, de eigen drankrekening en friet. Geen groep, werkgroepen of hoofdleiding.'
+            }
+            aan={oudleiding}
+            onChange={aan => {
+              setOudleiding(aan);
+              if (aan) setHoofdleiding(false);
+            }}
             disabled={isZelf}
           />
+          {!oudleiding && (
+            <Schakelaar
+              label="Hoofdleiding"
+              uitleg={
+                isZelf ? 'Je kan jezelf geen hoofdleiding afnemen.' : 'Hoofdleiding is admin en heeft alle rechten.'
+              }
+              aan={hoofdleiding}
+              onChange={setHoofdleiding}
+              disabled={isZelf}
+            />
+          )}
           <Schakelaar
             label="Actief account"
-            uitleg={isZelf ? 'Je kan je eigen account niet deactiveren.' : 'Inactieve accounts kunnen niet meer inloggen.'}
+            uitleg={
+              isZelf ? 'Je kan je eigen account niet deactiveren.' : 'Inactieve accounts kunnen niet meer inloggen.'
+            }
             aan={actief}
             onChange={setActief}
             disabled={isZelf}

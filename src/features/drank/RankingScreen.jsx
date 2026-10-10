@@ -55,7 +55,12 @@ export const RankingScreen = () => {
               #{i + 1}
             </div>
             <UserAvatar user={users.find(u => u.id === r.user_id)} size="md" />
-            <p className="flex-1 font-semibold truncate">{r.naam}</p>
+            <p className="flex-1 font-semibold truncate">
+              {r.naam}
+              {users.find(u => u.id === r.user_id)?.isOudleiding && (
+                <span className="ml-2 text-xs font-semibold text-gray-400">oudleiding</span>
+              )}
+            </p>
             <span className="font-bold">{r.strepen}</span>
           </div>
         ))}

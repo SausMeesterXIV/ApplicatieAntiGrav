@@ -5,11 +5,13 @@ import { ToastContainer } from './components/Toast';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { hasAccess } from './lib/roleUtils';
+import { moetGroepKiezen, oudleidingMag } from './lib/oudleiding';
 import { herlaadNaUpdate, vergeetHerladen } from './lib/herladen';
 
 import { BottomNav, Zijbalk } from './components/BottomNav';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CredentialsScreen } from './features/auth/CredentialsScreen';
+import { GroepKiezenScreen } from './features/auth/GroepKiezenScreen';
 import { HomeScreen } from './features/home/HomeScreen';
 import { AuthProvider, useAuth } from './features/auth/AuthContext';
 import { DrinkProvider } from './features/drank/DrinkContext';
@@ -106,6 +108,10 @@ const TeamDrankStreaksScreen = scherm(
 const VerslagenScreen = scherm(() => import('./features/verslagen/VerslagenScreen'), 'VerslagenScreen');
 const FotosScreen = scherm(() => import('./features/fotos/FotosScreen'), 'FotosScreen');
 const BollenVolgordeScreen = scherm(() => import('./features/beheer/BollenVolgordeScreen'), 'BollenVolgordeScreen');
+const OudleidingBeheerScreen = scherm(
+  () => import('./features/drank/OudleidingBeheerScreen'),
+  'OudleidingBeheerScreen',
+);
 
 // Alle data zit in de providers (features/*/…Context); App regelt enkel routing en layout.
 
@@ -139,8 +145,12 @@ const ScrollToTop = () => {
 // (het startscherm breder, in twee kolommen).
 const MainLayout = () => {
   const { notifications } = useAgenda();
+  const { currentUser } = useAuth();
   const { pathname } = useLocation();
   const breed = pathname === '/';
+
+  // Oudleiding ziet enkel strepen, de eigen rekening en friet (de database dwingt hetzelfde af)
+  if (currentUser?.isOudleiding && !oudleidingMag(pathname)) return <Navigate to="/" replace />;
 
   return (
     <div
@@ -170,6 +180,7 @@ const MainLayout = () => {
 
 const AppRoutes = () => {
   const { session, currentUser, loading } = useAuth();
+  const { pathname } = useLocation();
   usePushNotifications(currentUser);
 
   if (loading) {
@@ -194,6 +205,9 @@ const AppRoutes = () => {
       </div>
     );
   }
+
+  // Leiding kiest bij de eerste keer en elk werkjaar (vanaf 1 september) precies één groep
+  if (session && moetGroepKiezen(currentUser) && pathname !== '/reset-password') return <GroepKiezenScreen />;
 
   return (
     <Suspense fallback={<Laden />}>
@@ -363,6 +377,15 @@ const AppRoutes = () => {
               element={
                 <RoleRoute role="drank">
                   <ConsumptionOverviewScreen />
+                </RoleRoute>
+              }
+            />
+
+            <Route
+              path="strepen/oudleiding"
+              element={
+                <RoleRoute role="drank">
+                  <OudleidingBeheerScreen />
                 </RoleRoute>
               }
             />

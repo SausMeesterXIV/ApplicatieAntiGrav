@@ -36,6 +36,8 @@ Zo weten we altijd hoe de beveiliging en de functies er vóór de migraties uitz
 | `20261001002100_triggerfuncties.sql` | Triggerfuncties niet aanroepbaar voor ingelogden (Security Advisor) |
 | `20261001002200_gelezen_en_frietronde.sql` | Gelezen-status van meldingen per persoon (elk toestel); hoogstens één lopende frietronde |
 | `20261001002300_streep_open_periode_en_meldingen.sql` | Strepen altijd in de open periode (ook offline gezette); meldingen enkel voor actieve leiding; wie voor een ander friet bestelde, mag annuleren (met melding) |
+| `20261001002500_oudleiding_groepen_extern.sql` | Oudleiding (gebruikersnaam, registreren met code van Drankteam; enkel strepen, rekening en friet), precies één groep per leider per werkjaar, friet voor iemand zonder account (aparte lijst voor Drankteam). Daarna edge function `oudleiding` deployen en `send-push` opnieuw deployen (zie 3c) |
+| `20261001002400_financien.sql` | Financiën: andere betalingen (t-shirts, truien, activiteiten) met eigen mededeling, één overzicht met de drankfacturen, betaald zetten (Drankteam/Financiën), koppeling met een Google Sheet (zie hieronder) |
 
 **Na alle migraties**: draai `queries/controleer_migraties.sql` (wijzigt niets). Elke rij is een controle;
 alles met `ok = false` staat bovenaan en moet opgelost worden voor je de app test.
@@ -114,6 +116,68 @@ Doe alles met het **KSA-Google-account** (dat van de Drive met de foto's):
 
 Werkt het niet meer (bv. wachtwoord van het KSA-account gewijzigd of toegang ingetrokken)?
 Herhaal stap 5 en vervang `GOOGLE_REFRESH_TOKEN`.
+
+## 3b. Financiën: Google Sheet (twee richtingen)
+
+Financiën (en hoofdleiding) kan in de app een rekenblad laten maken dat in twee richtingen gekoppeld is:
+wat in de app verandert, staat binnen enkele seconden in de Sheet; wat in de Sheet verandert, staat binnen
+ongeveer 30 seconden in de app. Hiervoor gebruiken we **dezelfde Google-koppeling als de foto's** (sectie 3).
+
+1. **Migratie `20261001002400_financien.sql`** uitvoeren (SQL Editor). Ze gebruikt de Vault-sleutel
+   `send_push_service_key` (sectie 2) en pg_cron (sectie 2, stap 6): die moeten er dus al zijn.
+   Kreeg je de melding "pg_cron niet beschikbaar"? Zet Cron aan en voer het laatste `do $ … $`-blok van de migratie nog eens uit.
+2. **Google Sheets API aanzetten** in hetzelfde Google Cloud-project als de foto's:
+   APIs & Services > Library > "Google Sheets API" > Enable. (De refresh token met scope `…/auth/drive` volstaat.)
+3. **Map in Drive** (aangeraden): maak met het KSA-account een map, bv. "Financiën app", en deel ze **enkel**
+   met Financiën en hoofdleiding. Zet de id van die map als secret:
+   - `FINANCIEN_MAP_ID` = laatste stuk van de URL (`https://drive.google.com/drive/folders/<ID>`)
+   Zonder deze secret komt het rekenblad bovenaan in de Drive van het KSA-account.
+4. **Edge function deployen**:
+   ```
+   npx supabase functions deploy financien-sheet --project-ref <project-ref>
+   ```
+   (De map `functions/_shared` gaat automatisch mee.)
+5. In de app: **Financiën > Wie moet betalen > Google Sheet > Rekenblad aanmaken**. Het blad wordt meteen gevuld.
+
+Het rekenblad heeft vier tabbladen: *Overzicht* (wie moet wat betalen), *Betalingen* (aanpasbaar), *Strepen*
+(aantal strepen per leider per drank in de lopende periode, live, enkel lezen) en *Uitleg*.
+
+Een oud rekenblad overnemen: kopieer de rijen onderaan het tabblad *Betalingen* (Omschrijving, Leider zoals in de
+app, Bedrag, optioneel Te betalen voor en Betaald). Bij de volgende synchronisatie worden het andere betalingen.
+Rijen die de app niet kan verwerken (bv. onbekende naam) blijven staan en verschijnen als aandachtspunt in de app
+en onderaan het tabblad *Overzicht*.
+
+**Noodplan: terug naar enkel de Sheet, zoals vroeger**
+- Zet in het rekenblad (tabblad *Uitleg*, bovenaan) "Koppeling met de app" op **UIT**, of in de app: Financiën > Google Sheet >
+  "Koppeling uitzetten". Vanaf dan raakt de app het rekenblad niet meer aan en werk je erin zoals vroeger.
+  Dit werkt ook als de app zelf plat ligt (de schakelaar staat in de Sheet).
+- Elke dag staat er een **losse reservekopie** in dezelfde Drive-map (14 dagen bewaard): "… – reservekopie JJJJ-MM-DD".
+- Terug naar de app: zet de schakelaar op **AAN**. De app maakt eerst nog een reservekopie en neemt dan Betaald,
+  Betaald op, Opmerking, Bedrag (andere betalingen) en nieuwe rijen over. Verwijderde rijen, de grijze kolommen en de
+  tabbladen *Overzicht* en *Strepen* worden teruggezet zoals in de app. Voeg geen kolommen in *Betalingen* in:
+  dan weigert de app te synchroniseren tot ze terug kloppen.
+
+Werkt het niet? In de app staat de laatste fout onder "Google Sheet". Meest voorkomend:
+- "Google Sheets API staat nog niet aan" > stap 2
+- "De koppeling met Google werkt niet (meer)" > refresh token vernieuwen (sectie 3, stap 5)
+- "rekenblad niet gevonden" > het blad werd verwijderd: maak een nieuw aan
+
+## 3c. Oudleiding
+
+1. **Migratie `20261001002500_oudleiding_groepen_extern.sql`** uitvoeren (na 002400).
+2. **Edge function deployen** (zonder JWT-controle: registreren gebeurt vóór het inloggen; de functie controleert
+   zelf de code en de rechten, zie `config.toml`):
+   ```
+   npx supabase functions deploy oudleiding --project-ref <project-ref>
+   ```
+3. **`send-push` opnieuw deployen**: meldingen aan iedereen gaan niet meer naar oudleiding.
+   ```
+   npx supabase functions deploy send-push --project-ref <project-ref>
+   ```
+4. In de app (Drankteam): Team drank > **Oudleiding** > een code instellen en doorgeven aan oudleiding.
+   Zonder code staat registreren voor oudleiding uit.
+
+Na de migratie vraagt de app aan alle leiding één keer hun groep voor dit werkjaar (daarna elk jaar vanaf 1 september).
 
 ## 4. Wakker houden (gratis project pauzeert na 7 dagen zonder gebruik)
 

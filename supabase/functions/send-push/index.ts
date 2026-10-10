@@ -46,6 +46,8 @@ Deno.serve(async req => {
     // 2. Ontvangers: iedereen (behalve de afzender) of één persoon, enkel met push aan
     let query = supabase.from('profiles').select('id').eq('actief', true).eq('push_enabled', true);
     if (melding.ontvanger_id === 'all') {
+      // Meldingen aan iedereen gaan over leidingszaken: niet naar oudleiding
+      query = query.eq('is_oudleiding', false);
       if (melding.zender_id) query = query.neq('id', melding.zender_id);
     } else {
       query = query.eq('id', melding.ontvanger_id);

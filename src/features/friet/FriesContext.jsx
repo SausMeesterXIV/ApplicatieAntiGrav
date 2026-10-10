@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 import * as db from '../../lib/supabaseService';
+import { addExterneFrietBestelling } from '../../lib/oudleiding';
 import { showToast } from '../../components/Toast';
 import { useFriesRealtime } from '../../lib/useRealtime';
 import { hasRecht } from '../../lib/roleUtils';
@@ -97,6 +98,8 @@ export const FriesProvider = ({ children }) => {
 
   const handlePlaceFryOrder = async (items, totalCost, targetUser) => {
     if (!currentUser) return;
+    // Iemand zonder account: { extern: true, naam } (komt op geen drankfactuur, Drankteam krijgt een melding)
+    if (targetUser?.extern) return plaatsExterneBestelling(items, totalCost, targetUser.naam);
     const orderForUser = targetUser || currentUser;
     const isOwnOrder = orderForUser.id === currentUser.id;
     const orderUserName = orderForUser.naam || orderForUser.name || 'Onbekend';
@@ -141,6 +144,34 @@ export const FriesProvider = ({ children }) => {
     } catch (error) {
       setFriesOrders(prev => prev.filter(o => o.id !== tempId));
       if (isOwnOrder) setBalance(prev => prev - totalCost);
+      showToast('Fout bij het plaatsen van de bestelling', 'error');
+    }
+  };
+
+  const plaatsExterneBestelling = async (items, totalCost, naam) => {
+    const tempId = Math.random().toString(36).substr(2, 9);
+    const newOrder = {
+      id: tempId,
+      userId: null,
+      userName: naam,
+      externNaam: naam,
+      besteldDoor: currentUser.id,
+      items,
+      totalPrice: totalCost,
+      date: new Date(),
+      status: 'open',
+    };
+    setFriesOrders(prev => [newOrder, ...prev]);
+    try {
+      const realId = await addExterneFrietBestelling(naam, frituurSessieId, items, totalCost);
+      setFriesOrders(prev =>
+        prev.some(o => o.id === realId)
+          ? prev.filter(o => o.id !== tempId)
+          : prev.map(o => (o.id === tempId ? { ...o, id: realId } : o)),
+      );
+      showToast(`Bestelling voor ${naam} geplaatst. Drankteam regelt de betaling. 🍟`, 'success');
+    } catch (error) {
+      setFriesOrders(prev => prev.filter(o => o.id !== tempId));
       showToast('Fout bij het plaatsen van de bestelling', 'error');
     }
   };
@@ -269,7 +300,7 @@ export const FriesProvider = ({ children }) => {
   const meldAanBestellers = async (titel, bericht) => {
     if (!currentUser) return;
     const ontvangers = [...new Set(friesOrders.filter(o => o.status === 'open').map(o => o.userId))].filter(
-      id => id !== currentUser.id,
+      id => id && id !== currentUser.id,
     );
     await Promise.all(
       ontvangers.map(id =>
