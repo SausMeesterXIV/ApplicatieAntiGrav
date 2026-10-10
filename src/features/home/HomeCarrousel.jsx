@@ -247,7 +247,11 @@ const StrepenKaart = ({ positie }) => {
   const [snel, ...anderen] = useMemo(() => {
     const geldig = dranken.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM);
     if (!geldig.length) return [];
-    const snelste = geldig.find(d => String(d.id) === String(currentUser?.quickDrinkId)) || geldig[0];
+    // Zelf gekozen snelle drank, anders Freedom
+    const snelste =
+      geldig.find(d => String(d.id) === String(currentUser?.quickDrinkId)) ||
+      geldig.find(d => d.name === SPECIAL_DRINKS.PINT_FREEDOM) ||
+      geldig[0];
     const telling = {};
     streaks
       .filter(s => s.userId === currentUser?.id)

@@ -20,7 +20,7 @@ export const StrepenScreen = () => {
   const currentBalance = balances && currentUser ? balances[currentUser?.id || ''] || 0 : 0;
 
   const [drinkCounts, setDrinkCounts] = useState({});
-  const [selectedDrink, setSelectedDrink] = useState(drinks.length > 0 ? drinks[0] : null);
+  const [selectedDrink, setSelectedDrink] = useState(null);
   const [totalToday, setTotalToday] = useState(0);
   const [isManageMode, setIsManageMode] = useState(false);
   const [showFloatingPlus, setShowFloatingPlus] = useState(false);
@@ -29,10 +29,6 @@ export const StrepenScreen = () => {
   // Drankteam kan strepen voor iemand anders (bv. correcties); standaard voor jezelf
   const [strepenVoorId, setStrepenVoorId] = useState(null);
   const doelUser = (isTeamDrank && strepenVoorId && users.find(u => u.id === strepenVoorId)) || currentUser;
-
-  useEffect(() => {
-    if (!selectedDrink && drinks.length > 0) setSelectedDrink(drinks[0]);
-  }, [drinks, selectedDrink]);
 
   const getCurrentCountRaw = () => {
     if (!selectedDrink) return 1;
@@ -71,22 +67,26 @@ export const StrepenScreen = () => {
 
   const displayCount = getCurrentCountRaw();
 
-  const validQuickDrinks = useMemo(() => {
-    return drinks.filter(d => d.name === 'Frisdrank' || d.name === SPECIAL_DRINKS.PINT_FREEDOM);
-  }, [drinks]);
+  // De drankknoppen onder "Kies drank": alle dranken (Freedom eerst), behalve Bak Freedom (eigen knop).
+  // Enkel een drank uit deze lijst mag klaarstaan: anders stond bij het openen bv. "Bak Freedom" (eerste
+  // in het alfabet) klaar zonder dat je hem zag.
+  const keuzeDranken = useMemo(
+    () =>
+      drinks
+        .filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM)
+        .sort((a, b) => (b.name === SPECIAL_DRINKS.PINT_FREEDOM) - (a.name === SPECIAL_DRINKS.PINT_FREEDOM)),
+    [drinks],
+  );
+
+  useEffect(() => {
+    if (!keuzeDranken.some(d => d.id === selectedDrink?.id)) setSelectedDrink(keuzeDranken[0] || null);
+  }, [keuzeDranken, selectedDrink]);
+
+  const validQuickDrinks = keuzeDranken;
 
   const activeQuickDrinkId = String(
     currentUser?.quickDrinkId || (validQuickDrinks.length > 0 ? validQuickDrinks[0].id : ''),
   );
-
-  const isStillValid = validUntil => {
-    if (!validUntil) return true;
-    try {
-      return new Date(validUntil) >= new Date(new Date().setHours(0, 0, 0, 0));
-    } catch (e) {
-      return true;
-    }
-  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
@@ -210,24 +210,16 @@ export const StrepenScreen = () => {
                 Kies Drank
               </p>
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                {drinks
-                  .filter(
-                    d =>
-                      (d.name === 'Frisdrank' ||
-                        d.name === SPECIAL_DRINKS.PINT_FREEDOM ||
-                        (d.isTemporary && isStillValid(d.validUntil || undefined))) &&
-                      d.name !== SPECIAL_DRINKS.BAK_FREEDOM,
-                  )
-                  .map(drink => (
-                    <button
-                      key={drink.id}
-                      onClick={() => setSelectedDrink(drink)}
-                      className={`px-4 py-2.5 text-sm font-medium rounded-xl whitespace-nowrap shadow-sm transition-all flex items-center gap-2 ${selectedDrink?.id === drink.id ? 'bg-blue-600 text-white ring-2 ring-blue-600 ring-offset-2 dark:ring-offset-[#1e2330]' : 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 hover:bg-gray-100'}`}
-                    >
-                      {drink.name}
-                      {drink.isTemporary && <span className="material-icons-round text-[10px] opacity-70">timer</span>}
-                    </button>
-                  ))}
+                {keuzeDranken.map(drink => (
+                  <button
+                    key={drink.id}
+                    onClick={() => setSelectedDrink(drink)}
+                    className={`px-4 py-2.5 text-sm font-medium rounded-xl whitespace-nowrap shadow-sm transition-all flex items-center gap-2 ${selectedDrink?.id === drink.id ? 'bg-blue-600 text-white ring-2 ring-blue-600 ring-offset-2 dark:ring-offset-[#1e2330]' : 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 hover:bg-gray-100'}`}
+                  >
+                    {drink.name}
+                    {drink.isTemporary && <span className="material-icons-round text-[10px] opacity-70">timer</span>}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -331,7 +323,7 @@ export const StrepenScreen = () => {
         {isTeamDrank && isManageMode && (
           <StrepenAdminPanel
             onDrinkDeleted={id => {
-              if (selectedDrink?.id === id && drinks.length > 0) setSelectedDrink(drinks[0]);
+              if (selectedDrink?.id === id) setSelectedDrink(null);
             }}
           />
         )}

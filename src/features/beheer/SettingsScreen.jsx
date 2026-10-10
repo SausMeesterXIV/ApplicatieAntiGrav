@@ -80,7 +80,10 @@ export const SettingsScreen = () => {
 
   const aantalBollen = useMemo(() => bollenVoor(currentUser, gekozenVolgorde(currentUser)).length, [currentUser]);
   const drankKeuzes = dranken.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM);
-  const snelleDrank = drankKeuzes.find(d => String(d.id) === String(currentUser?.quickDrinkId)) || drankKeuzes[0];
+  const snelleDrank =
+    drankKeuzes.find(d => String(d.id) === String(currentUser?.quickDrinkId)) ||
+    drankKeuzes.find(d => d.name === SPECIAL_DRINKS.PINT_FREEDOM) ||
+    drankKeuzes[0];
 
   const toggleDarkMode = () => {
     const nieuw = !isDark;
