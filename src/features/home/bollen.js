@@ -51,7 +51,9 @@ export const BOLLEN = [
     label: "Foto's",
     route: '/fotos',
     kleur: 'bg-bol-fotos dark:bg-bol-fotos-d',
-    zichtbaar: leiding,
+    // Tijdelijk verborgen: het Google-account van de fotomap is niet meer bereikbaar.
+    // Terug op `leiding` zetten zodra een nieuwe Drive gekoppeld is (supabase/README.md, sectie 3).
+    zichtbaar: () => false,
   },
   {
     id: 'teamdrank',
