@@ -9,6 +9,7 @@ import { Bijlagen, NieuweBijlagen } from '../../components/Bijlagen';
 import * as db from '../../lib/supabaseService';
 import { hasRecht } from '../../lib/roleUtils';
 import { magEventAanpassen, magEventVerwijderen } from './rechten';
+import { aankomendeEvents } from './datums';
 
 // Alle leiding kan agenda-items toevoegen. Aanpassen: eigen items (+ Sfeerbeheer/hoofdleiding);
 // verwijderen: eigen items (+ hoofdleiding). Aftelklokken: enkel agenda_beheren.
@@ -214,8 +215,8 @@ export const AgendaManageScreen = () => {
     navigate(-1);
   };
 
-  // Sort events by date for display
-  const sortedEvents = [...events].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // Enkel aankomende items, chronologisch (geen items die al voorbij zijn)
+  const sortedEvents = aankomendeEvents(events);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">

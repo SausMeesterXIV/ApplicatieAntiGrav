@@ -6,11 +6,13 @@ import { ChevronBack } from '../../components/ChevronBack';
 import { SkeletonEvent } from '../../components/Skeleton';
 import { Aanwezigheid } from './Aanwezigheid';
 import { Bijlagen } from '../../components/Bijlagen';
+import { aankomendeEvents } from './datums';
 
 export const AgendaScreen = () => {
   const navigate = useNavigate();
-  const { loading } = useAuth();
+  const { loading, currentUser } = useAuth();
   const { notifications, handleMarkNotificationAsRead, events } = useAgenda();
+  const kanEventsMaken = !currentUser?.isOudleiding;
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showNewEvents, setShowNewEvents] = useState(false);
@@ -87,88 +89,87 @@ export const AgendaScreen = () => {
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   // All upcoming events from today onwards (across all months)
-  const allUpcomingEvents = events
-    .filter(e => {
-      const d = new Date(e.date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return d >= today;
-    })
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const allUpcomingEvents = aankomendeEvents(events);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
       {/* Header */}
-      <header className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] flex items-center justify-between shrink-0 bg-gray-50 dark:bg-[#0f172a] z-10 transition-colors relative">
+      <header className="px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] flex flex-col gap-3 shrink-0 bg-gray-50 dark:bg-[#0f172a] z-10 transition-colors relative">
         <div className="flex items-center gap-2">
           <ChevronBack onClick={() => navigate(-1)} />
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Agenda</h1>
-          <button
-            onClick={() => navigate('/agenda/beheer')}
-            className="ml-1 h-9 w-9 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-sm"
-            title="Agenda-item toevoegen"
-          >
-            <span className="material-icons-round text-xl">add</span>
-          </button>
         </div>
 
-        {/* Nieuwe Events Button */}
-        <div className="relative">
-          <button
-            onClick={() => setShowNewEvents(!showNewEvents)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-full border transition-all shadow-sm ${
-              showNewEvents
-                ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300'
-                : 'bg-white dark:bg-[#1e2330] border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-            }`}
-          >
-            <div className="relative">
-              <span className="material-icons-round text-xl">event_available</span>
-              {newEvents.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-600 rounded-full border-2 border-white dark:border-[#1e2330]"></span>
-              )}
-            </div>
-            <span className="text-xs font-bold uppercase tracking-wide hidden sm:block">Nieuwe Events</span>
-          </button>
-
-          {/* Dropdown / Popover */}
-          {showNewEvents && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setShowNewEvents(false)}></div>
-              <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-[#1e2330] rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 z-20 overflow-hidden animate-in slide-in-from-top-2 fade-in duration-200">
-                <div className="p-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-[#0f172a]/50 flex justify-between items-center">
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Ongelezen Events</span>
-                  <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-1.5 py-0.5 rounded-md">
-                    {newEvents.length}
-                  </span>
-                </div>
-                <div className="max-h-64 overflow-y-auto">
-                  {newEvents.length === 0 ? (
-                    <div className="p-6 text-center text-gray-400 text-sm italic">Geen nieuwe updates.</div>
-                  ) : (
-                    <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                      {newEvents.map(event => (
-                        <div
-                          key={event.id}
-                          onClick={() => handleNewEventClick(event.id)}
-                          className="p-3 hover:bg-blue-50 dark:hover:bg-blue-900/10 cursor-pointer transition-colors flex gap-3 items-start"
-                        >
-                          <div className="w-2 h-2 mt-1.5 rounded-full bg-blue-500 shrink-0"></div>
-                          <div>
-                            <h4 className="text-sm font-bold text-gray-900 dark:text-white leading-tight mb-0.5">
-                              {event.title || 'Nieuw Event'}
-                            </h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{event.content}</p>
-                            <span className="text-[10px] text-gray-400 mt-1 block">{event.time}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
+        <div className="flex items-center justify-end gap-2">
+          {/* Nieuw event: zelfde stijl als de knop "Nieuwe events" ernaast */}
+          {kanEventsMaken && (
+            <button
+              onClick={() => navigate('/agenda/beheer')}
+              className="flex items-center gap-2 px-3 py-2 rounded-full border transition-all shadow-sm bg-white dark:bg-[#1e2330] border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <span className="material-icons-round text-xl">add</span>
+              <span className="text-xs font-bold uppercase tracking-wide">Maak nieuw event</span>
+            </button>
           )}
+
+          {/* Nieuwe Events Button */}
+          <div className="relative">
+            <button
+              onClick={() => setShowNewEvents(!showNewEvents)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-full border transition-all shadow-sm ${
+                showNewEvents
+                  ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300'
+                  : 'bg-white dark:bg-[#1e2330] border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+              }`}
+            >
+              <div className="relative">
+                <span className="material-icons-round text-xl">event_available</span>
+                {newEvents.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-600 rounded-full border-2 border-white dark:border-[#1e2330]"></span>
+                )}
+              </div>
+              <span className="text-xs font-bold uppercase tracking-wide">Nieuwe Events</span>
+            </button>
+
+            {/* Dropdown / Popover */}
+            {showNewEvents && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowNewEvents(false)}></div>
+                <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-[#1e2330] rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 z-20 overflow-hidden animate-in slide-in-from-top-2 fade-in duration-200">
+                  <div className="p-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-[#0f172a]/50 flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Ongelezen Events</span>
+                    <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+                      {newEvents.length}
+                    </span>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {newEvents.length === 0 ? (
+                      <div className="p-6 text-center text-gray-400 text-sm italic">Geen nieuwe updates.</div>
+                    ) : (
+                      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                        {newEvents.map(event => (
+                          <div
+                            key={event.id}
+                            onClick={() => handleNewEventClick(event.id)}
+                            className="p-3 hover:bg-blue-50 dark:hover:bg-blue-900/10 cursor-pointer transition-colors flex gap-3 items-start"
+                          >
+                            <div className="w-2 h-2 mt-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                            <div>
+                              <h4 className="text-sm font-bold text-gray-900 dark:text-white leading-tight mb-0.5">
+                                {event.title || 'Nieuw Event'}
+                              </h4>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{event.content}</p>
+                              <span className="text-[10px] text-gray-400 mt-1 block">{event.time}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
