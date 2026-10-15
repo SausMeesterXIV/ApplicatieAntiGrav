@@ -7,7 +7,11 @@ import { showToast } from '../../components/Toast';
 // Foto's: albums (mappen) in de Google Drive van KSA, waar ook het cameraatje naartoe uploadt.
 // Bekijken gebeurt in Drive zelf (daar staan ook de rechten); via de app kan leiding foto's toevoegen.
 
-const datumTekst = d => new Date(d).toLocaleDateString('nl-BE', { day: 'numeric', month: 'short', year: 'numeric' });
+// Tijdelijk: het Google-account van de fotomap is niet meer bereikbaar. Het scherm toont dan enkel een melding.
+// Terug op false zetten zodra een nieuwe Drive gekoppeld is (supabase/README.md, sectie 3).
+const ONDER_CONSTRUCTIE = true;
+
+const datumTekst =d => new Date(d).toLocaleDateString('nl-BE', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export const FotosScreen = () => {
   const navigate = useNavigate();
@@ -31,8 +35,29 @@ export const FotosScreen = () => {
   };
 
   useEffect(() => {
-    laad();
+    if (!ONDER_CONSTRUCTIE) laad();
   }, []);
+
+  if (ONDER_CONSTRUCTIE)
+    return (
+      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white">
+        <header className="px-4 pb-3 pt-[calc(1rem+env(safe-area-inset-top,0px))] sticky top-0 bg-gray-50/95 dark:bg-[#0f172a]/95 backdrop-blur-sm z-10 border-b border-gray-200 dark:border-gray-800">
+          <div className="flex items-center gap-3">
+            <ChevronBack onClick={() => navigate(-1)} />
+            <h1 className="text-xl font-bold flex-1">Foto's</h1>
+          </div>
+        </header>
+        <main className="flex-1 px-4 py-10 pb-nav-safe">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 text-center space-y-2">
+            <span className="material-icons-round text-amber-500 text-5xl">construction</span>
+            <p className="font-bold text-lg">Under construction</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Google doet moeilijk… De fotodrive is daardoor ook tijdelijk niet beschikbaar.
+            </p>
+          </div>
+        </main>
+      </div>
+    );
 
   const nieuwAlbum = async () => {
     const naam = window.prompt('Naam van het nieuwe album, bv. "Weekend Sim november 2026"');
