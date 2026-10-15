@@ -48,6 +48,7 @@ const OUDLEIDING_SCHERMEN = [
   '/strepen/ranking',
   '/strepen/geschiedenis',
   '/mijn-factuur',
+  '/agenda', // enkel de items die met oudleiding gedeeld zijn (RLS)
   '/frituur',
   '/frituur/overzicht',
   '/frituur/samenvatting',

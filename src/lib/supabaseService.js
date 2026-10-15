@@ -283,6 +283,9 @@ export async function saveEvent(event) {
     end_time: event.endTime || null,
     responsible: event.responsible || null,
     beschrijving: event.description || null,
+    // Meerdaags: laatste dag (null = eendaags)
+    eind_datum: event.endDate instanceof Date ? lokaleDatum(event.endDate) : event.endDate || null,
+    voor_oudleiding: !!event.voorOudleiding,
   };
 
   const isNew = !event.id || event.id.startsWith('temp-') || !event.id.includes('-');
@@ -307,6 +310,8 @@ function mapEvent(e) {
     startTime: e.start_time || e.tijd || '20:00',
     endTime: e.end_time || null,
     date: new Date(e.datum),
+    endDate: e.eind_datum ? new Date(e.eind_datum) : null,
+    voorOudleiding: !!e.voor_oudleiding,
     createdBy: e.created_by || null,
   };
 }

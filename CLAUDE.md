@@ -9,7 +9,7 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - Iemand kan **meerdere rollen tegelijk** hebben.
 - **Groepen** (vaste lijst, van jong naar oud): Pagadders, Kabouters, Sloebers, Tieners, Jim, Sim, Kim.
 - **Precies één groep per leider**, opnieuw te kiezen elk werkjaar: bij de eerste keer in de app en vanaf **1 september** vraagt de app je groep (scherm "Wat is je groep?"). Daarna past enkel de hoofdleiding ze nog aan. Werkgroepen: geen, één of meer.
-- **Oudleiding**: heeft geen `@ksa-aalter.be`-mail meer en logt in met **gebruikersnaam + wachtwoord** (intern `<gebruikersnaam>@oudleiding.ksa-aalter.be`, er wordt nooit naar gemaild). Ze registreren zelf met een **code die Drankteam instelt** (edge function `oudleiding`; na 10 foute codes een uur geblokkeerd). Ze zien enkel: strepen (ook de ranking, samen met leiding), hun drankrekening (betalen met QR) en friet. Geen agenda, verslagen, polls, foto's of meldingen aan alle leiding. Wachtwoord vergeten: Drankteam stelt een nieuw in. Leiding die stopt, zet de hoofdleiding op "Oudleiding" (account en historiek blijven).
+- **Oudleiding**: heeft geen `@ksa-aalter.be`-mail meer en logt in met **gebruikersnaam + wachtwoord** (intern `<gebruikersnaam>@oudleiding.ksa-aalter.be`, er wordt nooit naar gemaild). Ze registreren zelf met een **code die Drankteam instelt** (edge function `oudleiding`; na 10 foute codes een uur geblokkeerd). Ze zien enkel: strepen (ook de ranking, samen met leiding), hun drankrekening (betalen met QR), friet en de agenda-items die met oudleiding gedeeld zijn (daar duiden ze ook aanwezigheid aan). Geen andere agenda-items, bijlagen, verslagen, polls, foto's of meldingen aan alle leiding. Wachtwoord vergeten: Drankteam stelt een nieuw in. Leiding die stopt, zet de hoofdleiding op "Oudleiding" (account en historiek blijven).
 - **Werkgroepen**: vrij in te stellen door de hoofdleiding in de app, bv. Drankteam of Sfeerbeheer.
 - **Hoofdleiding** is ook admin.
 - **Alleen hoofdleiding** kent groepen en werkgroepen toe aan leiding.
@@ -18,7 +18,7 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 ## Rechten per functie
 | Functie | Wie |
 |---|---|
-| Agenda bekijken | Alle leiding |
+| Agenda bekijken | Alle leiding; oudleiding enkel de items die met hen gedeeld zijn |
 | Agenda-items maken | Alle leiding |
 | Agenda-items aanpassen | Wie het item maakte + hoofdleiding + werkgroep Sfeerbeheer |
 | Agenda-items verwijderen | Wie het item maakte + hoofdleiding (alles) |
@@ -56,6 +56,9 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 ### Agenda — behouden
 - Inhoud: **grote evenementen** (kamp, weekends, fuiven, eetfestijn) en **leidingsvergaderingen**. Geen wekelijkse activiteiten per groep.
 - **Aanwezigheid**: leiding duidt aan of ze komt (komt / komt niet / misschien).
+- **Meerdaags**: een item kan meerdere dagen duren (eerste en laatste dag, bv. weekend of kamp). Het blijft in "aankomend" staan tot de laatste dag voorbij is.
+- **Delen met oudleiding**: per item aan te vinken ("Ook voor oudleiding"). Oudleiding ziet enkel die items, duidt aanwezigheid aan en krijgt een eigen melding en herinnering. Bijlagen blijven enkel voor leiding.
+- **Beheerscherm** ("Maak nieuw event" naast "Nieuwe events"): toont enkel aankomende items, chronologisch.
 - **Meldingen**: pushmelding bij een nieuw item en een herinnering de dag vooraf om 18u (Belgische tijd).
 - **Bijlagen**: bij een agenda-item kan je bestanden zetten, bv. de intro voor de groepsraad (privé-opslag, max 10 MB per bestand, enkel leiding kan ze openen).
 

@@ -6,7 +6,8 @@ import { ChevronBack } from '../../components/ChevronBack';
 import { SkeletonEvent } from '../../components/Skeleton';
 import { Aanwezigheid } from './Aanwezigheid';
 import { Bijlagen } from '../../components/Bijlagen';
-import { aankomendeEvents } from './datums';
+import { aankomendeEvents, totEnMetTekst, valtOp } from './datums';
+import { OudleidingLabel } from './OudleidingLabel';
 
 export const AgendaScreen = () => {
   const navigate = useNavigate();
@@ -69,12 +70,8 @@ export const AgendaScreen = () => {
     return day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
   };
 
-  const hasEvent = day => {
-    return events.some(e => {
-      const d = new Date(e.date);
-      return d.getDate() === day && d.getMonth() === month && d.getFullYear() === year;
-    });
-  };
+  // Meerdaagse items kleuren elke dag van de periode
+  const hasEvent = day => events.some(e => valtOp(e, new Date(year, month, day)));
 
   const handleNewEventClick = id => {
     handleMarkNotificationAsRead(id);
@@ -273,14 +270,22 @@ export const AgendaScreen = () => {
                         ></div>
                         <div className="flex justify-between items-start">
                           <div>
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mb-1 uppercase tracking-wide ${event.type === 'vergadering' ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'}`}
-                            >
-                              {event.type || 'Event'}
-                            </span>
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span
+                                className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${event.type === 'vergadering' ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'}`}
+                              >
+                                {event.type || 'Event'}
+                              </span>
+                              {event.voorOudleiding && kanEventsMaken && <OudleidingLabel />}
+                            </div>
                             <h4 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
                               {event.title}
                             </h4>
+                            {event.endDate && (
+                              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-0.5">
+                                {totEnMetTekst(event)}
+                              </p>
+                            )}
                             {event.description && (
                               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{event.description}</p>
                             )}
@@ -302,7 +307,8 @@ export const AgendaScreen = () => {
                           <span className="material-icons-round text-blue-500 text-base">location_on</span>
                           <span className="truncate">{event.location}</span>
                         </div>
-                        <Bijlagen item={{ eventId: event.id }} />
+                        {/* Bijlagen zijn enkel voor leiding */}
+                        {!currentUser?.isOudleiding && <Bijlagen item={{ eventId: event.id }} />}
                         <Aanwezigheid eventId={event.id} />
                       </div>
                     ))}

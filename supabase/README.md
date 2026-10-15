@@ -38,6 +38,7 @@ Zo weten we altijd hoe de beveiliging en de functies er vóór de migraties uitz
 | `20261001002300_streep_open_periode_en_meldingen.sql` | Strepen altijd in de open periode (ook offline gezette); meldingen enkel voor actieve leiding; wie voor een ander friet bestelde, mag annuleren (met melding) |
 | `20261001002500_oudleiding_groepen_extern.sql` | Oudleiding (gebruikersnaam, registreren met code van Drankteam; enkel strepen, rekening en friet), precies één groep per leider per werkjaar, friet voor iemand zonder account (aparte lijst voor Drankteam). Daarna edge function `oudleiding` deployen en `send-push` opnieuw deployen (zie 3c) |
 | `20261001002400_financien.sql` | Financiën: andere betalingen (t-shirts, truien, activiteiten) met eigen mededeling, één overzicht met de drankfacturen, betaald zetten (Drankteam/Financiën), koppeling met een Google Sheet (zie hieronder) |
+| `20261001002600_agenda_meerdaags_oudleiding.sql` | Agenda: meerdaagse items (laatste dag) en items delen met oudleiding (zien, aanwezigheid, eigen melding en herinnering); na 002500 |
 
 **Na alle migraties**: draai `queries/controleer_migraties.sql` (wijzigt niets). Elke rij is een controle;
 alles met `ok = false` staat bovenaan en moet opgelost worden voor je de app test.

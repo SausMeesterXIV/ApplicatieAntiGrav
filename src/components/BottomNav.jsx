@@ -7,7 +7,7 @@ const NAV_ITEMS = [
   { id: 'home', icon: 'home', label: 'Start' },
   { id: 'strepen', icon: 'sports_bar', label: 'Strepen' },
   { id: 'notificaties', icon: 'notifications', label: 'Meldingen', badge: true },
-  { id: 'agenda', icon: 'calendar_today', label: 'Agenda', enkelLeiding: true },
+  { id: 'agenda', icon: 'calendar_today', label: 'Agenda' },
   { id: 'settings', icon: 'settings', label: 'Instellingen' },
 ];
 
@@ -17,7 +17,7 @@ const useMenu = notifications => {
   const activeTab = location.pathname.split('/')[1] || 'home';
   const hasUnread = React.useMemo(() => notifications.some(n => !n.isRead), [notifications]);
   const ga = item => navigate(`/${item.id === 'home' ? '' : item.id}`);
-  // Oudleiding: geen agenda
+  // Oudleiding: agenda enkel met de gedeelde items
   const { currentUser } = useAuth();
   const items = NAV_ITEMS.filter(i => !(i.enkelLeiding && currentUser?.isOudleiding));
   return { activeTab, hasUnread, ga, items };

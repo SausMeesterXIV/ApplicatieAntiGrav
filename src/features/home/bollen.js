@@ -1,5 +1,5 @@
 // Bollen bovenaan het startscherm (zoals Instagram-stories).
-// Vaste bollen ziet alle leiding (oudleiding enkel Friet); rol-bollen enkel wie dat recht heeft (hoofdleiding ziet alles).
+// Vaste bollen ziet alle leiding (oudleiding enkel Friet en Agenda); rol-bollen enkel wie dat recht heeft (hoofdleiding ziet alles).
 // De volgorde kiest elke leider zelf (Instellingen > Volgorde bollen); bewaard op het profiel.
 import { hasRecht, isHoofdleiding } from '../../lib/roleUtils';
 import { updateProfile } from '../../lib/supabaseService';
@@ -27,7 +27,7 @@ export const BOLLEN = [
     label: 'Agenda',
     route: '/agenda',
     kleur: 'bg-bol-agenda dark:bg-bol-agenda-d',
-    zichtbaar: leiding,
+    zichtbaar: iedereen, // oudleiding: enkel gedeelde items
   },
   {
     id: 'polls',

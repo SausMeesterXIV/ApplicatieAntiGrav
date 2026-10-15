@@ -9,7 +9,25 @@ import { Bijlagen, NieuweBijlagen } from '../../components/Bijlagen';
 import * as db from '../../lib/supabaseService';
 import { hasRecht } from '../../lib/roleUtils';
 import { magEventAanpassen, magEventVerwijderen } from './rechten';
-import { aankomendeEvents } from './datums';
+import { aankomendeEvents, totEnMetTekst } from './datums';
+import { OudleidingLabel } from './OudleidingLabel';
+
+// Aan/uit-schakelaar met uitleg (zelfde stijl als bij de aftelklokken)
+const Schakelaar = ({ aan, onChange, label, uitleg }) => (
+  <button type="button" onClick={() => onChange(!aan)} className="w-full flex items-center justify-between gap-3 text-left">
+    <span>
+      <span className="block text-sm font-semibold text-gray-900 dark:text-white">{label}</span>
+      {uitleg && <span className="block text-xs text-gray-500 dark:text-gray-400">{uitleg}</span>}
+    </span>
+    <span
+      className={`w-11 h-6 shrink-0 rounded-full relative transition-colors ${aan ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+    >
+      <span
+        className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${aan ? 'translate-x-5' : 'translate-x-0'}`}
+      />
+    </span>
+  </button>
+);
 
 // Alle leiding kan agenda-items toevoegen. Aanpassen: eigen items (+ Sfeerbeheer/hoofdleiding);
 // verwijderen: eigen items (+ hoofdleiding). Aftelklokken: enkel agenda_beheren.
@@ -89,6 +107,9 @@ export const AgendaManageScreen = () => {
   const [description, setDescription] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
   const [nieuweBijlagen, setNieuweBijlagen] = useState([]); // bestanden voor een nieuw item, geüpload na het opslaan
+  const [meerdaags, setMeerdaags] = useState(false);
+  const [endDateStr, setEndDateStr] = useState(''); // laatste dag van een meerdaags item
+  const [voorOudleiding, setVoorOudleiding] = useState(false);
 
   // Handle Edit Click - Populate form
   const handleEditClick = event => {
@@ -100,6 +121,9 @@ export const AgendaManageScreen = () => {
 
     // Format Date object to YYYY-MM-DD for input using local time
     setDateStr(toLocalISOString(event.date));
+    setMeerdaags(!!event.endDate);
+    setEndDateStr(event.endDate ? toLocalISOString(event.endDate) : '');
+    setVoorOudleiding(!!event.voorOudleiding);
 
     // Scroll to form
     const formElement = document.getElementById('event-form');
@@ -119,6 +143,9 @@ export const AgendaManageScreen = () => {
     setDescription('');
     setSelectedRole('');
     setNieuweBijlagen([]);
+    setMeerdaags(false);
+    setEndDateStr('');
+    setVoorOudleiding(false);
   };
 
   const handleDelete = id => {
@@ -129,6 +156,15 @@ export const AgendaManageScreen = () => {
 
   const handleSave = async () => {
     if (!title || !dateStr) return;
+    if (meerdaags && !endDateStr) {
+      showToast('Kies de laatste dag van het event', 'error');
+      return;
+    }
+    // YYYY-MM-DD: als tekst vergelijken is genoeg
+    if (meerdaags && endDateStr <= dateStr) {
+      showToast('De laatste dag moet na de eerste dag liggen', 'error');
+      return;
+    }
 
     // Parse the date input properly
     const [year, month, day] = dateStr.split('-').map(Number);
@@ -155,6 +191,8 @@ export const AgendaManageScreen = () => {
       start_time: timeStr || '00:00',
       tijd: timeStr || '00:00',
       end_time: null,
+      endDate: meerdaags ? endDateStr : null,
+      voorOudleiding,
       created_at: new Date().toISOString(),
     };
 
@@ -270,6 +308,12 @@ export const AgendaManageScreen = () => {
                           <span className="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-600"></span>
                           <span className="truncate max-w-[100px]">{event.location}</span>
                         </div>
+                        {(event.endDate || event.voorOudleiding) && (
+                          <div className="flex items-center gap-2 text-xs mt-0.5">
+                            {event.endDate && <span className="text-gray-500 dark:text-gray-400">{totEnMetTekst(event)}</span>}
+                            {event.voorOudleiding && <OudleidingLabel />}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -348,6 +392,38 @@ export const AgendaManageScreen = () => {
                   className="w-full bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3.5 text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm"
                 />
               </div>
+            </div>
+
+            {/* Meerdaags: laatste dag */}
+            <div className="bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 shadow-sm space-y-3">
+              <Schakelaar
+                aan={meerdaags}
+                onChange={setMeerdaags}
+                label="Meerdaags event"
+                uitleg="Bv. een weekend of kamp"
+              />
+              {meerdaags && (
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1.5">Laatste dag</label>
+                  <input
+                    type="date"
+                    value={endDateStr}
+                    min={dateStr || undefined}
+                    onChange={e => setEndDateStr(e.target.value)}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Delen met oudleiding */}
+            <div className="bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 shadow-sm">
+              <Schakelaar
+                aan={voorOudleiding}
+                onChange={setVoorOudleiding}
+                label="Ook voor oudleiding"
+                uitleg="Oudleiding ziet dit event en krijgt een melding. Bijlagen blijven enkel voor leiding."
+              />
             </div>
 
             {/* Location */}
