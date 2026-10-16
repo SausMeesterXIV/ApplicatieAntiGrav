@@ -99,8 +99,9 @@ export const OudleidingBeheerScreen = () => {
               type="button"
               onClick={() => bewaarCode(null)}
               disabled={bezig}
-              className="text-sm font-semibold text-red-600"
+              className="w-full rounded-xl py-3 flex items-center justify-center gap-2 font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/15 active:scale-[0.99] disabled:opacity-40"
             >
+              <span className="material-icons-round text-lg">block</span>
               Registreren uitzetten
             </button>
           )}
