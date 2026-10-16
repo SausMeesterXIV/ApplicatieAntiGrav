@@ -163,6 +163,29 @@ Werkt het niet? In de app staat de laatste fout onder "Google Sheet". Meest voor
 - "De koppeling met Google werkt niet (meer)" > refresh token vernieuwen (sectie 3, stap 5)
 - "rekenblad niet gevonden" > het blad werd verwijderd: maak een nieuw aan
 
+> Let op: deze koppeling hangt aan het oude Google-account en is niet meer gelinkt in de app.
+> Financiën gebruikt nu de Sheet van Drankteam (3d).
+
+## 3d. Drankteam: Google Sheet (edge function `drank-sheet`)
+
+Werkt met een **service account** (robot), niet met iemands persoonlijke Google-account.
+Uitleg voor Team Drank: `C:\dev\KSA\KSA-app Team Drank handleiding.pdf`.
+
+1. Google Cloud-project met de **Google Sheets API** aan; service account met een JSON-sleutel.
+2. Secrets (Edge Functions > Secrets): `GOOGLE_SERVICE_ACCOUNT_B64` (de JSON-sleutel in base64) en
+   `DRANK_SHEET_ID` (het id uit de link van de Sheet).
+3. De Sheet maakt iemand van KSA zelf aan en deelt ze als **Bewerker** met het e-mailadres van de robot.
+4. Deploy: `npx supabase functions deploy drank-sheet --project-ref <project-ref>` (MET JWT-controle).
+5. Migraties `003600` (pg_cron: elke 30 seconden `drank_sheet_aanroepen()`) en `003700` (twee richtingen).
+
+Werking (rekenlogica in `functions/_shared/drankSheet.js`, getest in `tests/drank*.test.js`):
+- tabbladen Drankrekening, Bakken, Rekening, Strepen, Facturen, Info; enkel geschreven als er iets veranderde
+- een aantal veranderd in Drankrekening wordt een streep met `bron = 'sheet'` (geen melding; app wint bij botsing)
+- prijs per streepje uit Bakken (aankoopprijs + telling ingevuld) wordt `consumpties.prijs` van de open periode
+- nieuwe periode: tellingen in Bakken leeg, aankoopprijs blijft
+- indeling of formules gewijzigd? Verhoog `SHEET_VERSIE`, dan wordt alles opnieuw geschreven
+- het antwoord van elke ronde (o.a. `formuleFouten`, `viaSheet`) staat in `net._http_response`
+
 ## 3c. Oudleiding
 
 1. **Migratie `20261001002500_oudleiding_groepen_extern.sql`** uitvoeren (na 002400).
