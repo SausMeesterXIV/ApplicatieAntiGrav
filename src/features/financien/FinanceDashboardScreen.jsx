@@ -82,6 +82,13 @@ export const FinanceDashboardScreen = () => {
         <div className="flex items-center gap-3">
           <ChevronBack onClick={() => navigate(-1)} />
           <h1 className="text-xl font-bold flex-1">Financiën</h1>
+          {/* Extra kost op de drankfactuur (bv. cara's van een weekend), zie ExtraKostenScreen */}
+          <button
+            onClick={() => navigate('/extra-kosten')}
+            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-kaart-event dark:bg-kaart-event-d flex items-center gap-1"
+          >
+            <span className="material-icons-round text-base">group_add</span> Extra kost
+          </button>
           <button
             onClick={() => setNieuw(true)}
             className="text-xs font-bold px-3 py-1.5 rounded-lg bg-inkt text-white dark:bg-white dark:text-inkt flex items-center gap-1"

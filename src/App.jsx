@@ -112,6 +112,7 @@ const TeamDrankStreaksScreen = scherm(
 const VerslagenScreen = scherm(() => import('./features/verslagen/VerslagenScreen'), 'VerslagenScreen');
 const FotosScreen = scherm(() => import('./features/fotos/FotosScreen'), 'FotosScreen');
 const BollenVolgordeScreen = scherm(() => import('./features/beheer/BollenVolgordeScreen'), 'BollenVolgordeScreen');
+const ExtraKostenScreen = scherm(() => import('./features/drank/ExtraKostenScreen'), 'ExtraKostenScreen');
 const OudleidingBeheerScreen = scherm(
   () => import('./features/drank/OudleidingBeheerScreen'),
   'OudleidingBeheerScreen',
@@ -292,6 +293,14 @@ const AppRoutes = () => {
               element={
                 <RoleRoute role="drank">
                   <StrepenHistoryScreen adminMode={true} />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="extra-kosten"
+              element={
+                <RoleRoute role={['drank', 'financiën']}>
+                  <ExtraKostenScreen />
                 </RoleRoute>
               }
             />

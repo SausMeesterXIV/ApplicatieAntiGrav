@@ -1038,6 +1038,41 @@ export async function addBillingCorrection(userId, periodId, bedrag, notitie, us
   };
 }
 
+// ==================== EXTRA KOSTEN (migratie 003500) ====================
+
+// Extra kosten van een periode met per persoon het bedrag (Drankteam/Financiën ziet alles,
+// gewone leiding enkel de kosten waarin ze zelf zit)
+export async function fetchExtraKosten(periodId) {
+  const { data, error } = await supabase
+    .from('extra_kosten')
+    .select('*, billing_corrections(user_id, user_naam, correctie_bedrag)')
+    .eq('period_id', periodId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(k => ({
+    ...k,
+    bedrag: Number(k.bedrag),
+    posten: (k.billing_corrections || []).map(p => ({ ...p, correctie_bedrag: Number(p.correctie_bedrag) })),
+  }));
+}
+
+// wijze: 'verdelen' (totaal gelijk verdeeld) of 'per_persoon'
+export async function maakExtraKost(titel, wijze, bedrag, userIds) {
+  const { data, error } = await supabase.rpc('maak_extra_kost', {
+    p_titel: titel,
+    p_wijze: wijze,
+    p_bedrag: bedrag,
+    p_user_ids: userIds,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function verwijderExtraKost(id) {
+  const { error } = await supabase.rpc('verwijder_extra_kost', { p_id: id });
+  if (error) throw error;
+}
+
 // ==================== APP SETTINGS ====================
 
 export async function fetchSetting(key) {

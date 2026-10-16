@@ -24,6 +24,7 @@ export const MyInvoiceScreen = () => {
   const [betaal, setBetaal] = useState({ naam: '', iban: '', bic: '' });
   const [openFactuur, setOpenFactuur] = useState(null);
   const [andere, setAndere] = useState([]); // andere betalingen (t-shirts, truien, activiteiten, …)
+  const [extra, setExtra] = useState([]); // extra kosten en correcties in de open periode (bv. cara's)
 
   useEffect(() => {
     if (!currentUser) return;
@@ -39,6 +40,11 @@ export const MyInvoiceScreen = () => {
     fetchPosten()
       .then(rows => setAndere(rows.filter(r => r.soort === 'betaling' && r.user_id === currentUser.id)))
       .catch(() => setAndere([]));
+    if (activePeriod?.id) {
+      db.fetchBillingCorrections(activePeriod.id)
+        .then(rows => setExtra(rows.filter(r => r.user_id === currentUser.id)))
+        .catch(() => setExtra([]));
+    }
   }, [currentUser?.id, activePeriod?.id]);
 
   // Nog niet gefactureerd verbruik, per drank
@@ -166,7 +172,7 @@ export const MyInvoiceScreen = () => {
         <section>
           <h2 className="text-lg font-bold mb-2 px-1">Verbruik</h2>
           <div className="bg-white dark:bg-[#1e2330] rounded-2xl border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
-            {perDrank.length === 0 && frietOpen.length === 0 && (
+            {perDrank.length === 0 && frietOpen.length === 0 && extra.length === 0 && (
               <p className="p-4 text-center text-sm text-gray-500">Nog niets gestreept in deze periode.</p>
             )}
             {perDrank.map(([naam, aantal]) => (
@@ -181,6 +187,15 @@ export const MyInvoiceScreen = () => {
                 <span className="font-semibold">{euro(o.totalPrice)}</span>
               </div>
             ))}
+            {extra.map(k => (
+              <div key={k.id} className="p-4 flex justify-between gap-3">
+                <span className="min-w-0 truncate">
+                  {k.extra_kost_id ? '🧾 ' : ''}
+                  {k.notitie || 'Correctie'}
+                </span>
+                <span className="font-semibold tabular-nums shrink-0">{euro(k.correctie_bedrag)}</span>
+              </div>
+            ))}
             {overzicht && (
               <div className="p-4 space-y-1 text-sm">
                 <div className="flex justify-between text-gray-500">
@@ -193,7 +208,7 @@ export const MyInvoiceScreen = () => {
                 </div>
                 {overzicht.correctie_bedrag !== 0 && (
                   <div className="flex justify-between text-gray-500">
-                    <span>Correcties</span>
+                    <span>Extra kosten en correcties</span>
                     <span>{euro(overzicht.correctie_bedrag)}</span>
                   </div>
                 )}

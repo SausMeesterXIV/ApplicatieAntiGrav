@@ -82,6 +82,7 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - **Voorraad**: elke streep trekt automatisch af van de voorraad. Drankteam kan corrigeren na een manuele telling.
 - **Facturatie**: Drankteam **sluit zelf een periode af**. Daarbij wordt per leider een factuur gemaakt, met **Excel-export**.
 - **Schatting en echte kost**: tijdens de periode ziet iedereen een schatting = eigen strepen × de prijs van de drank (de laatst ingestelde prijs, bv. die van de vorige bak). Bij het afsluiten vult Drankteam de **echte kost** in (bv. factuur van de brouwer); die wordt verdeeld over alle strepen van de periode en bepaalt de factuur. Zonder echte kost blijft het aantal × prijs.
+- **Extra kosten** (migratie 003500, scherm Extra kosten via Team Drank of Financiën): bv. de cara's van een weekend. Drankteam of Financiën kiest **totaal verdelen** (gelijk over de gekozen personen; overblijvende centen naar de eersten op naam, de som is exact) of **bedrag per persoon**, en wie meebetaalt. Per persoon wordt het een correctie (`billing_corrections` met `extra_kost_id`) in de open periode: telt mee in de voorlopige rekening, het afsluiten, de factuur en Excel; leiding ziet de regel op Mijn factuur. Verwijderen kan zolang de periode open is.
 - **Archief**: afgesloten periodes terugbekijken.
 - **Streaks**: een **ranking** van wie het meest streepte in de huidige periode.
 - **Gewone leiding ziet**: eigen verbruik, eigen openstaande factuur en eigen historiek (eerdere facturen, betaald of niet betaald).

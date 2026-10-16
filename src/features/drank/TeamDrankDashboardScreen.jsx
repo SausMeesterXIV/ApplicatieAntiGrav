@@ -228,6 +228,12 @@ export const TeamDrankDashboardScreen = () => {
                 onClick={() => setActiveView('leiding')}
               />
               <Rij
+                icoon="group_add"
+                label="Extra kosten"
+                sub="Bv. cara's: totaal verdelen of per persoon"
+                onClick={() => navigate('/extra-kosten')}
+              />
+              <Rij
                 icoon="account_balance"
                 label="Openstaande saldo's"
                 waarde={`${drankrekeningen.length} leiding`}
