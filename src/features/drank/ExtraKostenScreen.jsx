@@ -89,7 +89,17 @@ export const ExtraKostenScreen = () => {
       s.has(id) ? s.delete(id) : s.add(id);
       return s;
     });
-  const kiesGroep = groepId => setGekozen(new Set(leden.filter(u => u.groepIds?.includes(groepId)).map(u => u.id)));
+  // Groepen als schakelaars: een groep staat "aan" als al haar leden gekozen zijn. Aanzetten voegt haar leden
+  // toe aan wie al gekozen was (meerdere groepen kan dus), uitzetten haalt enkel haar leden weg.
+  const ledenVan = groepId => leden.filter(u => u.groepIds?.includes(groepId)).map(u => u.id);
+  const allesGekozen = ids => ids.length > 0 && ids.every(id => gekozen.has(id));
+  const wisselGroep = ids =>
+    setGekozen(prev => {
+      const s = new Set(prev);
+      if (ids.every(id => s.has(id))) ids.forEach(id => s.delete(id));
+      else ids.forEach(id => s.add(id));
+      return s;
+    });
 
   const reset = () => {
     setTitel('');
@@ -262,20 +272,30 @@ export const ExtraKostenScreen = () => {
 
           <div>
             <div className="flex items-baseline justify-between">
-              <Label>Wie betaalt mee? ({n})</Label>
+              <Label>Wie betaalt mee? ({n} gekozen)</Label>
               <button type="button" onClick={() => setGekozen(new Set())} className="text-xs font-bold text-gray-500 underline">
                 Niemand
               </button>
             </div>
             <div className="flex flex-wrap gap-2 mb-3">
-              <Chip actief={n === leden.length && n > 0} onClick={() => setGekozen(new Set(leden.map(u => u.id)))}>
+              <Chip actief={allesGekozen(leden.map(u => u.id))} onClick={() => wisselGroep(leden.map(u => u.id))}>
+                {allesGekozen(leden.map(u => u.id)) && (
+                  <span className="material-icons-round text-sm align-[-2px] mr-1">check</span>
+                )}
                 Iedereen
               </Chip>
-              {(groepen || []).map(g => (
-                <Chip key={g.id} onClick={() => kiesGroep(g.id)}>
-                  {g.naam}
-                </Chip>
-              ))}
+              {(groepen || [])
+                .filter(g => ledenVan(g.id).length > 0)
+                .map(g => {
+                  const ids = ledenVan(g.id);
+                  const aan = allesGekozen(ids);
+                  return (
+                    <Chip key={g.id} actief={aan} onClick={() => wisselGroep(ids)}>
+                      {aan && <span className="material-icons-round text-sm align-[-2px] mr-1">check</span>}
+                      {g.naam} <span className="opacity-60 font-semibold">{ids.length}</span>
+                    </Chip>
+                  );
+                })}
             </div>
             <input type="search" value={zoek} onChange={e => setZoek(e.target.value)} placeholder="Zoek leiding" className={`${veld} mb-2`} />
             <ul className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d divide-y divide-white dark:divide-white/5 max-h-72 overflow-y-auto">
