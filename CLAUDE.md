@@ -5,7 +5,8 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 
 ## Gebruikers, groepen en rollen
 - Leiding heeft een account, en **oudleiding** ook (zie hieronder).
-- **Registratie**: iedereen met de link kan registreren met e-mail + wachtwoord, maar **alleen met een e-mailadres dat eindigt op `@ksa-aalter.be`**. Controleer dit **server-side** (Supabase auth hook of database-trigger), niet enkel in de frontend.
+- **Registratie**: iedereen met de link kan registreren met voornaam, achternaam, e-mail + wachtwoord, maar **alleen met een e-mailadres dat eindigt op `@ksa-aalter.be`**. Controleer dit **server-side** (Supabase auth hook of database-trigger), niet enkel in de frontend.
+- **Goedkeuring i.p.v. bevestigingsmail**: de app mailt nooit (DNS-records voor Resend op ksa-aalter.be komen er niet). Een nieuw account start inactief (`profiles.goedkeuring = 'wacht'`) en ziet een wachtscherm. Elke actieve leider die de app opent, krijgt een pop-up die niet weg kan: voornaam, achternaam, e-mail, "Is of wordt deze persoon leiding?" → **Verifiëren** of **Afwijzen**. De eerste beslissing telt. Geen melding of push. Oudleiding (met de code van Drankteam) is meteen actief. "Confirm email" staat uit in Supabase en blijft uit.
 - Iemand kan **meerdere rollen tegelijk** hebben.
 - **Groepen** (vaste lijst, van jong naar oud): Pagadders, Kabouters, Sloebers, Tieners, Jim, Sim, Kim.
 - **Precies één groep per leider**, opnieuw te kiezen elk werkjaar: bij de eerste keer in de app en vanaf **1 september** vraagt de app je groep (scherm "Wat is je groep?"). Daarna past enkel de hoofdleiding ze nog aan. Werkgroepen: geen, één of meer.
@@ -131,6 +132,7 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - `CredentialsScreen`: **blijft**. Het is het login- en registratiescherm.
 
 ## Beslissingen
+- **Geen e-mail**: geen bevestigingsmail en geen "wachtwoord vergeten"-mail. Nieuwe accounts keurt de leiding goed in de app (zie Gebruikers).
 - **Registratie-uitzondering**: naast `@ksa-aalter.be` mag enkel het testaccount `it.takes.jaguarke@gmail.com` registreren (ook server-side zo afdwingen).
 - **Streaks-ranking**: zichtbaar voor alle leiding.
 - **Geen vaste rollen in de code**: werkgroepen (bv. Drankteam, Sfeerbeheer) maakt de hoofdleiding zelf aan in de app. Enkel de 7 groepen en de hoofdleiding zijn vast.

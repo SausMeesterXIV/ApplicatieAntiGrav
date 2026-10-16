@@ -3,8 +3,9 @@ import * as db from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
 import { useAuth } from './AuthContext';
 
-// Voor alle actieve leiding: zolang er een nieuw account wacht, verschijnt deze pop-up over de hele app.
-// Hij kan niet weg: je accepteert of wijst af. De eerste die beslist, beslist voor iedereen.
+// Voor alle actieve leiding: zolang er een nieuw account wacht, verschijnt deze pop-up over de hele app
+// (bij het openen en terwijl de app openstaat). Er gaat geen melding of push uit.
+// Hij kan niet weg: je verifieert of wijst af. De eerste die beslist, beslist voor iedereen.
 // De database bepaalt wie dit ziet (enkel actieve leiding, geen oudleiding).
 export const GoedkeuringPopup = () => {
   const { currentUser } = useAuth();
@@ -44,7 +45,7 @@ export const GoedkeuringPopup = () => {
       const status = await db.beoordeelAccount(account.id, goedkeuren);
       const gevraagd = goedkeuren ? 'goedgekeurd' : 'afgewezen';
       if (status === gevraagd) {
-        showToast(goedkeuren ? `${naam} is goedgekeurd` : `${naam} is afgewezen`, 'success');
+        showToast(goedkeuren ? `${naam} is geverifieerd` : `${naam} is afgewezen`, 'success');
       } else {
         showToast(`Iemand anders was sneller: ${naam} is al ${status}`, 'info');
       }
@@ -105,7 +106,7 @@ export const GoedkeuringPopup = () => {
             onClick={() => beslis(true)}
             className="rounded-2xl py-4 font-bold bg-inkt text-white dark:bg-white dark:text-inkt active:scale-[0.99] disabled:opacity-50"
           >
-            Accepteren
+            Verifiëren
           </button>
         </div>
       </div>
