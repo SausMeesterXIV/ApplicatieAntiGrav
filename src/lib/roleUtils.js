@@ -26,11 +26,14 @@ const LEGACY_NAAR_RECHT = {
 };
 const HOOFDLEIDING_NAMEN = ['hoofdleiding', 'admin', 'godmode'];
 
-export const isHoofdleiding = user => !!user?.isHoofdleiding;
+// Rechten van hoofdleiding: echte hoofdleiding of het verborgen Godmode-account (migratie 003100).
+// Godmode kent de app enkel van de ingelogde gebruiker zelf (isGodmode); voor anderen is het onzichtbaar.
+// Voor het label "Hoofdleiding" gebruik je user.isHoofdleiding, niet deze functie.
+export const isHoofdleiding = user => !!(user?.isHoofdleiding || user?.isGodmode);
 
 // Oudleiding heeft nooit extra rechten (ook niet als er nog een werkgroep aan hangt)
 export const hasRecht = (user, recht) =>
-  !!user && !user.isOudleiding && (!!user.isHoofdleiding || (user.rechten || []).includes(recht));
+  !!user && !user.isOudleiding && (isHoofdleiding(user) || (user.rechten || []).includes(recht));
 
 export const isOudleiding = user => !!user?.isOudleiding;
 

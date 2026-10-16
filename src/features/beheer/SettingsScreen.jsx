@@ -144,7 +144,7 @@ export const SettingsScreen = () => {
   // Rollen onder je naam; "Hoofdleiding" ook als de rollenlijst leeg is (bv. vóór de migraties)
   const labels = currentUser?.roles || [];
   const rollen =
-    (isHoofdleiding(currentUser) && !labels.includes('Hoofdleiding') ? ['Hoofdleiding', ...labels] : labels).join(
+    (currentUser?.isHoofdleiding && !labels.includes('Hoofdleiding') ? ['Hoofdleiding', ...labels] : labels).join(
       ' · ',
     ) || 'Leiding';
 

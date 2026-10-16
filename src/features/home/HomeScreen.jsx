@@ -27,7 +27,7 @@ const middernacht = d => {
 const rolLabel = user =>
   user?.isOudleiding
     ? 'oudleiding'
-    : isHoofdleiding(user)
+    : user?.isHoofdleiding // label: echte rol (Godmode toont zich als gewone leiding)
       ? 'hoofdleiding'
       : (user?.roles || []).find(r => r !== 'Hoofdleiding')?.toLowerCase() || 'leiding';
 

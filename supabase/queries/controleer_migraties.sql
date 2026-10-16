@@ -31,11 +31,18 @@ controles as (
          exists (select 1 from pg_trigger where tgname = 'controleer_email_domein' and not tgisinternal) as ok,
          '' as detail
 
-  -- 2. Minstens één actieve hoofdleiding
+  -- 2. Minstens één actieve hoofdleiding (een actief Godmode-account telt mee, migratie 003100)
   union all
   select 2, 'Actieve hoofdleiding',
-         exists (select 1 from public.profiles where is_hoofdleiding and actief),
-         coalesce((select string_agg(naam, ', ') from public.profiles where is_hoofdleiding and actief), 'niemand!')
+         exists (
+           select 1 from public.profiles p
+           where p.actief and (p.is_hoofdleiding or p.id in (select user_id from public.godmode_accounts))
+         ),
+         coalesce(
+           (select string_agg(naam, ', ') from public.profiles where is_hoofdleiding and actief),
+           case when exists (select 1 from public.godmode_accounts g join public.profiles p on p.id = g.user_id where p.actief)
+                then 'enkel Godmode' else 'niemand!' end
+         )
 
   -- 3. Nieuwe tabellen bestaan
   union all

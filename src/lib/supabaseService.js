@@ -229,6 +229,13 @@ export async function fetchRanking() {
   return (data || []).map(r => ({ ...r, strepen: Number(r.strepen || 0) }));
 }
 
+// Godmode (migratie 003100): enkel over jezelf; false als de migratie nog niet gedraaid is
+export async function fetchMijnGodmode() {
+  const { data, error } = await supabase.rpc('mijn_godmode');
+  if (error) return false;
+  return !!data;
+}
+
 // --- Nieuwe accounts goedkeuren (migratie 002700) ---
 
 // Eigen status: 'wacht' | 'goedgekeurd' | 'afgewezen' (null als de migratie nog niet gedraaid is)
