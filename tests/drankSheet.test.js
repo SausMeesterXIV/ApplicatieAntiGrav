@@ -56,3 +56,11 @@ test('facturen: nieuwste periode eerst, betaald Ja/Nee', () => {
   assert.equal(rijen[2][10], '02/10/2026');
   assert.equal(rijen[1][7], 5.5);
 });
+
+test('zelfdeInhoud: negeert lege cellen achteraan en getal vs tekst', async () => {
+  const { zelfdeInhoud } = await import('../supabase/functions/_shared/drankSheet.js');
+  assert.ok(zelfdeInhoud([['Leider', 'Totaal'], ['Anna', 3.5]], [['Leider', 'Totaal'], ['Anna', 3.5, ''], []]));
+  assert.ok(zelfdeInhoud([['a', '', 'b']], [['a', '', 'b']]));
+  assert.ok(!zelfdeInhoud([['Anna', 3.5]], [['Anna', 4]]));
+  assert.ok(!zelfdeInhoud(undefined, [['Leider']]));
+});

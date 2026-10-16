@@ -1,5 +1,6 @@
 // Edge function: Google Sheet voor Drankteam (enkel lezen, de app is de bron).
-//  - 'sync': de tabbladen Rekening, Strepen, Facturen en Info opnieuw vullen
+//  - 'sync': de tabbladen Rekening, Strepen, Facturen en Info opnieuw vullen, enkel als er iets veranderd is
+//      * aangeroepen door de database elke 30 seconden (pg_cron, migratie 003600) en bij het openen in de app
 //  - 'url':  de link naar de Sheet (null als er geen gekoppeld is)
 // Mag: Drankteam, Financiën en hoofdleiding (ingelogd), of de database zelf met de service key.
 // De rekenlogica staat in ../_shared/drankSheet.js (getest in tests/drankSheet.test.js).
@@ -14,11 +15,13 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import {
   EURO_KOLOMMEN,
+  INHOUD_TABBLADEN,
   TABBLADEN,
   factuurRijen,
   infoRijen,
   rekeningRijen,
   strepenRijen,
+  zelfdeInhoud,
 } from '../_shared/drankSheet.js';
 
 const SHEETS = 'https://sheets.googleapis.com/v4/spreadsheets';
@@ -223,6 +226,16 @@ async function synchroniseer(db: SupabaseClient) {
       );
     }
     await google(`${SHEETS}/${id}:batchUpdate`, { method: 'POST', body: JSON.stringify({ requests: opmaak }) });
+  }
+
+  // Niets veranderd sinds de vorige keer? Dan niet schrijven (anders loopt de versiegeschiedenis vol)
+  if (!nieuw.length) {
+    const huidig = await google(
+      `${SHEETS}/${id}/values:batchGet?valueRenderOption=UNFORMATTED_VALUE&${INHOUD_TABBLADEN.map(t => `ranges=${encodeURIComponent(`'${t}'`)}`).join('&')}`,
+    );
+    // deno-lint-ignore no-explicit-any
+    const zelfde = INHOUD_TABBLADEN.every((t, i) => zelfdeInhoud((huidig.valueRanges?.[i] as any)?.values, inhoud[t]));
+    if (zelfde) return { url: `https://docs.google.com/spreadsheets/d/${id}/edit`, ongewijzigd: true };
   }
 
   // Alles leegmaken en opnieuw schrijven

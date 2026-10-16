@@ -132,3 +132,20 @@ export function infoRijen({ periode, nu = new Date() }) {
     ['Facturen: de drankfacturen van afgesloten periodes, met betaald of niet.', ''],
   ];
 }
+
+// Tabbladen die vergeleken worden om te weten of er iets veranderd is (Info heeft altijd een nieuw tijdstip)
+export const INHOUD_TABBLADEN = ['Rekening', 'Strepen', 'Facturen'];
+
+// Google laat lege cellen achteraan een rij en lege rijen achteraan weg; getallen en tekst vergelijken als tekst
+const normaal = rijen => {
+  const uit = (rijen || []).map(rij => {
+    const r = (rij || []).map(c => (c === null || c === undefined ? '' : String(c)));
+    while (r.length && r[r.length - 1] === '') r.pop();
+    return r;
+  });
+  while (uit.length && uit[uit.length - 1].length === 0) uit.pop();
+  return JSON.stringify(uit);
+};
+
+/** true als wat in de Sheet staat (oud) hetzelfde is als wat we zouden schrijven (nieuw) */
+export const zelfdeInhoud = (oud, nieuw) => normaal(oud) === normaal(nieuw);
