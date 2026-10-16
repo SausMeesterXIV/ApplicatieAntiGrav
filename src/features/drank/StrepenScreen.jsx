@@ -54,14 +54,11 @@ const Label = ({ children }) => (
 
 export const StrepenScreen = () => {
   const navigate = useNavigate();
-  const { currentUser, setCurrentUser, users } = useAuth();
+  const { currentUser, setCurrentUser } = useAuth();
   const { balances, streaks, handleAddCost, dranken, activePeriod } = useDrink();
 
+  // Hier streep je altijd voor jezelf; Drankteam streept voor anderen via het Team Drank-dashboard
   const isTeamDrank = hasRole(currentUser, 'drank') || hasRole(currentUser, 'hoofdleiding');
-  // Drankteam kan strepen voor iemand anders (bv. correcties); standaard voor jezelf
-  const [strepenVoorId, setStrepenVoorId] = useState(null);
-  const doelUser = (isTeamDrank && strepenVoorId && users.find(u => u.id === strepenVoorId)) || currentUser;
-  const voorMezelf = doelUser?.id === currentUser?.id;
 
   const [selectedDrink, setSelectedDrink] = useState(null);
   const [aantal, setAantal] = useState(1);
@@ -73,9 +70,9 @@ export const StrepenScreen = () => {
   const vandaag = useMemo(
     () =>
       streaks
-        .filter(s => s.userId === doelUser?.id && isVandaag(s.timestamp))
+        .filter(s => s.userId === currentUser?.id && isVandaag(s.timestamp))
         .reduce((som, s) => som + (s.amount || 1), 0),
-    [streaks, doelUser?.id],
+    [streaks, currentUser?.id],
   );
 
   // Alle dranken (Freedom eerst), behalve Bak Freedom (eigen knop). Enkel een drank uit deze lijst mag
@@ -98,11 +95,11 @@ export const StrepenScreen = () => {
   // Per ongeluk dubbel tikken (binnen 0,6 s) telt als één keer toevoegen
   const laatsteTik = useRef(0);
   const streep = async (drank, n) => {
-    if (!drank || !doelUser) return;
+    if (!drank || !currentUser) return;
     if (Date.now() - laatsteTik.current < 600) return;
     laatsteTik.current = Date.now();
 
-    handleAddCost(doelUser.id, drank.id, n, doelUser.naam);
+    handleAddCost(currentUser.id, drank.id, n, currentUser.naam);
     setPlusEen(n);
     setTimeout(() => setPlusEen(null), 800);
     await hapticSuccess();
@@ -141,9 +138,7 @@ export const StrepenScreen = () => {
       <main className="flex-1 px-4 pt-2 space-y-6">
         {/* Vandaag en voorlopige rekening */}
         <article className="rounded-[28px] bg-kaart-strepen dark:bg-kaart-strepen-d p-6">
-          <p className="text-base text-slate-600 dark:text-slate-300">
-            {voorMezelf ? 'Vandaag gestreept' : `Vandaag gestreept door ${doelUser?.naam}`}
-          </p>
+          <p className="text-base text-slate-600 dark:text-slate-300">Vandaag gestreept</p>
           <p className="text-7xl font-extrabold leading-none tabular-nums">{vandaag}</p>
           <button
             type="button"
@@ -166,27 +161,6 @@ export const StrepenScreen = () => {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
               <span className="text-5xl font-extrabold animate-bounce-up">+{plusEen}</span>
             </div>
-          )}
-
-          {isTeamDrank && (
-            <label className="block">
-              <Label>Strepen voor</Label>
-              <select
-                value={strepenVoorId || ''}
-                onChange={e => setStrepenVoorId(e.target.value || null)}
-                className="w-full px-4 py-3 rounded-xl bg-white dark:bg-white/10 border-0 font-semibold"
-              >
-                <option value="">Mezelf</option>
-                {users
-                  .filter(u => u.actief && u.id !== currentUser?.id)
-                  .sort((a, b) => (a.naam || '').localeCompare(b.naam || ''))
-                  .map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.naam}
-                    </option>
-                  ))}
-              </select>
-            </label>
           )}
 
           <div>
