@@ -1,14 +1,24 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
 import * as db from '../../lib/supabaseService';
 import { useAuth } from '../auth/AuthContext';
 import { showToast } from '../../components/Toast';
+import { isBeschikbaar, drankLabel } from '../../lib/dranken';
 
 const DrinkContext = createContext(undefined);
 
 export function DrinkProvider({ children }) {
   const { session, currentUser } = useAuth();
-  const [dranken, setDranken] = useState([]);
+  // alleDranken: ook afgelopen tijdelijke dranken en die uit de lijst (Drankteam, opzoekingen op id).
+  // dranken: enkel wat nu beschikbaar is (keuzelijsten voor iedereen). Elke minuut opnieuw berekend,
+  // zodat een tijdelijke drank vanzelf verschijnt of verdwijnt als zijn tijdslot begint of eindigt.
+  const [alleDranken, setDranken] = useState([]);
+  const [nu, setNu] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNu(new Date()), 60000);
+    return () => clearInterval(t);
+  }, []);
+  const dranken = useMemo(() => alleDranken.filter(d => isBeschikbaar(d, nu)), [alleDranken, nu]);
   const [streaks, setStreaks] = useState([]);
   const [balances, setBalances] = useState({});
   const [activePeriod, setActivePeriod] = useState(null);
@@ -102,7 +112,8 @@ export function DrinkProvider({ children }) {
   }, [session?.user?.id]);
 
   const handleAddCost = async (userId, drinkId, quantity = 1, userNaam) => {
-    const drink = dranken.find(d => d.id === drinkId);
+    // Uit alle dranken: Drankteam mag ook op afgelopen tijdelijke dranken strepen (database controleert het recht)
+    const drink = alleDranken.find(d => d.id === drinkId);
     if (!drink) {
       showToast('Drankje niet gevonden', 'error');
       return;
@@ -114,6 +125,7 @@ export function DrinkProvider({ children }) {
       userId,
       drinkId,
       drinkName: drink.name,
+      drinkLabel: drankLabel(drink),
       price: drink.price,
       amount: quantity,
       timestamp: new Date(),
@@ -159,7 +171,8 @@ export function DrinkProvider({ children }) {
         ...prev,
         [userId]: (prev[userId] || 0) - drink.price * quantity,
       }));
-      showToast('Fout bij toevoegen streepje. Probeer opnieuw.', 'error');
+      // Bv. "Cocktail kan je enkel strepen van 16/10 18:00 tot 18/10 00:00" (database)
+      showToast(error?.message || 'Fout bij toevoegen streepje. Probeer opnieuw.', 'error');
     }
   };
 
@@ -221,6 +234,7 @@ export function DrinkProvider({ children }) {
     <DrinkContext.Provider
       value={{
         dranken,
+        alleDranken,
         streaks,
         strepenVersie,
         balances,

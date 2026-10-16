@@ -5,6 +5,7 @@ import { useDrink } from './DrinkContext';
 import * as db from '../../lib/supabaseService';
 
 import { showToast } from '../../components/Toast';
+import { drankLabel } from '../../lib/dranken';
 import { euro } from '../../lib/geld';
 
 // "row-col"
@@ -14,7 +15,7 @@ const COL_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 export const TeamDrankExcelBeheerScreen = () => {
   const navigate = useNavigate();
   const { users, setUsers } = useAuth();
-  const { streaks, setStreaks, dranken: drinks, setDrinks, activePeriod, billingPeriods } = useDrink();
+  const { streaks, setStreaks, alleDranken: drinks, setDrinks, activePeriod, billingPeriods } = useDrink();
   const [activeSheet, setActiveSheet] = useState('consumpties');
   const [selectedCell, setSelectedCell] = useState(null);
   const [editingCell, setEditingCell] = useState(null);
@@ -44,7 +45,7 @@ export const TeamDrankExcelBeheerScreen = () => {
       return {
         ...streak,
         userName: streak.userName || user?.naam || user?.name || 'Onbekend',
-        drinkName: drink?.name || streak.drinkName || 'Onbekend',
+        drinkName: drink ? drankLabel(drink) : streak.drinkLabel || streak.drinkName || 'Onbekend',
       };
     });
     if (searchTerm) {

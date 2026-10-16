@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { formatTimeAgo } from './utils';
+import { drankLabel } from './dranken';
 
 // Eén rij verwijderen en nagaan dat het echt gebeurde: zonder recht verwijdert RLS stil niets (geen fout).
 async function verwijderRij(tabel, id, geenRechtMelding) {
@@ -59,21 +60,12 @@ export async function uploadAvatar(userId, file) {
 
 // ==================== DRANKEN ====================
 
+// Alle dranken, ook afgelopen tijdelijke en die uit de lijst (migratie 003400).
+// Wat gewone leiding mag kiezen, bepaalt isBeschikbaar() in lib/dranken.js (en de database).
 export async function fetchDranken() {
   const { data, error } = await supabase.from('dranken').select('*').order('naam');
   if (error) throw error;
-  return (data || []).filter(isActiveDrank).map(mapDrank);
-}
-
-// Datum als YYYY-MM-DD in lokale tijd (toISOString rekent in UTC en schuift items vóór 2u naar de vorige dag)
-const lokaleDatum = d =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-// Vaste dranken altijd; tijdelijke dranken enkel tot en met hun valid_until-datum
-function isActiveDrank(d) {
-  if (!d.is_temporary || !d.valid_until) return true;
-  const today = lokaleDatum(new Date());
-  return d.valid_until.slice(0, 10) >= today;
+  return (data || []).map(mapDrank);
 }
 
 function mapDrank(d) {
@@ -82,23 +74,45 @@ function mapDrank(d) {
     name: d.naam,
     price: Number(d.prijs),
     isTemporary: d.is_temporary,
+    geldigVan: d.geldig_van ? new Date(d.geldig_van) : null,
+    geldigTot: d.geldig_tot ? new Date(d.geldig_tot) : null,
+    uitLijst: !!d.uit_lijst,
     validUntil: d.valid_until || undefined,
     categorie: d.categorie,
   };
 }
 
-export async function addDrank(naam, prijs, isTemporary = false, validUntil) {
-  const { data, error } = await supabase
-    .from('dranken')
-    .insert([{ naam, prijs, is_temporary: isTemporary, valid_until: validUntil || null }])
-    .select()
-    .single();
+// Vaste drank: addDrank(naam, prijs). Tijdelijke: addDrank(naam, prijs, true, geldigVan, geldigTot) (Date)
+export async function addDrank(naam, prijs, isTemporary = false, geldigVan = null, geldigTot = null) {
+  const rij = { naam, prijs, is_temporary: isTemporary };
+  if (isTemporary) {
+    rij.geldig_van = (geldigVan || new Date()).toISOString();
+    rij.geldig_tot = geldigTot ? geldigTot.toISOString() : null;
+  }
+  const { data, error } = await supabase.from('dranken').insert([rij]).select().single();
   if (error) throw error;
   return mapDrank(data);
 }
 
 export async function updateDrank(id, naam, prijs) {
   const { error } = await supabase.from('dranken').update({ naam, prijs }).eq('id', String(id));
+  if (error) throw error;
+}
+
+export async function updateTijdslot(id, geldigVan, geldigTot) {
+  const { data, error } = await supabase
+    .from('dranken')
+    .update({ geldig_van: geldigVan.toISOString(), geldig_tot: geldigTot.toISOString() })
+    .eq('id', String(id))
+    .select()
+    .single();
+  if (error) throw error;
+  return mapDrank(data);
+}
+
+// Vaste drank uit de lijst halen (of terugzetten); de strepen blijven bewaard
+export async function setUitLijst(id, uitLijst) {
+  const { error } = await supabase.from('dranken').update({ uit_lijst: uitLijst }).eq('id', String(id));
   if (error) throw error;
 }
 
@@ -112,7 +126,7 @@ export async function deleteDrank(id) {
 export async function fetchConsumpties(userId) {
   let query = supabase
     .from('consumpties')
-    .select('*, dranken(naam, prijs), profiles(naam)')
+    .select('*, dranken(naam, prijs, is_temporary, geldig_van, geldig_tot), profiles(naam)')
     .order('datum', { ascending: false });
 
   if (userId) {
@@ -127,6 +141,8 @@ export async function fetchConsumpties(userId) {
     userName: c.profiles?.naam || c.user_naam || 'Onbekend',
     drinkId: c.drank_id,
     drinkName: c.dranken?.naam || 'Onbekend',
+    // Met tijdslot voor tijdelijke dranken: twee "Cocktail"s blijven zo uit elkaar
+    drinkLabel: c.dranken ? drankLabel(mapDrank(c.dranken)) : 'Onbekend',
     price: Number(c.prijs ?? c.dranken?.prijs ?? 0), // prijs per stuk; totaal = price * amount
     amount: c.aantal,
     timestamp: new Date(c.datum),

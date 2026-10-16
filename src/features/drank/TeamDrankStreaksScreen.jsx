@@ -4,12 +4,13 @@ import { useDrink } from './DrinkContext';
 import { useNavigate } from 'react-router-dom';
 import { ChevronBack } from '../../components/ChevronBack';
 import { ConsumptionOverviewScreen } from './ConsumptionOverviewScreen';
+import { drankLabel } from '../../lib/dranken';
 import { euro } from '../../lib/geld';
 
 export const TeamDrankStreaksScreen = () => {
   const navigate = useNavigate();
   const { users } = useAuth();
-  const { streaks, dranken: drinks, handleDeleteStreak: onDeleteStreak } = useDrink();
+  const { streaks, dranken: drinks, alleDranken, handleDeleteStreak: onDeleteStreak } = useDrink();
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const today = new Date();
     const dayOfWeek = today.getDay(); // Sunday - 0, Monday - 1, ..., Saturday - 6
@@ -52,7 +53,7 @@ export const TeamDrankStreaksScreen = () => {
 
   const getUserName = userId =>
     users.find(u => u.id === userId)?.naam || users.find(u => u.id === userId)?.name || 'Onbekend';
-  const getDrinkName = drinkId => drinks.find(d => d.id === drinkId)?.name || 'Onbekend';
+  const getDrinkName = drinkId => drankLabel(alleDranken.find(d => d.id === drinkId));
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-white font-sans transition-colors duration-200">

@@ -66,7 +66,7 @@ export const TeamDrankBillingExcelPreviewScreen = ({ onBack }) => {
         // Detailed drink breakdown
         const drinkBreakdown = {};
         userStreaks.forEach(s => {
-          drinkBreakdown[s.drinkName] = (drinkBreakdown[s.drinkName] || 0) + s.amount;
+          drinkBreakdown[s.drinkLabel || s.drinkName] = (drinkBreakdown[s.drinkLabel || s.drinkName] || 0) + s.amount;
         });
 
         return {
@@ -154,7 +154,7 @@ export const TeamDrankBillingExcelPreviewScreen = ({ onBack }) => {
         XLSX.utils.book_append_sheet(wb, ws1, 'Overzicht');
 
         // === Sheet 2: Detail per drank ===
-        const drinkColumns = [...new Set(filteredStreaks.map(s => s.drinkName))].sort();
+        const drinkColumns = [...new Set(filteredStreaks.map(s => s.drinkLabel || s.drinkName))].sort();
         const detailHeader = [
           { v: 'Naam', t: 's' },
           ...drinkColumns.map(d => ({ v: d, t: 's' })),

@@ -47,7 +47,7 @@ export const MyInvoiceScreen = () => {
     streaks
       .filter(s => s.userId === currentUser?.id && !s.factuurId)
       .forEach(s => {
-        groep[s.drinkName] = (groep[s.drinkName] || 0) + s.amount;
+        groep[s.drinkLabel || s.drinkName] = (groep[s.drinkLabel || s.drinkName] || 0) + s.amount;
       });
     return Object.entries(groep).sort((a, b) => b[1] - a[1]);
   }, [streaks, currentUser?.id]);

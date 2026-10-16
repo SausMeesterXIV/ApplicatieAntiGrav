@@ -5,6 +5,7 @@ import { inVasteVolgorde } from '../../lib/constants';
 import { hapticSuccess } from '../../lib/haptics';
 import { showToast } from '../../components/Toast';
 import { euro } from '../../lib/geld';
+import { drankLabel } from '../../lib/dranken';
 
 // Drankteam: de strepen van één leider in de open periode bekijken, bijzetten en verwijderen.
 // Bijzetten en verwijderen mag hier op elk moment; de database controleert dat je Drankteam bent.
@@ -17,12 +18,23 @@ const Label = ({ children }) => (
 );
 
 export const LeiderStrepenSheet = ({ leider, onClose }) => {
-  const { dranken, streaks, activePeriod, handleAddCost, handleDeleteStreak } = useDrink();
+  const { dranken, alleDranken, streaks, activePeriod, handleAddCost, handleDeleteStreak } = useDrink();
   const [drankId, setDrankId] = useState(null);
   const [aantal, setAantal] = useState(1);
+  const [ookAndere, setOokAndere] = useState(false);
 
-  const keuze = useMemo(() => inVasteVolgorde(dranken), [dranken]);
-  const drank = keuze.find(d => d.id === drankId) || keuze[0] || null;
+  // Eerst wat nu beschikbaar is; Drankteam kan ook afgelopen/geplande tijdelijke dranken en dranken
+  // die uit de lijst zijn kiezen (nieuwste eerst), bv. om achteraf iets te corrigeren.
+  const beschikbaar = useMemo(() => inVasteVolgorde(dranken), [dranken]);
+  const andere = useMemo(
+    () =>
+      alleDranken
+        .filter(d => !dranken.some(b => b.id === d.id))
+        .sort((a, b) => (b.geldigVan || 0) - (a.geldigVan || 0)),
+    [alleDranken, dranken],
+  );
+  const keuze = ookAndere ? [...beschikbaar, ...andere] : beschikbaar;
+  const drank = alleDranken.find(d => d.id === drankId) || beschikbaar[0] || null;
   const n = Math.max(1, aantal || 1);
 
   // Bij een andere leider opnieuw beginnen met 1× de eerste drank
@@ -54,7 +66,7 @@ export const LeiderStrepenSheet = ({ leider, onClose }) => {
   };
 
   const verwijder = s => {
-    if (window.confirm(`${s.amount}× ${s.drinkName} van ${leider.naam} verwijderen?`)) handleDeleteStreak(s.id);
+    if (window.confirm(`${s.amount}× ${s.drinkLabel || s.drinkName} van ${leider.naam} verwijderen?`)) handleDeleteStreak(s.id);
   };
 
   return (
@@ -86,10 +98,19 @@ export const LeiderStrepenSheet = ({ leider, onClose }) => {
                         actief ? 'bg-inkt text-white dark:bg-white dark:text-inkt' : 'bg-white dark:bg-white/10'
                       }`}
                     >
-                      {d.name}
+                      {d.isTemporary || d.uitLijst ? drankLabel(d) : d.name}
                     </button>
                   );
                 })}
+                {andere.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setOokAndere(!ookAndere)}
+                    className="rounded-full px-4 py-2 text-sm font-bold text-gray-500 dark:text-gray-400 underline underline-offset-2"
+                  >
+                    {ookAndere ? 'Minder tonen' : `Andere dranken (${andere.length})`}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -152,7 +173,7 @@ export const LeiderStrepenSheet = ({ leider, onClose }) => {
                 <li key={s.id} className="px-4 py-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-semibold truncate">
-                      {s.amount}× {s.drinkName}
+                      {s.amount}× {s.drinkLabel || s.drinkName}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
                       {tijdstip(s.timestamp)} · {euro(s.price * s.amount)}
@@ -162,7 +183,7 @@ export const LeiderStrepenSheet = ({ leider, onClose }) => {
                     type="button"
                     onClick={() => verwijder(s)}
                     className="shrink-0 rounded-full bg-red-50 dark:bg-red-900/15 text-red-600 dark:text-red-400 px-3.5 py-2 text-sm font-bold active:scale-95"
-                    aria-label={`${s.amount}× ${s.drinkName} verwijderen`}
+                    aria-label={`${s.amount}× ${s.drinkLabel || s.drinkName} verwijderen`}
                   >
                     Verwijder
                   </button>

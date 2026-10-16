@@ -120,7 +120,7 @@ export const TeamDrankDashboardScreen = () => {
     Object.keys(weeks).forEach(label => {
       const drinkTotals = {};
       weeks[label].streaks.forEach(s => {
-        drinkTotals[s.drinkName] = (drinkTotals[s.drinkName] || 0) + s.amount;
+        drinkTotals[s.drinkLabel || s.drinkName] = (drinkTotals[s.drinkLabel || s.drinkName] || 0) + s.amount;
       });
       weeks[label].summary = Object.entries(drinkTotals)
         .map(([name, count]) => `${count}× ${name}`)
@@ -429,7 +429,7 @@ export const TeamDrankDashboardScreen = () => {
                                 <div className="min-w-0">
                                   <p className="font-semibold truncate">{userName}</p>
                                   <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
-                                    {s.amount}× {s.drinkName} · {euro(s.price)}
+                                    {s.amount}× {s.drinkLabel || s.drinkName} · {euro(s.price)}
                                   </p>
                                 </div>
                                 <button

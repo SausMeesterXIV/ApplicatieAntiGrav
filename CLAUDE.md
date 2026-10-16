@@ -75,7 +75,10 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 
 ### Drank en strepen — behouden
 - Leiding zet **zelf** strepen en kan een eigen streep verwijderen tot 1 uur na het zetten (zolang ze niet gefactureerd is). **Drankteam** kan strepen van iedereen toevoegen en verwijderen, op elk moment, bv. bij correcties.
-- **Dranken en prijzen** beheert Drankteam in de app.
+- **Dranken en prijzen** beheert Drankteam in de app (Voorraad en prijzen > Dranken & Prijzen, of Strepen > Dranken beheren).
+- **Tijdelijke dranken** (migratie 003400): elk een aparte drank met eigen id, prijs en tijdslot (begin en einde, datum en uur); dezelfde naam mag opnieuw en overschrijft nooit een vorige. Ze blijven **voor altijd** in de database en zijn niet te verwijderen. Binnen het tijdslot streept iedereen; daarbuiten enkel Drankteam/hoofdleiding (afgedwongen in `streep_drank`). Overal waar de naam niet volstaat, toont de app het tijdslot ("Cocktail (16/10 – 17/10)", `drankLabel`). Drankteam ziet ze gesorteerd op datum met status gepland/open/afgelopen.
+- **Vaste dranken**: unieke naam (de app zoekt Freedom/Bak Freedom op naam). Wie al gestreept werd, kan niet verwijderd worden: "uit de lijst halen" (`uit_lijst`), de strepen blijven.
+- **Geschiedenis blijft altijd bewaard**: een frietronde met bestellingen of een account met strepen, friet, facturen of betalingen is niet te verwijderen (account: op inactief zetten). De prijs van een streep ligt vast op het moment van strepen.
 - **Voorraad**: elke streep trekt automatisch af van de voorraad. Drankteam kan corrigeren na een manuele telling.
 - **Facturatie**: Drankteam **sluit zelf een periode af**. Daarbij wordt per leider een factuur gemaakt, met **Excel-export**.
 - **Schatting en echte kost**: tijdens de periode ziet iedereen een schatting = eigen strepen × de prijs van de drank (de laatst ingestelde prijs, bv. die van de vorige bak). Bij het afsluiten vult Drankteam de **echte kost** in (bv. factuur van de brouwer); die wordt verdeeld over alle strepen van de periode en bepaalt de factuur. Zonder echte kost blijft het aantal × prijs.

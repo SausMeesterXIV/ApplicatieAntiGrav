@@ -5,6 +5,7 @@ import { useDrink } from './DrinkContext';
 import { ChevronBack } from '../../components/ChevronBack';
 import { BottomSheet } from '../../components/Modal';
 
+import { drankLabel } from '../../lib/dranken';
 import { SkeletonRow } from '../../components/Skeleton';
 
 export const ConsumptionOverviewScreen = ({
@@ -79,7 +80,10 @@ export const ConsumptionOverviewScreen = ({
     });
 
     // Dynamically get all unique drink names from the available drinks
-    const drinkNames = drinks.map(drink => drink.name.toUpperCase());
+    // Kolommen: beschikbare dranken plus alles wat die week gestreept werd (ook afgelopen tijdelijke dranken)
+    const drinkNames = [
+      ...new Set([...drinks.map(drankLabel), ...filteredStreaks.map(s => s.drinkLabel || s.drinkName)]),
+    ].map(n => n.toUpperCase());
     const columns = ['NAAM', ...drinkNames];
 
     const consumptionByUser = {};
@@ -88,7 +92,7 @@ export const ConsumptionOverviewScreen = ({
       if (!consumptionByUser[streak.userId]) {
         consumptionByUser[streak.userId] = {};
       }
-      const drinkNameUpper = streak.drinkName.toUpperCase();
+      const drinkNameUpper = (streak.drinkLabel || streak.drinkName).toUpperCase();
       consumptionByUser[streak.userId][drinkNameUpper] = (consumptionByUser[streak.userId][drinkNameUpper] || 0) + 1;
     });
 

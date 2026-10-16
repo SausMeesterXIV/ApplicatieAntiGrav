@@ -5,19 +5,19 @@ import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 import { showToast } from '../../components/Toast';
-import { Modal, BottomSheet } from '../../components/Modal';
+import { BottomSheet } from '../../components/Modal';
 import { SkeletonRow } from '../../components/Skeleton';
 import { VoorraadPerDrank } from './VoorraadPerDrank';
+import { StrepenAdminPanel } from './StrepenAdminPanel';
 
 export const TeamDrankStockScreen = () => {
   const navigate = useNavigate();
   const { loading } = useAuth();
-  const { stockItems, setStockItems: onUpdateStock, dranken: drinks, setDrinks: onUpdateDrinks } = useDrink();
+  const { stockItems, setStockItems: onUpdateStock } = useDrink();
   const [activeMainTab, setActiveMainTab] = useState('voorraad');
   const [activeFilter, setActiveFilter] = useState('Standaard');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDrinkModalOpen, setIsDrinkModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [viewMode, setViewMode] = useState('list');
 
@@ -29,13 +29,6 @@ export const TeamDrankStockScreen = () => {
     unit: 'stuks',
     exp: '',
     icon: 'inventory_2',
-  });
-
-  // Form State Temporary Drink
-  const [drinkFormData, setDrinkFormData] = useState({
-    name: '',
-    price: '',
-    validUntil: '',
   });
 
   const filteredItems = (stockItems || []).filter(item => {
@@ -113,29 +106,6 @@ export const TeamDrankStockScreen = () => {
     }
   };
 
-  const handleSaveDrink = () => {
-    if (!drinkFormData.name || !drinkFormData.price) return;
-    const newDrink = {
-      id: Date.now().toString(),
-      name: drinkFormData.name,
-      price: parseFloat(drinkFormData.price.replace(',', '.')) || 0,
-      isTemporary: true,
-      validUntil: drinkFormData.validUntil || 'Einde periode',
-      icon: 'local_bar',
-      categorie: 'bier',
-      created_at: new Date().toISOString(),
-      huidige_voorraad: 0,
-      is_temporary: true,
-      naam: drinkFormData.name,
-      prijs: parseFloat(drinkFormData.price.replace(',', '.')) || 0,
-    };
-    if (onUpdateDrinks) {
-      onUpdateDrinks([...drinks, newDrink]);
-      showToast('Tijdelijke drank toegevoegd!', 'success');
-      setIsDrinkModalOpen(false);
-      setDrinkFormData({ name: '', price: '', validUntil: '' });
-    }
-  };
 
   // Prepare data for chart
   const chartData = (stockItems || [])
@@ -328,79 +298,9 @@ export const TeamDrankStockScreen = () => {
             )}
           </>
         ) : (
-          /* Dranken & Prijzen Tab */
-          <div className="space-y-4 mt-4">
-            <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider px-1">
-              Levende Prijzen (wordt direct doorgerekend!)
-            </h2>
-            {loading ? (
-              <div className="space-y-3">
-                {[...Array(5)].map((_, i) => (
-                  <SkeletonRow key={i} />
-                ))}
-              </div>
-            ) : (
-              drinks.map(drink => (
-                <div
-                  key={drink.id}
-                  className="bg-white dark:bg-[#1e293b] p-4 rounded-xl flex items-center justify-between border border-gray-100 dark:border-gray-800 shadow-sm"
-                >
-                  <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white flex items-center">
-                      {drink.name}
-                      {drink.isTemporary && (
-                        <span className="text-[10px] bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full ml-2 lowercase">
-                          Tijdelijk
-                        </span>
-                      )}
-                    </h3>
-                    {drink.validUntil && (
-                      <p className="text-[10px] text-gray-500 mt-0.5">
-                        Vervalt na:{' '}
-                        <span className="font-semibold text-gray-700 dark:text-gray-300">{drink.validUntil}</span>
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="relative">
-                      <span className="absolute left-3 top-2 text-gray-400 text-sm">€</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={drink.price}
-                        onChange={e => {
-                          const val = parseFloat(e.target.value) || 0;
-                          if (onUpdateDrinks) {
-                            onUpdateDrinks(drinks.map(d => (d.id === drink.id ? { ...d, price: val } : d)));
-                          }
-                        }}
-                        className="w-20 lg:w-24 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-6 pr-2 py-1.5 text-right font-bold focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30 outline-none transition-shadow"
-                      />
-                    </div>
-                    {drink.isTemporary && (
-                      <button
-                        onClick={() => {
-                          if (window.confirm('Tijdelijke drank verwijderen?')) {
-                            onUpdateDrinks && onUpdateDrinks(drinks.filter(d => d.id !== drink.id));
-                          }
-                        }}
-                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
-                      >
-                        <span className="material-icons-round text-sm">delete</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-
-            <button
-              onClick={() => setIsDrinkModalOpen(true)}
-              className="w-full py-4 mt-6 border-2 border-dashed border-gray-300 dark:border-white/15 rounded-2xl text-inkt dark:text-white font-bold flex items-center justify-center gap-2 hover:bg-kaart-event dark:hover:bg-kaart-event-d transition-colors active:scale-95"
-            >
-              <span className="material-icons-round">add_circle</span>
-              Tijdelijke Drank Toevoegen
-            </button>
+          /* Dranken & Prijzen: het echte beheer (bewaart in de database), zie StrepenAdminPanel */
+          <div className="mt-4">
+            <StrepenAdminPanel />
           </div>
         )}
       </main>
@@ -521,63 +421,6 @@ export const TeamDrankStockScreen = () => {
           </div>
         </div>
       </BottomSheet>
-      {/* Add Modal TIJDELIJKE DRANK */}
-      <Modal isOpen={isDrinkModalOpen} onClose={() => setIsDrinkModalOpen(false)} title="Nieuwe Tijdelijke Drank">
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Naam</label>
-              <input
-                type="text"
-                value={drinkFormData.name}
-                onChange={e => setDrinkFormData({ ...drinkFormData, name: e.target.value })}
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white"
-                placeholder="Bv. Rode Wodka Redbull"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">
-                Prijs (€)
-              </label>
-              <input
-                type="number"
-                step="0.10"
-                value={drinkFormData.price}
-                onChange={e => setDrinkFormData({ ...drinkFormData, price: e.target.value })}
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white"
-                placeholder="2.50"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">
-                Geldigheid (Optioneel)
-              </label>
-              <input
-                type="text"
-                value={drinkFormData.validUntil}
-                onChange={e => setDrinkFormData({ ...drinkFormData, validUntil: e.target.value })}
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white"
-                placeholder="Bv. Enkel vanavond"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <button
-              onClick={() => setIsDrinkModalOpen(false)}
-              className="flex-1 py-3.5 rounded-xl font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 transition-colors"
-            >
-              Annuleren
-            </button>
-            <button
-              onClick={handleSaveDrink}
-              className="flex-1 py-3.5 rounded-xl font-bold bg-inkt text-white dark:bg-white dark:text-inkt transition-colors active:scale-[0.98]"
-            >
-              Toevoegen
-            </button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 };
