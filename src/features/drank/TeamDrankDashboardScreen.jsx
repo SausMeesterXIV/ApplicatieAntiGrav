@@ -278,14 +278,8 @@ export const TeamDrankDashboardScreen = () => {
                 onClick={() => navigate('/strepen/facturatie')}
               />
               {sheetUrl && (
-                <Rij icoon="table_chart" label="Google Sheet" sub="Rekeningen, strepen en facturen (enkel lezen)" onClick={openSheet} />
+                <Rij icoon="table_chart" label="Google Sheet" sub="Drankrekening, bakken en facturen" onClick={openSheet} />
               )}
-              <Rij
-                icoon="grid_on"
-                label="Excel-beheer"
-                sub="Gegevens rechtstreeks aanpassen"
-                onClick={() => navigate('/strepen/facturatie/beheer')}
-              />
               <Rij
                 icoon="inventory_2"
                 label="Archief"

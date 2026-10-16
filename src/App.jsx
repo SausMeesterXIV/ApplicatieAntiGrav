@@ -88,10 +88,6 @@ const TeamDrankDashboardScreen = scherm(
   () => import('./features/drank/TeamDrankDashboardScreen'),
   'TeamDrankDashboardScreen',
 );
-const TeamDrankExcelBeheerScreen = scherm(
-  () => import('./features/drank/TeamDrankExcelBeheerScreen'),
-  'TeamDrankExcelBeheerScreen',
-);
 const TeamDrankExcelPreviewScreen = scherm(
   () => import('./features/drank/TeamDrankExcelPreviewScreen'),
   'TeamDrankExcelPreviewScreen',
@@ -381,14 +377,6 @@ const AppRoutes = () => {
               element={
                 <RoleRoute role="drank">
                   <TeamDrankBillingExcelPreviewScreen />
-                </RoleRoute>
-              }
-            />
-            <Route
-              path="strepen/facturatie/beheer"
-              element={
-                <RoleRoute role="drank">
-                  <TeamDrankExcelBeheerScreen />
                 </RoleRoute>
               }
             />
