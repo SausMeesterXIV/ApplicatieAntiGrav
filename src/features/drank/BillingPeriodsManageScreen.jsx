@@ -95,7 +95,7 @@ export const BillingPeriodsManageScreen = () => {
           {hasRecht(currentUser, 'drank_beheren') && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-blue-600 text-white p-2 rounded-xl shadow-lg shadow-blue-500/20"
+              className="bg-inkt text-white dark:bg-white dark:text-inkt p-2 rounded-xl"
             >
               <span className="material-icons-round">add</span>
             </button>
@@ -116,7 +116,7 @@ export const BillingPeriodsManageScreen = () => {
           billingPeriods.map(period => (
             <div
               key={period.id}
-              className={`p-4 rounded-2xl border transition-all ${!period.is_closed ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800' : 'bg-white dark:bg-[#1e293b] border-gray-100 dark:border-gray-800'}`}
+              className={`p-4 rounded-2xl border transition-all ${!period.is_closed ? 'bg-kaart-strepen dark:bg-kaart-strepen-d border-transparent' : 'bg-white dark:bg-[#1e293b] border-gray-100 dark:border-gray-800'}`}
             >
               <div className="flex justify-between items-start mb-2">
                 <div>
@@ -128,7 +128,7 @@ export const BillingPeriodsManageScreen = () => {
                           setEditingPeriod(period);
                           setEditName(period.naam);
                         }}
-                        className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                        className="p-1 text-gray-400 hover:text-inkt dark:hover:text-white transition-colors"
                       >
                         <span className="material-icons-round text-sm">edit</span>
                       </button>
@@ -171,7 +171,7 @@ export const BillingPeriodsManageScreen = () => {
                 )}
                 <button
                   onClick={() => navigate(`/strepen/facturatie/billing-excel?periodId=${period.id}`)}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-xs font-bold shadow-md shadow-blue-900/20 flex items-center justify-center gap-2"
+                  className="flex-1 bg-inkt text-white dark:bg-white dark:text-inkt py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
                 >
                   <span className="material-icons-round text-sm">download</span>
                   Excel Export
@@ -193,7 +193,7 @@ export const BillingPeriodsManageScreen = () => {
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 placeholder="v.b. Maart - April 2024"
-                className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
               />
             </div>
             <div>
@@ -204,7 +204,7 @@ export const BillingPeriodsManageScreen = () => {
                 type="date"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
               />
             </div>
           </div>
@@ -218,7 +218,7 @@ export const BillingPeriodsManageScreen = () => {
             </button>
             <button
               onClick={handleCreatePeriod}
-              className="flex-[2] bg-blue-600 text-white py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
+              className="flex-[2] bg-inkt text-white dark:bg-white dark:text-inkt py-3 rounded-2xl text-sm font-bold active:scale-[0.98] transition-all"
             >
               Opslaan
             </button>
@@ -235,7 +235,7 @@ export const BillingPeriodsManageScreen = () => {
               type="text"
               value={editName}
               onChange={e => setEditName(e.target.value)}
-              className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
             />
           </div>
 
@@ -248,7 +248,7 @@ export const BillingPeriodsManageScreen = () => {
             </button>
             <button
               onClick={handleUpdateName}
-              className="flex-[2] bg-blue-600 text-white py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
+              className="flex-[2] bg-inkt text-white dark:bg-white dark:text-inkt py-3 rounded-2xl text-sm font-bold active:scale-[0.98] transition-all"
             >
               Aanpassen
             </button>

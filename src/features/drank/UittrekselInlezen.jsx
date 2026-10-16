@@ -59,7 +59,7 @@ export const UittrekselInlezen = ({ facturen, onBetaald }) => {
       <input ref={invoer} type="file" accept=".csv,.txt,text/csv" className="hidden" onChange={lees} />
       <button
         onClick={() => invoer.current?.click()}
-        className="w-full py-2.5 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center gap-2"
+        className="w-full py-2.5 rounded-xl bg-inkt text-white dark:bg-white dark:text-inkt font-bold flex items-center justify-center gap-2"
       >
         <span className="material-icons-round">upload_file</span> CSV-bestand kiezen
       </button>

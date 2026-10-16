@@ -59,7 +59,7 @@ export const VoorraadPerDrank = () => {
                     setBewerkId(d.id);
                     setGeteld(String(d.huidige_voorraad ?? 0));
                   }}
-                  className="text-xs font-bold px-2 py-1 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-900/20"
+                  className="text-xs font-bold px-2 py-1 rounded-lg bg-kaart-event text-inkt dark:bg-kaart-event-d dark:text-white"
                 >
                   Tellen
                 </button>

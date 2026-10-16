@@ -165,7 +165,7 @@ export const TeamDrankStockScreen = () => {
               onClick={() => setViewMode(prev => (prev === 'list' ? 'overview' : 'list'))}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-2 ${
                 viewMode === 'overview'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                  ? 'bg-inkt text-white dark:bg-white dark:text-inkt'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
@@ -179,13 +179,13 @@ export const TeamDrankStockScreen = () => {
         <div className="flex gap-4 mt-2 mb-2 border-b border-gray-200 dark:border-gray-800">
           <button
             onClick={() => setActiveMainTab('voorraad')}
-            className={`pb-2 text-sm font-bold transition-colors ${activeMainTab === 'voorraad' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            className={`pb-2 text-sm font-bold transition-colors ${activeMainTab === 'voorraad' ? 'text-inkt dark:text-white border-b-2 border-inkt dark:border-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
           >
             Fysieke Voorraad
           </button>
           <button
             onClick={() => setActiveMainTab('dranken')}
-            className={`pb-2 text-sm font-bold transition-colors ${activeMainTab === 'dranken' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            className={`pb-2 text-sm font-bold transition-colors ${activeMainTab === 'dranken' ? 'text-inkt dark:text-white border-b-2 border-inkt dark:border-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
           >
             Dranken & Prijzen
           </button>
@@ -201,7 +201,7 @@ export const TeamDrankStockScreen = () => {
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Zoeken in voorraad..."
-                className="w-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
+                className="w-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30 transition-all shadow-sm"
               />
             </div>
 
@@ -212,8 +212,8 @@ export const TeamDrankStockScreen = () => {
                   onClick={() => setActiveFilter(filter)}
                   className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${
                     activeFilter === filter
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                      : 'bg-white dark:bg-[#1e293b] text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700'
+                      ? 'bg-inkt text-white dark:bg-white dark:text-inkt'
+                      : 'bg-kaart-event dark:bg-kaart-event-d text-gray-600 dark:text-gray-300'
                   }`}
                 >
                   {filter}
@@ -277,7 +277,7 @@ export const TeamDrankStockScreen = () => {
                           </div>
 
                           <div className="mt-2 h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full bg-blue-500" style={{ width: '60%' }}></div>
+                            <div className="h-full rounded-full bg-inkt dark:bg-white" style={{ width: '60%' }}></div>
                           </div>
                         </div>
                       </div>
@@ -288,12 +288,13 @@ export const TeamDrankStockScreen = () => {
             ) : (
               <div className="space-y-6 mt-4">
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-blue-500 text-white p-4 rounded-2xl shadow-lg shadow-blue-500/20">
-                    <div className="text-xs font-medium text-blue-100 uppercase tracking-wide">Totaal Items</div>
+                  <div className="bg-kaart-strepen dark:bg-kaart-strepen-d text-inkt dark:text-white p-4 rounded-2xl">
+                    <div className="text-3xl font-bold mb-1">{stockItems.length}</div>
+                    <div className="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide">Totaal items</div>
                   </div>
-                  <div className="bg-green-500 text-white p-4 rounded-2xl shadow-lg shadow-green-500/20">
+                  <div className="bg-kaart-event dark:bg-kaart-event-d text-inkt dark:text-white p-4 rounded-2xl">
                     <div className="text-3xl font-bold mb-1">{stockItems.filter(i => i.count < 5).length}</div>
-                    <div className="text-xs font-medium text-green-100 uppercase tracking-wide">Lage Voorraad</div>
+                    <div className="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide">Lage voorraad</div>
                   </div>
                 </div>
 
@@ -316,7 +317,7 @@ export const TeamDrankStockScreen = () => {
                         />
                         <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                           {chartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={'#3b82f6'} />
+                            <Cell key={`cell-${index}`} fill={'#64748b'} />
                           ))}
                         </Bar>
                       </BarChart>
@@ -373,7 +374,7 @@ export const TeamDrankStockScreen = () => {
                             onUpdateDrinks(drinks.map(d => (d.id === drink.id ? { ...d, price: val } : d)));
                           }
                         }}
-                        className="w-20 lg:w-24 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-6 pr-2 py-1.5 text-right font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                        className="w-20 lg:w-24 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-6 pr-2 py-1.5 text-right font-bold focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30 outline-none transition-shadow"
                       />
                     </div>
                     {drink.isTemporary && (
@@ -395,7 +396,7 @@ export const TeamDrankStockScreen = () => {
 
             <button
               onClick={() => setIsDrinkModalOpen(true)}
-              className="w-full py-4 mt-6 border-2 border-dashed border-blue-300 dark:border-blue-700/50 rounded-2xl text-blue-600 dark:text-blue-500 font-bold flex items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors active:scale-95"
+              className="w-full py-4 mt-6 border-2 border-dashed border-gray-300 dark:border-white/15 rounded-2xl text-inkt dark:text-white font-bold flex items-center justify-center gap-2 hover:bg-kaart-event dark:hover:bg-kaart-event-d transition-colors active:scale-95"
             >
               <span className="material-icons-round">add_circle</span>
               Tijdelijke Drank Toevoegen
@@ -408,7 +409,7 @@ export const TeamDrankStockScreen = () => {
         <footer className="fixed bottom-nav-offset left-0 right-0 lg:left-60 lg:mx-auto lg:max-w-3xl lg:rounded-2xl lg:border p-4 bg-gray-50/90 dark:bg-[#0f172a]/90 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 z-20 flex gap-3 transition-colors">
           <button
             onClick={() => handleOpenModal()}
-            className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+            className="flex-1 bg-inkt text-white dark:bg-white dark:text-inkt font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
           >
             <span className="material-icons-round">add</span>
             Nieuw Stock Item
@@ -429,7 +430,7 @@ export const TeamDrankStockScreen = () => {
                 type="text"
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
                 placeholder="bv. Jupiler Bakken"
               />
             </div>
@@ -443,7 +444,7 @@ export const TeamDrankStockScreen = () => {
                   type="number"
                   value={formData.count}
                   onChange={e => setFormData({ ...formData, count: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
                   placeholder="0"
                 />
               </div>
@@ -454,7 +455,7 @@ export const TeamDrankStockScreen = () => {
                 <select
                   value={formData.unit}
                   onChange={e => setFormData({ ...formData, unit: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
                 >
                   <option value="flessen">flessen</option>
                   <option value="blikken">blikken</option>
@@ -471,7 +472,7 @@ export const TeamDrankStockScreen = () => {
               <select
                 value={formData.category}
                 onChange={e => setFormData({ ...formData, category: e.target.value })}
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
               >
                 {filters.map(f => (
                   <option key={f} value={f}>
@@ -489,7 +490,7 @@ export const TeamDrankStockScreen = () => {
                 type="text"
                 value={formData.exp}
                 onChange={e => setFormData({ ...formData, exp: e.target.value })}
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
                 placeholder="bv. 12/10/24"
               />
             </div>
@@ -513,7 +514,7 @@ export const TeamDrankStockScreen = () => {
             </button>
             <button
               onClick={handleSaveStock}
-              className="flex-1 py-3.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 active:scale-[0.98]"
+              className="flex-1 py-3.5 rounded-xl font-bold bg-inkt text-white dark:bg-white dark:text-inkt transition-colors active:scale-[0.98]"
             >
               Opslaan
             </button>
@@ -570,7 +571,7 @@ export const TeamDrankStockScreen = () => {
             </button>
             <button
               onClick={handleSaveDrink}
-              className="flex-1 py-3.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 active:scale-[0.98]"
+              className="flex-1 py-3.5 rounded-xl font-bold bg-inkt text-white dark:bg-white dark:text-inkt transition-colors active:scale-[0.98]"
             >
               Toevoegen
             </button>

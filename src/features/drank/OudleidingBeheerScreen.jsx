@@ -83,7 +83,7 @@ export const OudleidingBeheerScreen = () => {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
             />
             <button
               type="button"
@@ -207,7 +207,7 @@ const OudleiderSheet = ({ leider, onClose, onSaved }) => {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
             />
             <button
               type="button"

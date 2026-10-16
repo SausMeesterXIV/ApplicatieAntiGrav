@@ -169,7 +169,7 @@ export const ConsumptionOverviewScreen = ({
         <div className="mx-2 mb-2 px-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">Gesorteerd op:</span>
-            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-md font-semibold truncate">
+            <span className="text-xs bg-kaart-strepen dark:bg-kaart-strepen-d text-inkt dark:text-white px-2 py-0.5 rounded-md font-semibold truncate">
               {sortOption === 'alphabetical' ? 'Naam (A-Z)' : sortOption}
             </span>
           </div>
@@ -215,14 +215,14 @@ export const ConsumptionOverviewScreen = ({
                       return (
                         <tr
                           key={rowIdx}
-                          className={`${isCurrentUser ? 'bg-blue-50 dark:bg-blue-900/20 z-10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'} transition-colors relative`}
+                          className={`${isCurrentUser ? 'bg-kaart-strepen/60 dark:bg-kaart-strepen-d/60 z-10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'} transition-colors relative`}
                         >
                           <td
-                            className={`py-4 px-4 font-medium text-sm sticky left-0 border-r border-gray-100 dark:border-gray-800 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)] ${isCurrentUser ? 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-[#131b2e]' : 'text-gray-900 dark:text-white bg-white dark:bg-surface-dark'}`}
+                            className={`py-4 px-4 font-medium text-sm sticky left-0 border-r border-gray-100 dark:border-gray-800 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)] ${isCurrentUser ? 'text-inkt dark:text-white bg-kaart-strepen dark:bg-kaart-strepen-d' : 'text-gray-900 dark:text-white bg-white dark:bg-surface-dark'}`}
                           >
                             <div className="flex items-center gap-2">
                               {isCurrentUser && (
-                                <span className="material-icons-round text-xs text-blue-500">person</span>
+                                <span className="material-icons-round text-xs text-gray-500 dark:text-gray-400">person</span>
                               )}
                               {row.name}
                             </div>
@@ -230,7 +230,7 @@ export const ConsumptionOverviewScreen = ({
                           {row.values.map((val, vIdx) => (
                             <td
                               key={vIdx}
-                              className={`py-4 px-4 text-center text-sm ${sortOption === columns[vIdx + 1] ? 'font-bold text-blue-600 dark:text-blue-400 bg-blue-50/30 dark:bg-blue-900/10' : 'text-gray-600 dark:text-gray-300'}`}
+                              className={`py-4 px-4 text-center text-sm ${sortOption === columns[vIdx + 1] ? 'font-bold text-inkt dark:text-white bg-kaart-strepen/40 dark:bg-kaart-strepen-d/40' : 'text-gray-600 dark:text-gray-300'}`}
                             >
                               {val}
                             </td>
@@ -264,7 +264,7 @@ export const ConsumptionOverviewScreen = ({
               setSortOption('alphabetical');
               setShowSortMenu(false);
             }}
-            className={`w-full p-4 rounded-xl flex items-center justify-between transition-all ${sortOption === 'alphabetical' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-transparent'}`}
+            className={`w-full p-4 rounded-xl flex items-center justify-between transition-all ${sortOption === 'alphabetical' ? 'bg-inkt text-white dark:bg-white dark:text-inkt border border-transparent' : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-transparent'}`}
           >
             <span className="font-bold">Alfabetisch (A-Z)</span>
             {sortOption === 'alphabetical' && <span className="material-icons-round">check</span>}
@@ -282,7 +282,7 @@ export const ConsumptionOverviewScreen = ({
                     setSortOption(col);
                     setShowSortMenu(false);
                   }}
-                  className={`w-full p-4 rounded-xl flex items-center justify-between transition-all ${sortOption === col ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-transparent'}`}
+                  className={`w-full p-4 rounded-xl flex items-center justify-between transition-all ${sortOption === col ? 'bg-inkt text-white dark:bg-white dark:text-inkt border border-transparent' : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-transparent'}`}
                 >
                   <span className="font-bold">{col}</span>
                   {sortOption === col && <span className="material-icons-round">check</span>}

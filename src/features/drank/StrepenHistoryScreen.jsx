@@ -188,7 +188,7 @@ export const StrepenHistoryScreen = ({ adminMode = false }) => {
                           size="md"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-kaart-strepen dark:bg-kaart-strepen-d text-inkt dark:text-white flex items-center justify-center shrink-0">
                           <span className="material-icons-round">local_bar</span>
                         </div>
                       )}

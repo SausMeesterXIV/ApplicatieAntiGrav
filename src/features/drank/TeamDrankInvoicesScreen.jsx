@@ -103,7 +103,7 @@ export const TeamDrankInvoicesScreen = () => {
           <h1 className="text-xl font-bold flex-1">Facturen</h1>
           <button
             onClick={() => navigate('/strepen/facturatie/nieuw')}
-            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-600/20 dark:text-blue-400"
+            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-kaart-event text-inkt dark:bg-kaart-event-d dark:text-white"
           >
             Periode afsluiten
           </button>
@@ -130,7 +130,7 @@ export const TeamDrankInvoicesScreen = () => {
               key={k}
               onClick={() => setFilter(k)}
               className={`flex-1 py-1.5 rounded-lg text-sm font-semibold ${
-                filter === k ? 'bg-blue-600 text-white' : 'bg-white dark:bg-[#1e2330] text-gray-600 dark:text-gray-300'
+                filter === k ? 'bg-inkt text-white dark:bg-white dark:text-inkt' : 'bg-white dark:bg-[#1e2330] text-gray-600 dark:text-gray-300'
               }`}
             >
               {l}

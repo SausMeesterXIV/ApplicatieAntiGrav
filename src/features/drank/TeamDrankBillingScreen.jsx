@@ -119,7 +119,7 @@ export const TeamDrankBillingScreen = () => {
           </div>
           <button
             onClick={() => navigate('/strepen/facturatie/periodes')}
-            className="p-2 rounded-full text-blue-600 hover:bg-gray-200 dark:hover:bg-white/10"
+            className="p-2 rounded-full text-inkt dark:text-white hover:bg-gray-200 dark:hover:bg-white/10"
             title="Periodebeheer"
           >
             <span className="material-icons-round">event_note</span>
@@ -154,7 +154,7 @@ export const TeamDrankBillingScreen = () => {
               className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
             />
           </label>
-          <p className="text-xs text-blue-700 dark:text-blue-300">
+          <p className="text-xs text-gray-600 dark:text-gray-300">
             {echteKost && totaalStrepen > 0
               ? `Prijs per streep: ${euro(echteKost / totaalStrepen)}. De bedragen hieronder zijn wat op de facturen komt.`
               : 'De bedragen hieronder zijn de schatting (aantal × prijs).'}
@@ -170,7 +170,7 @@ export const TeamDrankBillingScreen = () => {
           onClick={() => setBetaalOpen(true)}
           className="w-full text-left bg-white dark:bg-[#1e2330] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 flex items-center gap-3"
         >
-          <span className="material-icons-round text-blue-600">account_balance</span>
+          <span className="material-icons-round text-gray-500 dark:text-gray-400">account_balance</span>
           <div className="flex-1">
             <p className="font-semibold">Rekening voor betalingen</p>
             <p className="text-xs text-gray-500">
@@ -203,7 +203,7 @@ export const TeamDrankBillingScreen = () => {
               <p className="font-bold">{euro(r.totaal)}</p>
               <button
                 onClick={() => setCorrectie({ userId: r.user_id, naam: r.naam })}
-                className="p-2 rounded-full text-gray-400 hover:text-blue-600"
+                className="p-2 rounded-full text-gray-400 hover:text-inkt dark:hover:text-white"
                 title="Correctie"
               >
                 <span className="material-icons-round text-lg">tune</span>
@@ -244,7 +244,7 @@ export const TeamDrankBillingScreen = () => {
             onChange={e => setCorrectieNotitie(e.target.value)}
             className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
           />
-          <button onClick={voegCorrectieToe} className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold">
+          <button onClick={voegCorrectieToe} className="w-full py-3 rounded-xl bg-inkt text-white dark:bg-white dark:text-inkt font-bold">
             Toevoegen
           </button>
         </div>
@@ -270,7 +270,7 @@ export const TeamDrankBillingScreen = () => {
             onChange={e => setBetaal({ ...betaal, bic: e.target.value })}
             className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 font-mono"
           />
-          <button onClick={bewaarBetaalgegevens} className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold">
+          <button onClick={bewaarBetaalgegevens} className="w-full py-3 rounded-xl bg-inkt text-white dark:bg-white dark:text-inkt font-bold">
             Opslaan
           </button>
         </div>

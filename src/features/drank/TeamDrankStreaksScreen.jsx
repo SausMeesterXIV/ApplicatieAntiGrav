@@ -97,7 +97,7 @@ export const TeamDrankStreaksScreen = () => {
                   className="bg-white dark:bg-[#1e293b] p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-kaart-strepen dark:bg-kaart-strepen-d flex items-center justify-center text-inkt dark:text-white shrink-0">
                       <span className="material-icons-round text-xl">filter_alt</span>
                     </div>
                     <div>
