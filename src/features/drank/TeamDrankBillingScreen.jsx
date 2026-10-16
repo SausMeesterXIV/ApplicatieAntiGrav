@@ -6,7 +6,7 @@ import { showToast } from '../../components/Toast';
 import { Modal } from '../../components/Modal';
 import { ChevronBack } from '../../components/ChevronBack';
 import { formatIban } from '../../lib/epc';
-import { euro, afrondingsverschil, afrondingsTekst } from '../../lib/geld';
+import { euro } from '../../lib/geld';
 
 // Drankteam: overzicht van de open periode, correcties, rekeninggegevens en de periode afsluiten.
 // De bedragen komen uit periode_overzicht() in de database: exact wat op de factuur komt.
@@ -26,17 +26,12 @@ export const TeamDrankBillingScreen = () => {
   const [betaal, setBetaal] = useState({ naam: '', iban: '', bic: '' });
   const [betaalOpen, setBetaalOpen] = useState(false);
 
-  // Echte kost van de periode (bv. factuur van de brouwer): verdeeld over alle strepen. Leeg = aantal x prijs.
-  const [echteKostTekst, setEchteKostTekst] = useState('');
-  const echteKost = (() => {
-    const n = parseFloat(String(echteKostTekst).replace(',', '.'));
-    return Number.isFinite(n) && n > 0 ? n : null;
-  })();
-
+  // De prijs per streep komt van de strepen zelf: uit Bakken in de Google Sheet (aankoopprijs en tellingen
+  // ingevuld) of anders de prijs in de app. Er is geen aparte "echte kost" meer die alles zou vervangen.
   const laadOverzicht = async () => {
     setLaden(true);
     try {
-      setRijen(await db.fetchPeriodeOverzicht(activePeriod?.id || null, echteKost));
+      setRijen(await db.fetchPeriodeOverzicht(activePeriod?.id || null));
     } catch (e) {
       console.error(e);
       showToast('Overzicht laden mislukt (is de drank-migratie uitgevoerd?)', 'error');
@@ -51,11 +46,9 @@ export const TeamDrankBillingScreen = () => {
       .catch(() => {});
   }, []);
 
-  // Opnieuw berekenen bij een andere periode of echte kost (kort wachten tot het typen stopt)
   useEffect(() => {
-    const t = setTimeout(laadOverzicht, 400);
-    return () => clearTimeout(t);
-  }, [activePeriod?.id, echteKost]);
+    laadOverzicht();
+  }, [activePeriod?.id]);
 
   const gesorteerd = useMemo(() => [...rijen].sort((a, b) => b.totaal - a.totaal), [rijen]);
   const totaal = rijen.reduce((s, r) => s + r.totaal, 0);
@@ -96,7 +89,7 @@ export const TeamDrankBillingScreen = () => {
     if (!bevestig) return setBevestig(true);
     setBezig(true);
     try {
-      const res = await db.sluitPeriodeAf(activePeriod?.id || null, echteKost);
+      const res = await db.sluitPeriodeAf(activePeriod?.id || null);
       showToast(`Periode afgesloten: ${res?.aantal_facturen ?? 0} facturen gemaakt`, 'success');
       await refreshDrinksData();
       navigate(`/strepen/facturatie/archief/${res?.closed_period_id || ''}`);
@@ -139,31 +132,11 @@ export const TeamDrankBillingScreen = () => {
           </div>
         </section>
 
-        <section className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-2">
-          <label className="block">
-            <span className="font-semibold">Echte kost van deze periode</span>
-            <span className="block text-xs text-gray-500 mb-2">
-              Bv. de factuur van de brouwer. Die wordt verdeeld over alle {totaalStrepen} strepen. Leeg laten = de
-              schatting (aantal strepen × prijs van de drank).
-            </span>
-            <input
-              inputMode="decimal"
-              placeholder="€0,00"
-              value={echteKostTekst}
-              onChange={e => setEchteKostTekst(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-            />
-          </label>
-          <p className="text-xs text-gray-600 dark:text-gray-300">
-            {echteKost && totaalStrepen > 0
-              ? `Prijs per streep: ${euro(echteKost / totaalStrepen)}. De bedragen hieronder zijn wat op de facturen komt.`
-              : 'De bedragen hieronder zijn de schatting (aantal × prijs).'}
+        <section className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl border border-gray-100 dark:border-gray-800">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            De bedragen hieronder komen op de facturen. De prijs per streep komt uit <b>Bakken</b> in de Google Sheet
+            (als de aankoopprijs en de tellingen ingevuld zijn), anders uit de prijs in de app.
           </p>
-          {echteKost && totaalStrepen > 0 && !laden && (
-            <p className="text-xs text-gray-500">
-              {afrondingsTekst(afrondingsverschil(rijen.map(r => r.drank_bedrag), echteKost))}
-            </p>
-          )}
         </section>
 
         <button
