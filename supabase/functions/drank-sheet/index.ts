@@ -1,5 +1,5 @@
 // Edge function: Google Sheet voor Drankteam (enkel lezen, de app is de bron).
-//  - 'sync': de tabbladen Rekening, Strepen, Facturen en Info opnieuw vullen, enkel als er iets veranderd is
+//  - 'sync': de tabbladen Drankrekening, Bakken, Rekening, Strepen, Facturen en Info opnieuw vullen, enkel als er iets veranderd is
 //      * aangeroepen door de database elke 30 seconden (pg_cron, migratie 003600) en bij het openen in de app
 //  - 'url':  de link naar de Sheet (null als er geen gekoppeld is)
 // Mag: Drankteam, Financiën en hoofdleiding (ingelogd), of de database zelf met de service key.
@@ -15,7 +15,10 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import {
   EURO_KOLOMMEN,
+  drankrekeningTabbladen,
+  formuleScheiding,
   INHOUD_TABBLADEN,
+  SHEET_VERSIE,
   TABBLADEN,
   factuurRijen,
   infoRijen,
@@ -136,19 +139,21 @@ async function laad(db: SupabaseClient) {
   const [overzicht, strepen, dranken, facturen, profielen, godmode] = await Promise.all([
     db.rpc('periode_overzicht'),
     strepenQuery,
-    db.from('dranken').select('id, naam, is_temporary, geldig_van, geldig_tot, uit_lijst'),
+    db.from('dranken').select('id, naam, prijs, is_temporary, geldig_van, geldig_tot, uit_lijst'),
     db
       .from('facturen')
       .select(
         'nummer, periode, user_naam, aantal_strepen, drank_bedrag, friet_bedrag, correctie_bedrag, totaal_bedrag, mededeling, status, betaald_op, profiles(naam), billing_periods(naam, start_datum)',
       ),
-    db.from('profiles').select('id, naam').eq('actief', true),
+    db.from('profiles').select('id, naam, is_oudleiding').eq('actief', true),
     db.from('godmode_accounts').select('user_id'),
   ]);
   for (const r of [overzicht, strepen, dranken, facturen, profielen, godmode]) if (r.error) throw r.error;
   // Vaste lijst leiders: alle actieve accounts behalve Godmode (testaccount)
   const godmodeIds = new Set((godmode.data ?? []).map(g => g.user_id));
-  const leiders = (profielen.data ?? []).filter(p => !godmodeIds.has(p.id) && p.naam).map(p => p.naam);
+  const leiders = (profielen.data ?? [])
+    .filter(p => !godmodeIds.has(p.id) && p.naam)
+    .map(p => ({ naam: p.naam as string, oud: !!p.is_oudleiding }));
 
   return {
     periode,
@@ -161,6 +166,59 @@ async function laad(db: SupabaseClient) {
   };
 }
 
+const EURO = { numberFormat: { type: 'CURRENCY', pattern: '€ #,##0.00' } };
+const INVOER_KLEUR = { red: 1, green: 0.95, blue: 0.75 };
+
+// Opmaak van Drankrekening en Bakken: bij elke keer schrijven opnieuw, want de kolommen schuiven mee met de dranken
+// deno-lint-ignore no-explicit-any
+function opmaakVerzoeken(dr: number, bk: number, o: any, aantalBakken: number) {
+  const vet = { textFormat: { bold: true } };
+  const cel = (sheetId: number, r0: number, r1: number | undefined, c0: number | undefined, c1: number | undefined, fmt: unknown, fields: string) => ({
+    repeatCell: {
+      range: { sheetId, startRowIndex: r0, endRowIndex: r1, startColumnIndex: c0, endColumnIndex: c1 },
+      cell: { userEnteredFormat: fmt },
+      fields,
+    },
+  });
+  const wis = (sheetId: number) => cel(sheetId, 0, undefined, undefined, undefined, {}, 'userEnteredFormat(numberFormat,backgroundColor,textFormat)');
+  const vastzetten = (sheetId: number) => ({
+    updateSheetProperties: {
+      properties: { sheetId, gridProperties: { frozenRowCount: 1, frozenColumnCount: 1 } },
+      fields: 'gridProperties(frozenRowCount,frozenColumnCount)',
+    },
+  });
+  const k = o.aantalDranken;
+  return [
+    // Drankrekening
+    wis(dr),
+    vastzetten(dr),
+    cel(dr, 0, 1, undefined, undefined, vet, 'userEnteredFormat.textFormat.bold'),
+    ...o.euroKolommen.map((c: number) => cel(dr, 1, o.totaalRij, c, c + 1, EURO, 'userEnteredFormat.numberFormat')),
+    cel(dr, o.totaalRij - 1, o.totaalRij, undefined, undefined, vet, 'userEnteredFormat.textFormat.bold'),
+    cel(dr, o.prijsRij - 1, o.prijsRij, undefined, undefined, { ...EURO, ...vet }, 'userEnteredFormat(numberFormat,textFormat)'),
+    cel(dr, 1, o.totaalRij, 1, 2, vet, 'userEnteredFormat.textFormat.bold'),
+    ...(o.oudKopRij ? [cel(dr, o.oudKopRij - 1, o.oudKopRij, 0, 1, vet, 'userEnteredFormat.textFormat.bold')] : []),
+    // Bakken: geel = zelf invullen
+    wis(bk),
+    vastzetten(bk),
+    cel(bk, 0, 1, undefined, undefined, vet, 'userEnteredFormat.textFormat.bold'),
+    ...(k ? [cel(bk, 1, 1 + k, 1, 6, { backgroundColor: INVOER_KLEUR }, 'userEnteredFormat.backgroundColor')] : []),
+    ...[1, 9, 10, 11].map(c => cel(bk, 1, aantalBakken, c, c + 1, EURO, 'userEnteredFormat.numberFormat')),
+    ...(k ? [cel(bk, 1 + k, 2 + k, undefined, undefined, vet, 'userEnteredFormat.textFormat.bold')] : []),
+    // De ID-kolom (M) verbergen: die gebruikt de app om de invoer per drank te bewaren
+    {
+      updateDimensionProperties: {
+        range: { sheetId: bk, dimension: 'COLUMNS', startIndex: 12, endIndex: 13 },
+        properties: { hiddenByUser: true },
+        fields: 'hiddenByUser',
+      },
+    },
+  ];
+}
+
+const bereik = (tabbladen: string[], optie: string) =>
+  `values:batchGet?valueRenderOption=${optie}&${tabbladen.map(t => `ranges=${encodeURIComponent(`'${t}'`)}`).join('&')}`;
+
 // ---------------------------------------------------------------------
 // De Sheet vullen
 // ---------------------------------------------------------------------
@@ -168,15 +226,16 @@ async function synchroniseer(db: SupabaseClient) {
   const id = sheetId();
   if (!id) throw new Fout('Er is nog geen Sheet gekoppeld (secret DRANK_SHEET_ID).', 409);
   const data = await laad(db);
+  const namen = data.leiders.map(l => l.naam);
   const inhoud: Record<string, unknown[][]> = {
-    Rekening: rekeningRijen(data.overzicht, data.leiders),
-    Strepen: strepenRijen(data.strepen, data.dranken, data.leiders),
+    Rekening: rekeningRijen(data.overzicht, namen),
+    Strepen: strepenRijen(data.strepen, data.dranken, namen),
     Facturen: factuurRijen(data.facturen),
     Info: infoRijen({ periode: data.periode }),
   };
 
-  // Ontbrekende tabbladen aanmaken (een leeg standaardblad "Blad1"/"Sheet1" wordt het eerste)
-  const meta = await google(`${SHEETS}/${id}?fields=sheets.properties`);
+  // Ontbrekende tabbladen aanmaken op hun plaats (een leeg standaardblad "Blad1"/"Sheet1" wordt het eerste)
+  const meta = await google(`${SHEETS}/${id}?fields=properties.locale,sheets.properties`);
   // deno-lint-ignore no-explicit-any
   const bestaand = (meta.sheets ?? []).map((s: any) => s.properties);
   // deno-lint-ignore no-explicit-any
@@ -186,27 +245,27 @@ async function synchroniseer(db: SupabaseClient) {
   const nieuw: string[] = [];
   const standaard = bestaand.find(
     // deno-lint-ignore no-explicit-any
-    (p: any) => ['Blad1', 'Sheet1'].includes(p.title) && !opNaam.has(TABBLADEN[0]),
+    (p: any) => ['Blad1', 'Sheet1'].includes(p.title) && !TABBLADEN.some(t => opNaam.has(t)),
   );
-  for (const titel of TABBLADEN) {
-    if (opNaam.has(titel)) continue;
-    if (standaard && titel === TABBLADEN[0]) {
+  TABBLADEN.forEach((titel, index) => {
+    if (opNaam.has(titel)) return;
+    if (standaard && index === 0) {
       verzoeken.push({ updateSheetProperties: { properties: { sheetId: standaard.sheetId, title: titel }, fields: 'title' } });
       opNaam.set(titel, { ...standaard, title: titel });
     } else {
-      verzoeken.push({ addSheet: { properties: { title: titel } } });
+      verzoeken.push({ addSheet: { properties: { title: titel, index } } });
     }
     nieuw.push(titel);
-  }
+  });
   if (verzoeken.length) {
     const antwoord = await google(`${SHEETS}/${id}:batchUpdate`, { method: 'POST', body: JSON.stringify({ requests: verzoeken }) });
     // deno-lint-ignore no-explicit-any
     for (const r of antwoord.replies ?? []) if (r.addSheet) opNaam.set(r.addSheet.properties.title, r.addSheet.properties);
 
-    // Opmaak voor nieuwe tabbladen: vetgedrukte, vastgezette kopregel en euro-kolommen
+    // Opmaak voor nieuwe gewone tabbladen: vetgedrukte, vastgezette kopregel en euro-kolommen
     // deno-lint-ignore no-explicit-any
     const opmaak: any[] = [];
-    for (const titel of nieuw) {
+    for (const titel of nieuw.filter(t => !['Drankrekening', 'Bakken'].includes(t))) {
       const blad = opNaam.get(titel).sheetId;
       opmaak.push(
         {
@@ -225,39 +284,77 @@ async function synchroniseer(db: SupabaseClient) {
         ...((EURO_KOLOMMEN as Record<string, number[]>)[titel] ?? []).map(kolom => ({
           repeatCell: {
             range: { sheetId: blad, startRowIndex: 1, startColumnIndex: kolom, endColumnIndex: kolom + 1 },
-            cell: { userEnteredFormat: { numberFormat: { type: 'CURRENCY', pattern: '€ #,##0.00' } } },
+            cell: { userEnteredFormat: EURO },
             fields: 'userEnteredFormat.numberFormat',
           },
         })),
       );
     }
-    await google(`${SHEETS}/${id}:batchUpdate`, { method: 'POST', body: JSON.stringify({ requests: opmaak }) });
+    if (opmaak.length) await google(`${SHEETS}/${id}:batchUpdate`, { method: 'POST', body: JSON.stringify({ requests: opmaak }) });
   }
 
-  // Niets veranderd sinds de vorige keer? Dan niet schrijven (anders loopt de versiegeschiedenis vol)
+  // Wat jullie in Bakken invulden (formules als formule), om te bewaren
+  const oudeBakken = (await google(`${SHEETS}/${id}/${bereik(['Bakken'], 'FORMULA')}`)).valueRanges?.[0]?.values ?? [];
+  const dr = drankrekeningTabbladen({
+    rekening: data.overzicht,
+    strepen: data.strepen,
+    dranken: data.dranken,
+    leiders: data.leiders,
+    oudeBakken,
+    scheiding: formuleScheiding(meta.properties?.locale),
+  });
+
+  // Niets veranderd sinds de vorige keer? Dan niet schrijven (anders loopt de versiegeschiedenis vol).
+  // De dranken (en hun volgorde) zitten in de ID-kolom van Bakken.
   if (!nieuw.length) {
-    const huidig = await google(
-      `${SHEETS}/${id}/values:batchGet?valueRenderOption=UNFORMATTED_VALUE&${INHOUD_TABBLADEN.map(t => `ranges=${encodeURIComponent(`'${t}'`)}`).join('&')}`,
-    );
+    const huidig = await google(`${SHEETS}/${id}/${bereik(INHOUD_TABBLADEN, 'UNFORMATTED_VALUE')}&ranges=${encodeURIComponent("'Info'!B1")}`);
+    const versie = (huidig.valueRanges?.[INHOUD_TABBLADEN.length] as any)?.values?.[0]?.[0];
     // deno-lint-ignore no-explicit-any
     const zelfde = INHOUD_TABBLADEN.every((t, i) => zelfdeInhoud((huidig.valueRanges?.[i] as any)?.values, inhoud[t]));
-    if (zelfde) return { url: `https://docs.google.com/spreadsheets/d/${id}/edit`, ongewijzigd: true };
+    const ids = (rijen: unknown[][]) => JSON.stringify(rijen.slice(1).map(r => String(r?.[12] ?? '')).filter(Boolean));
+    if (zelfde && versie === `versie ${SHEET_VERSIE}` && ids(oudeBakken) === ids(dr.bakken)) {
+      return { url: `https://docs.google.com/spreadsheets/d/${id}/edit`, ongewijzigd: true };
+    }
   }
 
-  // Alles leegmaken en opnieuw schrijven
+  // Schrijven. Bakken wordt niet eerst leeggemaakt (wat jullie intussen typen, gaat zo minder snel verloren);
+  // enkel de rijen onder de nieuwe inhoud worden gewist.
+  const gewoon = ['Rekening', 'Strepen', 'Facturen', 'Info'];
   await google(`${SHEETS}/${id}/values:batchClear`, {
     method: 'POST',
-    body: JSON.stringify({ ranges: TABBLADEN.map(t => `'${t}'`) }),
+    body: JSON.stringify({ ranges: [...gewoon, 'Drankrekening'].map(t => `'${t}'`).concat(`'Bakken'!A${dr.bakken.length + 1}:Z`) }),
+  });
+  await google(`${SHEETS}/${id}/values:batchUpdate`, {
+    method: 'POST',
+    body: JSON.stringify({ valueInputOption: 'RAW', data: gewoon.map(t => ({ range: `'${t}'!A1`, values: inhoud[t] })) }),
   });
   await google(`${SHEETS}/${id}/values:batchUpdate`, {
     method: 'POST',
     body: JSON.stringify({
-      valueInputOption: 'RAW',
-      data: TABBLADEN.map(t => ({ range: `'${t}'!A1`, values: inhoud[t] })),
+      valueInputOption: 'USER_ENTERED',
+      data: [
+        { range: `'Drankrekening'!A1`, values: dr.drankrekening },
+        // Lege cellen expliciet schrijven, zodat oude waarden in Bakken niet blijven staan
+        { range: `'Bakken'!A1`, values: dr.bakken.map(r => [...r, ...Array(13 - r.length).fill('')].slice(0, 13)) },
+      ],
+    }),
+  });
+  await google(`${SHEETS}/${id}:batchUpdate`, {
+    method: 'POST',
+    body: JSON.stringify({
+      requests: opmaakVerzoeken(opNaam.get('Drankrekening').sheetId, opNaam.get('Bakken').sheetId, dr.opmaak, dr.bakken.length),
     }),
   });
 
-  return { url: `https://docs.google.com/spreadsheets/d/${id}/edit`, bijgewerkt: new Date().toISOString() };
+  // Controle: staan er formulefouten (#REF!, #NAME?, ...) in de berekende tabbladen?
+  const nagekeken = await google(`${SHEETS}/${id}/${bereik(['Drankrekening', 'Bakken'], 'FORMATTED_VALUE')}`);
+  const formuleFouten = (nagekeken.valueRanges ?? [])
+    // deno-lint-ignore no-explicit-any
+    .flatMap((v: any) => (v.values ?? []).flat())
+    .filter((w: unknown) => typeof w === 'string' && /^#(REF|NAME|VALUE|DIV\/0|N\/A|ERROR|NUM|NULL)/.test(w)).length;
+  if (formuleFouten) console.error('Formulefouten in de Sheet', formuleFouten);
+
+  return { url: `https://docs.google.com/spreadsheets/d/${id}/edit`, bijgewerkt: new Date().toISOString(), formuleFouten };
 }
 
 function jwtRol(autorisatie: string): string | null {
