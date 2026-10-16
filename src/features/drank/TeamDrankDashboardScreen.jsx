@@ -455,7 +455,14 @@ export const TeamDrankDashboardScreen = () => {
                                 <div className="min-w-0">
                                   <p className="font-semibold truncate">{userName}</p>
                                   <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
+                                    {s.bron === 'sheet' && s.amount > 0 ? '+' : ''}
                                     {s.amount}× {s.drinkLabel || s.drinkName} · {euro(s.price)}
+                                    {/* Aangepast in de Google Sheet: enkel hier zichtbaar, geen melding voor de leider */}
+                                    {s.bron === 'sheet' && (
+                                      <span className="ml-2 inline-block whitespace-nowrap rounded-full bg-white dark:bg-white/10 px-2 py-0.5 text-xs font-bold text-gray-600 dark:text-gray-300">
+                                        via Sheet
+                                      </span>
+                                    )}
                                   </p>
                                 </div>
                                 <button

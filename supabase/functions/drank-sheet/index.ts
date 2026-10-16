@@ -1,5 +1,7 @@
-// Edge function: Google Sheet voor Drankteam (enkel lezen, de app is de bron).
-//  - 'sync': de tabbladen Drankrekening, Bakken, Rekening, Strepen, Facturen en Info opnieuw vullen, enkel als er iets veranderd is
+// Edge function: Google Sheet voor Drankteam. De app is de bron; in de Sheet kan Drankteam aantallen strepen
+// (Drankrekening) en de gele vakjes in Bakken aanpassen, de rest wordt overschreven.
+//  - 'sync': eerst wat Drankteam in de Sheet veranderde overnemen (aantallen in Drankrekening -> strepen 'via Sheet',
+//            prijs per streepje uit Bakken -> prijs van de strepen), dan de tabbladen opnieuw vullen als er iets veranderd is
 //      * aangeroepen door de database elke 30 seconden (pg_cron, migratie 003600) en bij het openen in de app
 //  - 'url':  de link naar de Sheet (null als er geen gekoppeld is)
 // Mag: Drankteam, Financiën en hoofdleiding (ingelogd), of de database zelf met de service key.
@@ -15,7 +17,10 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import {
   EURO_KOLOMMEN,
+  appTellingen,
   drankrekeningTabbladen,
+  prijzenUitBakken,
+  sheetWijzigingen,
   formuleScheiding,
   INHOUD_TABBLADEN,
   SHEET_VERSIE,
@@ -131,7 +136,10 @@ async function laad(db: SupabaseClient) {
     .maybeSingle();
   if (pFout) throw pFout;
 
-  let strepenQuery = db.from('consumpties').select('drank_id, aantal, user_naam, profiles(naam)').is('factuur_id', null);
+  let strepenQuery = db
+    .from('consumpties')
+    .select('user_id, drank_id, aantal, user_naam, profiles(naam)')
+    .is('factuur_id', null);
   strepenQuery = periode
     ? strepenQuery.or(`period_id.eq.${periode.id},period_id.is.null`)
     : strepenQuery.is('period_id', null);
@@ -145,19 +153,20 @@ async function laad(db: SupabaseClient) {
       .select(
         'nummer, periode, user_naam, aantal_strepen, drank_bedrag, friet_bedrag, correctie_bedrag, totaal_bedrag, mededeling, status, betaald_op, profiles(naam), billing_periods(naam, start_datum)',
       ),
-    db.from('profiles').select('id, naam, is_oudleiding').eq('actief', true),
+    db.from('profiles').select('id, naam, is_oudleiding, actief'),
     db.from('godmode_accounts').select('user_id'),
   ]);
   for (const r of [overzicht, strepen, dranken, facturen, profielen, godmode]) if (r.error) throw r.error;
   // Vaste lijst leiders: alle actieve accounts behalve Godmode (testaccount)
   const godmodeIds = new Set((godmode.data ?? []).map(g => g.user_id));
   const leiders = (profielen.data ?? [])
-    .filter(p => !godmodeIds.has(p.id) && p.naam)
-    .map(p => ({ naam: p.naam as string, oud: !!p.is_oudleiding }));
+    .filter(p => p.actief && !godmodeIds.has(p.id) && p.naam)
+    .map(p => ({ id: p.id as string, naam: p.naam as string, oud: !!p.is_oudleiding }));
 
   return {
     periode,
     leiders,
+    profielen: new Map((profielen.data ?? []).map(p => [p.id as string, (p.naam as string) ?? '?'])),
     overzicht: overzicht.data ?? [],
     // deno-lint-ignore no-explicit-any
     strepen: (strepen.data ?? []).map((s: any) => ({ ...s, naam: s.profiles?.naam ?? s.user_naam })),
@@ -187,32 +196,37 @@ function opmaakVerzoeken(dr: number, bk: number, o: any, aantalBakken: number) {
       fields: 'gridProperties(frozenRowCount,frozenColumnCount)',
     },
   });
+  // Eerst alles weer zichtbaar (de kolommen schuiven), daarna de id-kolom en -rij verbergen
+  const zichtbaar = (sheetId: number, dimension: string, startIndex: number, endIndex: number, hiddenByUser: boolean) => ({
+    updateDimensionProperties: {
+      range: { sheetId, dimension, startIndex, endIndex },
+      properties: { hiddenByUser },
+      fields: 'hiddenByUser',
+    },
+  });
   const k = o.aantalDranken;
   return [
     // Drankrekening
     wis(dr),
     vastzetten(dr),
+    zichtbaar(dr, 'COLUMNS', 0, o.idKolom + 1, false),
+    zichtbaar(dr, 'ROWS', 0, o.idRij, false),
+    zichtbaar(dr, 'COLUMNS', o.idKolom, o.idKolom + 1, true),
+    zichtbaar(dr, 'ROWS', o.idRij - 1, o.idRij, true),
     cel(dr, 0, 1, undefined, undefined, vet, 'userEnteredFormat.textFormat.bold'),
     ...o.euroKolommen.map((c: number) => cel(dr, 1, o.totaalRij, c, c + 1, EURO, 'userEnteredFormat.numberFormat')),
     cel(dr, o.totaalRij - 1, o.totaalRij, undefined, undefined, vet, 'userEnteredFormat.textFormat.bold'),
     cel(dr, o.prijsRij - 1, o.prijsRij, undefined, undefined, { ...EURO, ...vet }, 'userEnteredFormat(numberFormat,textFormat)'),
     cel(dr, 1, o.totaalRij, 1, 2, vet, 'userEnteredFormat.textFormat.bold'),
     ...(o.oudKopRij ? [cel(dr, o.oudKopRij - 1, o.oudKopRij, 0, 1, vet, 'userEnteredFormat.textFormat.bold')] : []),
-    // Bakken: geel = zelf invullen
+    // Bakken: geel = zelf invullen; de ID-kolom (M) verborgen
     wis(bk),
     vastzetten(bk),
     cel(bk, 0, 1, undefined, undefined, vet, 'userEnteredFormat.textFormat.bold'),
     ...(k ? [cel(bk, 1, 1 + k, 1, 6, { backgroundColor: INVOER_KLEUR }, 'userEnteredFormat.backgroundColor')] : []),
     ...[1, 9, 10, 11].map(c => cel(bk, 1, aantalBakken, c, c + 1, EURO, 'userEnteredFormat.numberFormat')),
     ...(k ? [cel(bk, 1 + k, 2 + k, undefined, undefined, vet, 'userEnteredFormat.textFormat.bold')] : []),
-    // De ID-kolom (M) verbergen: die gebruikt de app om de invoer per drank te bewaren
-    {
-      updateDimensionProperties: {
-        range: { sheetId: bk, dimension: 'COLUMNS', startIndex: 12, endIndex: 13 },
-        properties: { hiddenByUser: true },
-        fields: 'hiddenByUser',
-      },
-    },
+    zichtbaar(bk, 'COLUMNS', 12, 13, true),
   ];
 }
 
@@ -220,19 +234,37 @@ const bereik = (tabbladen: string[], optie: string) =>
   `values:batchGet?valueRenderOption=${optie}&${tabbladen.map(t => `ranges=${encodeURIComponent(`'${t}'`)}`).join('&')}`;
 
 // ---------------------------------------------------------------------
+// Slot: nooit twee synchronisaties tegelijk (anders telt een aanpassing in de Sheet dubbel)
+// ---------------------------------------------------------------------
+async function neemSlot(db: SupabaseClient): Promise<boolean> {
+  const nu = new Date();
+  const { data, error } = await db
+    .from('drank_sheet_slot')
+    .update({ bezig_tot: new Date(nu.getTime() + 120_000).toISOString() })
+    .eq('id', 1)
+    .or(`bezig_tot.is.null,bezig_tot.lt.${nu.toISOString()}`)
+    .select('id');
+  if (error) throw error;
+  return (data ?? []).length > 0;
+}
+const geefSlotTerug = (db: SupabaseClient) => db.from('drank_sheet_slot').update({ bezig_tot: null }).eq('id', 1);
+
+// ---------------------------------------------------------------------
 // De Sheet vullen
 // ---------------------------------------------------------------------
 async function synchroniseer(db: SupabaseClient) {
   const id = sheetId();
   if (!id) throw new Fout('Er is nog geen Sheet gekoppeld (secret DRANK_SHEET_ID).', 409);
-  const data = await laad(db);
-  const namen = data.leiders.map(l => l.naam);
-  const inhoud: Record<string, unknown[][]> = {
-    Rekening: rekeningRijen(data.overzicht, namen),
-    Strepen: strepenRijen(data.strepen, data.dranken, namen),
-    Facturen: factuurRijen(data.facturen),
-    Info: infoRijen({ periode: data.periode }),
-  };
+  if (!(await neemSlot(db))) return { url: `https://docs.google.com/spreadsheets/d/${id}/edit`, bezig: true };
+  try {
+    return await synchroniseerMetSlot(db, id);
+  } finally {
+    await geefSlotTerug(db);
+  }
+}
+
+async function synchroniseerMetSlot(db: SupabaseClient, id: string) {
+  let data = await laad(db);
 
   // Ontbrekende tabbladen aanmaken op hun plaats (een leeg standaardblad "Blad1"/"Sheet1" wordt het eerste)
   const meta = await google(`${SHEETS}/${id}?fields=properties.locale,sheets.properties`);
@@ -293,8 +325,62 @@ async function synchroniseer(db: SupabaseClient) {
     if (opmaak.length) await google(`${SHEETS}/${id}:batchUpdate`, { method: 'POST', body: JSON.stringify({ requests: opmaak }) });
   }
 
-  // Wat jullie in Bakken invulden (formules als formule), om te bewaren
-  const oudeBakken = (await google(`${SHEETS}/${id}/${bereik(['Bakken'], 'FORMULA')}`)).valueRanges?.[0]?.values ?? [];
+  // Wat er nu in de Sheet staat
+  const leesTabs = ['Drankrekening', 'Bakken', ...INHOUD_TABBLADEN];
+  const [waarden, formules] = await Promise.all([
+    google(`${SHEETS}/${id}/${bereik(leesTabs, 'UNFORMATTED_VALUE')}&ranges=${encodeURIComponent("'Info'!B1")}`),
+    google(`${SHEETS}/${id}/${bereik(['Bakken'], 'FORMULA')}`),
+  ]);
+  // deno-lint-ignore no-explicit-any
+  const vr = (i: number) => ((waarden.valueRanges?.[i] as any)?.values ?? []) as unknown[][];
+  const sheetDrankrekening = vr(0);
+  const sheetBakken = vr(1);
+  const oudeBakken = formules.valueRanges?.[0]?.values ?? [];
+  const versie = vr(2 + INHOUD_TABBLADEN.length)?.[0]?.[0];
+
+  // 1. Aanpassingen in de Sheet (Drankrekening) -> strepen "via Sheet" in de app (geen melding)
+  const { data: standRijen, error: standFout } = await db.from('drank_sheet_stand').select('user_id, drank_id, aantal');
+  if (standFout) throw standFout;
+  const wijz = sheetWijzigingen(sheetDrankrekening, standRijen ?? [], appTellingen(data.strepen));
+  const drankIds = new Set(data.dranken.map(d => String(d.id)));
+  const nieuweStrepen = data.periode
+    ? wijz.aanpassingen
+        .filter(a => a.verschil !== 0 && data.profielen.has(a.user_id) && drankIds.has(a.drank_id))
+        .map(a => ({
+          user_id: a.user_id,
+          drank_id: a.drank_id,
+          aantal: a.verschil,
+          period_id: data.periode!.id,
+          user_naam: data.profielen.get(a.user_id),
+          bron: 'sheet',
+        }))
+    : [];
+  if (nieuweStrepen.length) {
+    const { error } = await db.from('consumpties').insert(nieuweStrepen);
+    if (error) throw error;
+  }
+
+  // 2. Prijs per streepje uit Bakken (enkel waar een aankoopprijs en telling ingevuld is) op de strepen van de
+  //    lopende periode zetten: zo komt die prijs op de factuur en toont de app hetzelfde als de Sheet
+  let prijzenAangepast = 0;
+  for (const [drankId, prijs] of prijzenUitBakken(sheetBakken)) {
+    if (!drankIds.has(drankId)) continue;
+    let q = db.from('consumpties').update({ prijs }).is('factuur_id', null).eq('drank_id', drankId).neq('prijs', prijs);
+    q = data.periode ? q.or(`period_id.eq.${data.periode.id},period_id.is.null`) : q.is('period_id', null);
+    const { data: aangepast, error } = await q.select('id');
+    if (error) throw error;
+    prijzenAangepast += (aangepast ?? []).length;
+  }
+
+  if (nieuweStrepen.length || prijzenAangepast) data = await laad(db);
+
+  const namen = data.leiders.map(l => l.naam);
+  const inhoud: Record<string, unknown[][]> = {
+    Rekening: rekeningRijen(data.overzicht, namen),
+    Strepen: strepenRijen(data.strepen, data.dranken, namen),
+    Facturen: factuurRijen(data.facturen),
+    Info: infoRijen({ periode: data.periode }),
+  };
   const dr = drankrekeningTabbladen({
     rekening: data.overzicht,
     strepen: data.strepen,
@@ -303,17 +389,21 @@ async function synchroniseer(db: SupabaseClient) {
     oudeBakken,
     scheiding: formuleScheiding(meta.properties?.locale),
   });
+  const resultaat = {
+    url: `https://docs.google.com/spreadsheets/d/${id}/edit`,
+    viaSheet: nieuweStrepen.length,
+    prijzenAangepast,
+    ongeldig: wijz.ongeldig,
+    botsingen: wijz.botsingen,
+  };
 
   // Niets veranderd sinds de vorige keer? Dan niet schrijven (anders loopt de versiegeschiedenis vol).
   // De dranken (en hun volgorde) zitten in de ID-kolom van Bakken.
-  if (!nieuw.length) {
-    const huidig = await google(`${SHEETS}/${id}/${bereik(INHOUD_TABBLADEN, 'UNFORMATTED_VALUE')}&ranges=${encodeURIComponent("'Info'!B1")}`);
-    const versie = (huidig.valueRanges?.[INHOUD_TABBLADEN.length] as any)?.values?.[0]?.[0];
-    // deno-lint-ignore no-explicit-any
-    const zelfde = INHOUD_TABBLADEN.every((t, i) => zelfdeInhoud((huidig.valueRanges?.[i] as any)?.values, inhoud[t]));
+  if (!nieuw.length && !nieuweStrepen.length && !prijzenAangepast && !wijz.ongeldig && !wijz.botsingen) {
+    const zelfde = INHOUD_TABBLADEN.every((t, i) => zelfdeInhoud(vr(2 + i), inhoud[t]));
     const ids = (rijen: unknown[][]) => JSON.stringify(rijen.slice(1).map(r => String(r?.[12] ?? '')).filter(Boolean));
     if (zelfde && versie === `versie ${SHEET_VERSIE}` && ids(oudeBakken) === ids(dr.bakken)) {
-      return { url: `https://docs.google.com/spreadsheets/d/${id}/edit`, ongewijzigd: true };
+      return { ...resultaat, ongewijzigd: true };
     }
   }
 
@@ -339,6 +429,17 @@ async function synchroniseer(db: SupabaseClient) {
       ],
     }),
   });
+
+  // Onthouden wat er nu in de Sheet staat (om de volgende keer aanpassingen in de Sheet te herkennen)
+  {
+    const { error: wisFout } = await db.from('drank_sheet_stand').delete().not('user_id', 'is', null);
+    if (wisFout) throw wisFout;
+    for (let i = 0; i < dr.stand.length; i += 500) {
+      const { error } = await db.from('drank_sheet_stand').insert(dr.stand.slice(i, i + 500));
+      if (error) throw error;
+    }
+  }
+
   await google(`${SHEETS}/${id}:batchUpdate`, {
     method: 'POST',
     body: JSON.stringify({
@@ -354,7 +455,7 @@ async function synchroniseer(db: SupabaseClient) {
     .filter((w: unknown) => typeof w === 'string' && /^#(REF|NAME|VALUE|DIV\/0|N\/A|ERROR|NUM|NULL)/.test(w)).length;
   if (formuleFouten) console.error('Formulefouten in de Sheet', formuleFouten);
 
-  return { url: `https://docs.google.com/spreadsheets/d/${id}/edit`, bijgewerkt: new Date().toISOString(), formuleFouten };
+  return { ...resultaat, bijgewerkt: new Date().toISOString(), formuleFouten };
 }
 
 function jwtRol(autorisatie: string): string | null {

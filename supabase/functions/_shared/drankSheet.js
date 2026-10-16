@@ -16,7 +16,7 @@
 //   Info      – wanneer bijgewerkt en uitleg
 
 // Verhoog bij een wijziging aan de formules of de indeling: dan schrijft de app alles opnieuw, ook als de cijfers gelijk bleven
-export const SHEET_VERSIE = 2;
+export const SHEET_VERSIE = 3;
 
 export const TABBLADEN = ['Drankrekening', 'Bakken', 'Rekening', 'Strepen', 'Facturen', 'Info'];
 
@@ -230,73 +230,105 @@ export function bewaardeInvoer(oudeRijen) {
   return { perId, perNaam };
 }
 
+
+// Verborgen kolom (leider) en rij (drank) met de id's: zo weet de app welk vakje bij wie en welke drank hoort,
+// ook als iemand in de Sheet rijen sorteert. Dezelfde tekst staat in Bakken kolom M.
+export const ID_KOP = 'ID (niet aanpassen)';
+
+const sleutel = (userId, drankId) => `${userId}|${drankId}`;
+
+/** Aantal strepen per leider per drank in de app: Map 'user|drank' -> aantal */
+export function appTellingen(strepen) {
+  const m = new Map();
+  for (const s of strepen || []) {
+    if (!s.user_id) continue;
+    const k = sleutel(s.user_id, s.drank_id);
+    m.set(k, (m.get(k) || 0) + (Number(s.aantal) || 0));
+  }
+  return m;
+}
+
 /**
- * rekening: rijen van periode_overzicht() (naam, friet_bedrag, correctie_bedrag)
- * leiders: [{ naam, oud }] die er altijd in staan; oudleiding komt onder een eigen kopje
+ * rekening: rijen van periode_overzicht() (user_id, naam, friet_bedrag, correctie_bedrag)
+ * strepen: [{ user_id, naam, drank_id, aantal }]
+ * leiders: [{ id, naam, oud }] die er altijd in staan; oudleiding komt onder een eigen kopje
  * oudeBakken: huidige inhoud van het tabblad Bakken (render FORMULA), om de invoer te bewaren
  * scheiding: ',' of ';' tussen de delen van een formule (zie formuleScheiding)
- * Geeft { drankrekening, bakken, opmaak } met waarden en formules (schrijven met USER_ENTERED).
+ * Geeft { drankrekening, bakken, opmaak, stand } met waarden en formules (schrijven met USER_ENTERED);
+ * stand = de aantallen die in de Sheet komen (om later te zien wat er in de Sheet veranderd is).
+ * @param {{ rekening: any[], strepen: any[], dranken: any[], leiders?: { id: string, naam: string, oud?: boolean }[], oudeBakken?: unknown[][], nu?: Date, scheiding?: string }} invoer
  */
 export function drankrekeningTabbladen({ rekening, strepen, dranken, leiders = [], oudeBakken = [], nu = new Date(), scheiding = ',' }) {
   const x = scheiding; // tussen de delen van een formule: , of ; (hangt af van de taal van de Sheet)
   const lijst = drankLijst(dranken, strepen, nu);
   const k = lijst.length;
-  const { per } = telStrepen(strepen);
-  const perNaam = new Map((rekening || []).map(r => [r.naam, r]));
+  const tellingen = appTellingen(strepen);
+  const perId = new Map((rekening || []).filter(r => r.user_id).map(r => [r.user_id, r]));
 
   // Wie: vaste lijst + iedereen met strepen of kosten; oudleiding apart
-  const vast = new Set(leiders.map(l => l.naam));
-  const oud = new Set(leiders.filter(l => l.oud).map(l => l.naam));
-  const metIets = naam =>
-    [...(per.get(naam)?.values() || [])].some(x => x !== 0) ||
-    !!Number(perNaam.get(naam)?.friet_bedrag) ||
-    !!Number(perNaam.get(naam)?.correctie_bedrag);
-  const alle = [...new Set([...vast, ...per.keys(), ...perNaam.keys()])].filter(n => vast.has(n) || metIets(n));
-  const leiding = alle.filter(n => !oud.has(n)).sort(opNaam);
-  const oudleiding = alle.filter(n => oud.has(n)).sort(opNaam);
+  const naamVan = new Map();
+  for (const s of strepen || []) if (s.user_id) naamVan.set(s.user_id, s.naam ?? '?');
+  for (const r of rekening || []) if (r.user_id) naamVan.set(r.user_id, r.naam ?? '?');
+  for (const l of leiders) naamVan.set(l.id, l.naam);
+  const vast = new Set(leiders.map(l => l.id));
+  const oud = new Set(leiders.filter(l => l.oud).map(l => l.id));
+  const heeftStrepen = new Set([...tellingen].filter(([, n]) => n !== 0).map(([kk]) => kk.split('|')[0]));
+  const metIets = id =>
+    heeftStrepen.has(id) || !!Number(perId.get(id)?.friet_bedrag) || !!Number(perId.get(id)?.correctie_bedrag);
+  const alle = [...naamVan.keys()].filter(id => vast.has(id) || metIets(id));
+  const opNaamId = (a, b) => opNaam(naamVan.get(a), naamVan.get(b));
+  const leiding = alle.filter(id => !oud.has(id)).sort(opNaamId);
+  const oudleiding = alle.filter(id => oud.has(id)).sort(opNaamId);
 
-  // Kolommen: A naam, B totaal, C.. dranken, dan subtotaal drank, friet, extra kosten
+  // Kolommen: A naam, B totaal, C.. dranken, subtotaal drank, friet, extra kosten, (verborgen) ID
   const L = kolom;
   const eersteDrank = 2;
   const laatsteDrank = eersteDrank + k - 1;
   const kSub = eersteDrank + k;
   const kFriet = kSub + 1;
   const kExtra = kSub + 2;
+  const kId = kSub + 3;
 
-  const namen = [...leiding, ...(oudleiding.length ? [null, ...oudleiding] : [])]; // null = kopje Oud-leiding
+  const personen = [...leiding, ...(oudleiding.length ? [null, ...oudleiding] : [])]; // null = kopje Oud-leiding
   const eersteRij = 2;
-  const laatsteRij = eersteRij + Math.max(namen.length, 1) - 1;
+  const laatsteRij = eersteRij + Math.max(personen.length, 1) - 1;
   const totaalRij = laatsteRij + 2;
   const prijsRij = totaalRij + 1;
+  const idRij = prijsRij + 1;
 
-  const rijen = [['Leiding', 'Totaal te betalen', ...lijst.map(drankNaam), 'Subtotaal drank', 'Friet', 'Extra kosten']];
-  namen.forEach((naam, i) => {
+  const stand = [];
+  const rijen = [['Leiding', 'Totaal te betalen', ...lijst.map(drankNaam), 'Subtotaal drank', 'Friet', 'Extra kosten', ID_KOP]];
+  personen.forEach((id, i) => {
     const r = eersteRij + i;
-    if (naam === null) return rijen.push(['Oud-leiding']);
+    if (id === null) return rijen.push(['Oud-leiding']);
     const sub = k
       ? `=SUMPRODUCT(${L(eersteDrank)}${r}:${L(laatsteDrank)}${r}${x}${L(eersteDrank)}$${prijsRij}:${L(laatsteDrank)}$${prijsRij})`
       : 0;
+    const aantallen = lijst.map(d => tellingen.get(sleutel(id, d.id)) || 0);
+    lijst.forEach((d, j) => stand.push({ user_id: id, drank_id: String(d.id), aantal: aantallen[j] }));
     rijen.push([
-      tekst(naam),
+      tekst(naamVan.get(id)),
       `=${L(kSub)}${r}+${L(kFriet)}${r}+${L(kExtra)}${r}`,
-      ...lijst.map(d => per.get(naam)?.get(String(d.id)) || 0),
+      ...aantallen,
       sub,
-      rond(perNaam.get(naam)?.friet_bedrag),
-      rond(perNaam.get(naam)?.correctie_bedrag),
+      rond(perId.get(id)?.friet_bedrag),
+      rond(perId.get(id)?.correctie_bedrag),
+      id,
     ]);
   });
-  if (!namen.length) rijen.push([]);
+  if (!personen.length) rijen.push([]);
   rijen.push([]);
   const som = c => `=SUM(${L(c)}${eersteRij}:${L(c)}${laatsteRij})`;
   rijen.push(['Totaal streepjes', som(1), ...lijst.map((_, i) => som(eersteDrank + i)), som(kSub), som(kFriet), som(kExtra)]);
   rijen.push(['Prijs per streepje', '', ...lijst.map((_, i) => `=Bakken!K${2 + i}`)]);
+  rijen.push([ID_KOP, '', ...lijst.map(d => String(d.id))]);
 
   // Bakken: één rij per drank, in dezelfde volgorde als de kolommen van Drankrekening
-  const { perId, perNaam: invoerPerNaam } = bewaardeInvoer(oudeBakken);
+  const { perId: invoerPerId, perNaam: invoerPerNaam } = bewaardeInvoer(oudeBakken);
   const bakken = [BAKKEN_KOP];
   lijst.forEach((d, i) => {
     const r = 2 + i;
-    const invoer = perId.get(String(d.id)) || invoerPerNaam.get(drankNaam(d)) || ['', '', '', '', ''];
+    const invoer = invoerPerId.get(String(d.id)) || invoerPerNaam.get(drankNaam(d)) || ['', '', '', '', ''];
     bakken.push([
       tekst(drankNaam(d)),
       ...invoer,
@@ -304,8 +336,8 @@ export function drankrekeningTabbladen({ rekening, strepen, dranken, leiders = [
       `=Drankrekening!${L(eersteDrank + i)}${totaalRij}`,
       `=G${r}-H${r}`,
       `=B${r}*G${r}`,
-      // Zonder aankoopprijs: de prijs van de app (dan is de Sheet gelijk aan de app)
-      `=IF(B${r}=""${x}L${r}${x}IFERROR(J${r}/H${r}${x}0))`,
+      // Zonder aankoopprijs of zonder telling: de prijs van de app (dan is de Sheet gelijk aan de app)
+      `=IF(OR(B${r}=""${x}G${r}=0)${x}L${r}${x}IFERROR(J${r}/H${r}${x}0))`,
       rond(d.prijs),
       String(d.id),
     ]);
@@ -318,16 +350,83 @@ export function drankrekeningTabbladen({ rekening, strepen, dranken, leiders = [
   return {
     drankrekening: rijen,
     bakken,
+    stand,
     opmaak: {
       aantalDranken: k,
       eersteDrank,
       euroKolommen: [1, kSub, kFriet, kExtra],
       totaalRij,
       prijsRij,
+      idRij,
+      idKolom: kId,
       oudKopRij: oudleiding.length ? eersteRij + leiding.length : null,
     },
   };
 }
+
+/**
+ * Wat is er in de Sheet veranderd sinds de app ze de vorige keer schreef?
+ * sheet: inhoud van Drankrekening (UNFORMATTED_VALUE); stand: [{ user_id, drank_id, aantal }] van de vorige keer;
+ * app: appTellingen() van nu.
+ * Geeft { aanpassingen: [{ user_id, drank_id, verschil }], ongeldig, botsingen }:
+ *  - een aantal dat in de Sheet veranderde en in de app niet: het verschil wordt een streep "via Sheet"
+ *  - in de Sheet én in de app veranderd: de app wint (botsing)
+ *  - geen geheel getal van 0 of meer: genegeerd (de app zet het terug)
+ */
+export function sheetWijzigingen(sheet, stand, app) {
+  /** @type {{ aanpassingen: { user_id: string, drank_id: string, verschil: number }[], ongeldig: number, botsingen: number }} */
+  const uit = { aanpassingen: [], ongeldig: 0, botsingen: 0 };
+  const rijen = sheet || [];
+  const kop = rijen[0] || [];
+  const kId = kop.indexOf(ID_KOP);
+  const idRij = rijen.find(r => r?.[0] === ID_KOP);
+  if (kId < 0 || !idRij) return uit;
+  const vorige = new Map((stand || []).map(s => [sleutel(s.user_id, s.drank_id), Number(s.aantal) || 0]));
+
+  for (const rij of rijen.slice(1)) {
+    const userId = rij?.[kId];
+    if (!userId || rij === idRij) continue;
+    idRij.forEach((drankId, c) => {
+      if (c < 2 || !drankId) return;
+      const kk = sleutel(userId, drankId);
+      if (!vorige.has(kk)) return; // nieuw vakje dat de app nog niet schreef
+      const was = vorige.get(kk);
+      const waarde = rij[c] === undefined || rij[c] === '' ? 0 : rij[c];
+      if (waarde === was) return;
+      if (typeof waarde !== 'number' || !Number.isInteger(waarde) || waarde < 0 || waarde > 999) {
+        uit.ongeldig++;
+        return;
+      }
+      const nuInApp = app.get(kk) || 0;
+      if (nuInApp !== was) {
+        uit.botsingen++;
+        return;
+      }
+      uit.aanpassingen.push({ user_id: String(userId), drank_id: String(drankId), verschil: waarde - nuInApp });
+    });
+  }
+  return uit;
+}
+
+/**
+ * Prijs per streepje uit Bakken (UNFORMATTED_VALUE), enkel voor dranken met een ingevulde aankoopprijs en telling:
+ * Map drank_id -> prijs (afgerond op 4 decimalen). Zonder aankoopprijs blijft de prijs van de app gelden.
+ */
+export function prijzenUitBakken(bakken) {
+  const m = new Map();
+  for (const rij of (bakken || []).slice(1)) {
+    const id = rij?.[12];
+    const aankoop = rij?.[1];
+    const gedronken = rij?.[6];
+    const prijs = rij?.[10];
+    if (!id || aankoop === '' || aankoop === undefined || aankoop === null) continue;
+    if (typeof gedronken !== 'number' || gedronken === 0) continue; // nog niet geteld
+    if (typeof prijs !== 'number' || !Number.isFinite(prijs) || prijs < 0 || prijs > 1000) continue;
+    m.set(String(id), Math.round(prijs * 10000) / 10000);
+  }
+  return m;
+}
+
 
 /** Google Sheets gebruikt ; tussen de delen van een formule als de taal van de Sheet een decimale komma heeft (bv. nl_BE) */
 export function formuleScheiding(locale) {

@@ -148,6 +148,7 @@ export async function fetchConsumpties(userId) {
     timestamp: new Date(c.datum),
     period_id: c.period_id || undefined,
     factuurId: c.factuur_id || null,
+    bron: c.bron || null, // 'sheet': aangepast door Drankteam in de Google Sheet (migratie 003700)
   }));
 }
 
