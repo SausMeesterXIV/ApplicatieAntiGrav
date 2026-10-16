@@ -10,6 +10,7 @@ import { Groep, Rij } from '../../components/Lijst';
 import { SPECIAL_DRINKS } from '../../lib/constants';
 import { euro } from '../../lib/geld';
 import { LeiderStrepenSheet } from './LeiderStrepenSheet';
+import { drankSheet } from '../../lib/drankSheet';
 
 // Team Drank (design-update): zelfde stijl als het startscherm, Strepen en Instellingen.
 // Drie weergaven op één scherm: het overzicht, openstaande saldo's en het logboek met correcties.
@@ -52,6 +53,22 @@ export const TeamDrankDashboardScreen = () => {
   React.useEffect(() => {
     sessionStorage.setItem('teamDrankActiveView', activeView);
   }, [activeView]);
+
+  // Google Sheet (enkel lezen): bij het openen van het dashboard meteen bijwerken, zodat ze vers is
+  const [sheetUrl, setSheetUrl] = useState(null);
+  React.useEffect(() => {
+    if (!canAccess) return;
+    drankSheet('url')
+      .then(d => {
+        setSheetUrl(d?.url || null);
+        if (d?.url) drankSheet('sync').catch(() => {});
+      })
+      .catch(() => {});
+  }, [canAccess]);
+  const openSheet = () => {
+    window.open(sheetUrl, '_blank', 'noopener');
+    drankSheet('sync').catch(e => showToast(e.message, 'error'));
+  };
 
   const [expandedWeek, setExpandedWeek] = useState(null);
   const [zoek, setZoek] = useState('');
@@ -260,6 +277,9 @@ export const TeamDrankDashboardScreen = () => {
                 sub="Periode afsluiten en facturen maken"
                 onClick={() => navigate('/strepen/facturatie')}
               />
+              {sheetUrl && (
+                <Rij icoon="table_chart" label="Google Sheet" sub="Rekeningen, strepen en facturen (enkel lezen)" onClick={openSheet} />
+              )}
               <Rij
                 icoon="grid_on"
                 label="Excel-beheer"
