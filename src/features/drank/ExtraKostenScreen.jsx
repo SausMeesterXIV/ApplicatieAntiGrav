@@ -279,20 +279,15 @@ export const ExtraKostenScreen = () => {
             </div>
             <div className="flex flex-wrap gap-2 mb-3">
               <Chip actief={allesGekozen(leden.map(u => u.id))} onClick={() => wisselGroep(leden.map(u => u.id))}>
-                {allesGekozen(leden.map(u => u.id)) && (
-                  <span className="material-icons-round text-sm align-[-2px] mr-1">check</span>
-                )}
                 Iedereen
               </Chip>
               {(groepen || [])
                 .filter(g => ledenVan(g.id).length > 0)
                 .map(g => {
                   const ids = ledenVan(g.id);
-                  const aan = allesGekozen(ids);
                   return (
-                    <Chip key={g.id} actief={aan} onClick={() => wisselGroep(ids)}>
-                      {aan && <span className="material-icons-round text-sm align-[-2px] mr-1">check</span>}
-                      {g.naam} <span className="opacity-60 font-semibold">{ids.length}</span>
+                    <Chip key={g.id} actief={allesGekozen(ids)} onClick={() => wisselGroep(ids)}>
+                      {g.naam}
                     </Chip>
                   );
                 })}
