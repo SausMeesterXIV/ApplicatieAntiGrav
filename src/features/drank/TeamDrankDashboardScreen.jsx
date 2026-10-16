@@ -9,6 +9,7 @@ import { hasRole } from '../../lib/roleUtils';
 import { Groep, Rij } from '../../components/Lijst';
 import { SPECIAL_DRINKS } from '../../lib/constants';
 import { euro } from '../../lib/geld';
+import { LeiderStrepenSheet } from './LeiderStrepenSheet';
 
 // Team Drank (design-update): zelfde stijl als het startscherm, Strepen en Instellingen.
 // Drie weergaven op één scherm: het overzicht, openstaande saldo's en het logboek met correcties.
@@ -53,6 +54,9 @@ export const TeamDrankDashboardScreen = () => {
   }, [activeView]);
 
   const [expandedWeek, setExpandedWeek] = useState(null);
+  const [zoek, setZoek] = useState('');
+  const [gekozenLeiderId, setGekozenLeiderId] = useState(null);
+  const gekozenLeider = (users || []).find(u => u.id === gekozenLeiderId) || null;
 
   const periodStreaks = useMemo(() => {
     return (streaks || []).filter(s => s.period_id === activePeriod?.id);
@@ -144,11 +148,25 @@ export const TeamDrankDashboardScreen = () => {
       .slice(0, 10);
   }, [periodStreaks, users]);
 
-  const onMinKnop = async streakId => {
-    if (window.confirm('Weet je zeker dat je deze streep wil verwijderen?')) {
-      await handleDeleteStreak(streakId);
-      showToast('Streep verwijderd', 'success');
-    }
+  // Alle actieve leiding (ook wie nog niets streepte), met hun strepen in de open periode
+  const leiding = useMemo(() => {
+    const perLeider = {};
+    periodStreaks.forEach(s => {
+      const p = (perLeider[s.userId] ||= { aantal: 0, bedrag: 0 });
+      p.aantal += s.amount;
+      p.bedrag += s.price * s.amount;
+    });
+    const q = zoek.trim().toLowerCase();
+    return (users || [])
+      .filter(u => u.actief)
+      .filter(u => !q || `${u.naam || ''} ${u.nickname || ''}`.toLowerCase().includes(q))
+      .map(u => ({ ...u, ...(perLeider[u.id] || { aantal: 0, bedrag: 0 }) }))
+      .sort((a, b) => (a.naam || '').localeCompare(b.naam || ''));
+  }, [users, periodStreaks, zoek]);
+
+  // handleDeleteStreak toont zelf een melding
+  const onMinKnop = streakId => {
+    if (window.confirm('Weet je zeker dat je deze streep wil verwijderen?')) handleDeleteStreak(streakId);
   };
 
   const handleBack = () => {
@@ -164,7 +182,12 @@ export const TeamDrankDashboardScreen = () => {
   if (loading || !canAccess) return null;
 
   const titel =
-    activeView === 'dashboard' ? 'Team Drank' : activeView === 'balances' ? "Openstaande saldo's" : 'Logboek';
+    {
+      dashboard: 'Team Drank',
+      leiding: 'Strepen per leider',
+      balances: "Openstaande saldo's",
+      logbook: 'Logboek',
+    }[activeView] || 'Team Drank';
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-inkt dark:text-white pb-nav-safe">
@@ -198,6 +221,12 @@ export const TeamDrankDashboardScreen = () => {
             </article>
 
             <Groep titel="Deze periode">
+              <Rij
+                icoon="edit_note"
+                label="Strepen per leider"
+                sub="Bijzetten of verwijderen"
+                onClick={() => setActiveView('leiding')}
+              />
               <Rij
                 icoon="account_balance"
                 label="Openstaande saldo's"
@@ -269,6 +298,41 @@ export const TeamDrankDashboardScreen = () => {
                   <p className="px-5 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
                     Nog geen pinten gestreept deze periode.
                   </p>
+                )}
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* Strepen per leider: iemand kiezen om strepen bij te zetten of te verwijderen */}
+        {activeView === 'leiding' && (
+          <>
+            <label className="flex items-center gap-2 rounded-2xl bg-kaart-event dark:bg-kaart-event-d px-4">
+              <span className="material-icons-round text-xl text-gray-500 dark:text-gray-400">search</span>
+              <input
+                type="search"
+                value={zoek}
+                onChange={e => setZoek(e.target.value)}
+                placeholder="Zoek leiding"
+                aria-label="Zoek leiding"
+                className="flex-1 min-w-0 bg-transparent border-0 py-3.5 text-base focus:outline-none focus:ring-0"
+              />
+            </label>
+
+            <section className="space-y-2">
+              <Kopje>{zoek.trim() ? `${leiding.length} gevonden` : 'Alle leiding'}</Kopje>
+              <div className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d overflow-hidden divide-y divide-white dark:divide-white/5">
+                {leiding.map(u => (
+                  <Rij
+                    key={u.id}
+                    label={u.naam}
+                    sub={u.aantal ? `${u.aantal} ${u.aantal === 1 ? 'streep' : 'strepen'}` : 'Nog niets gestreept'}
+                    waarde={u.aantal ? euro(u.bedrag) : undefined}
+                    onClick={() => setGekozenLeiderId(u.id)}
+                  />
+                ))}
+                {leiding.length === 0 && (
+                  <p className="px-5 py-6 text-center text-sm text-gray-500 dark:text-gray-400">Niemand gevonden.</p>
                 )}
               </div>
             </section>
@@ -394,6 +458,8 @@ export const TeamDrankDashboardScreen = () => {
           </>
         )}
       </main>
+
+      <LeiderStrepenSheet leider={gekozenLeider} onClose={() => setGekozenLeiderId(null)} />
     </div>
   );
 };
