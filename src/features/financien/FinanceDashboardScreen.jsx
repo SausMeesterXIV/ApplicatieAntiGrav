@@ -6,7 +6,7 @@ import { showToast } from '../../components/Toast';
 import { euro } from '../../lib/geld';
 import * as fin from '../../lib/financien';
 import { UittrekselInlezen } from '../drank/UittrekselInlezen';
-import { SheetKoppeling } from './SheetKoppeling';
+import { DrankSheetKaart } from './DrankSheetKaart';
 import { BetalingSheet } from './BetalingSheet';
 import { LeiderSheet } from './LeiderSheet';
 import { NieuweBetalingSheet } from './NieuweBetalingSheet';
@@ -188,7 +188,7 @@ export const FinanceDashboardScreen = () => {
             </section>
 
             <UittrekselInlezen facturen={uittrekselPosten} onBetaald={zetBetaaldVanUittreksel} />
-            <SheetKoppeling onGesynchroniseerd={laad} />
+            <DrankSheetKaart />
           </>
         )}
 
