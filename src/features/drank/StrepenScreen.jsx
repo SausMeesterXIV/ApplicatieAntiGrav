@@ -5,6 +5,7 @@ import { useDrink } from './DrinkContext';
 
 import { ChevronBack } from '../../components/ChevronBack';
 import { BottomSheet } from '../../components/Modal';
+import { Groep, Rij } from '../../components/Lijst';
 import { hapticSuccess } from '../../lib/haptics';
 import { StrepenAdminPanel } from './StrepenAdminPanel';
 import { SPECIAL_DRINKS, inVasteVolgorde } from '../../lib/constants';
@@ -23,30 +24,6 @@ const isVandaag = d => {
   const n = new Date();
   return x.getFullYear() === n.getFullYear() && x.getMonth() === n.getMonth() && x.getDate() === n.getDate();
 };
-
-const Groep = ({ titel, children }) => (
-  <section className="space-y-2">
-    <h2 className="px-2 text-xs font-bold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">{titel}</h2>
-    <div className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d overflow-hidden divide-y divide-white dark:divide-white/5">
-      {children}
-    </div>
-  </section>
-);
-
-const Rij = ({ icoon, label, waarde, onClick }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="w-full flex items-center gap-3 px-5 py-4 text-left active:bg-black/5 dark:active:bg-white/5"
-  >
-    <span className="material-icons-round text-xl text-gray-500 dark:text-gray-400">{icoon}</span>
-    <span className="flex-1 font-semibold text-base">{label}</span>
-    <span className="flex items-center gap-1 min-w-0 text-gray-500 dark:text-gray-400">
-      {waarde && <span className="truncate text-sm">{waarde}</span>}
-      <span className="material-icons-round text-xl">chevron_right</span>
-    </span>
-  </button>
-);
 
 const Label = ({ children }) => (
   <p className="text-xs font-bold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400 mb-2">{children}</p>

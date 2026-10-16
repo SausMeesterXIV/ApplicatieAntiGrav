@@ -6,13 +6,30 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronBack } from '../../components/ChevronBack';
 import { showToast } from '../../components/Toast';
 import { hasRole } from '../../lib/roleUtils';
-import { NavCard } from '../../components/NavCard';
+import { Groep, Rij } from '../../components/Lijst';
 import { SPECIAL_DRINKS } from '../../lib/constants';
 import { euro } from '../../lib/geld';
 
+// Team Drank (design-update): zelfde stijl als het startscherm, Strepen en Instellingen.
+// Drie weergaven op één scherm: het overzicht, openstaande saldo's en het logboek met correcties.
+
+const Kopje = ({ children }) => (
+  <h2 className="px-2 text-xs font-bold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">{children}</h2>
+);
+
+const Pil = ({ icoon, children, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="shrink-0 flex items-center gap-1.5 rounded-full bg-kaart-event dark:bg-kaart-event-d px-4 py-2.5 text-sm font-bold active:scale-[0.98]"
+  >
+    <span className="material-icons-round text-base">{icoon}</span>
+    {children}
+  </button>
+);
+
 export const TeamDrankDashboardScreen = () => {
   const navigate = useNavigate();
-  // 1. Haal 'loading' mee uit de useAuth hook
   const { users, currentUser, loading } = useAuth();
   const { streaks, activePeriod, handleDeleteStreak } = useDrink();
   const { friesOrders } = useFries();
@@ -20,12 +37,11 @@ export const TeamDrankDashboardScreen = () => {
   const canAccess = hasRole(currentUser, 'drank');
 
   React.useEffect(() => {
-    // 2. Wacht met de redirect check tot het laden voltooid is
+    // Wacht met de redirect tot het laden voltooid is
     if (!loading && !canAccess) {
       showToast('Geen toegang tot Team Drank dashboard', 'error');
       navigate('/');
     }
-    // 3. Vergeet loading niet in de dependency array
   }, [canAccess, navigate, loading]);
 
   const [activeView, setActiveView] = useState(() => {
@@ -70,7 +86,9 @@ export const TeamDrankDashboardScreen = () => {
     return Object.values(data).sort((a, b) => b.strepenKost + b.frietenKost - (a.strepenKost + a.frietenKost));
   }, [periodStreaks, users, friesOrders, activePeriod]);
 
-  const totaalOpenstaand = drankrekeningen.reduce((acc, curr) => acc + curr.strepenKost + curr.frietenKost, 0);
+  const totaalStrepen = drankrekeningen.reduce((a, b) => a + b.strepenKost, 0);
+  const totaalFriet = drankrekeningen.reduce((a, b) => a + b.frietenKost, 0);
+  const totaalOpenstaand = totaalStrepen + totaalFriet;
 
   const weeklyStreaks = useMemo(() => {
     const weeks = {};
@@ -101,7 +119,7 @@ export const TeamDrankDashboardScreen = () => {
         drinkTotals[s.drinkName] = (drinkTotals[s.drinkName] || 0) + s.amount;
       });
       weeks[label].summary = Object.entries(drinkTotals)
-        .map(([name, count]) => `${count}x ${name}`)
+        .map(([name, count]) => `${count}× ${name}`)
         .join(', ');
     });
 
@@ -127,9 +145,9 @@ export const TeamDrankDashboardScreen = () => {
   }, [periodStreaks, users]);
 
   const onMinKnop = async streakId => {
-    if (window.confirm('Weet je zeker dat je deze consumptie wil corrigeren (-1 streepje)?')) {
+    if (window.confirm('Weet je zeker dat je deze streep wil verwijderen?')) {
       await handleDeleteStreak(streakId);
-      showToast('Correctie toegepast!', 'success');
+      showToast('Streep verwijderd', 'success');
     }
   };
 
@@ -145,280 +163,235 @@ export const TeamDrankDashboardScreen = () => {
   // verandert het aantal hooks tussen renders en laat React crashen.
   if (loading || !canAccess) return null;
 
+  const titel =
+    activeView === 'dashboard' ? 'Team Drank' : activeView === 'balances' ? "Openstaande saldo's" : 'Logboek';
+
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
-      <header className="px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-6 sticky top-0 bg-gray-50/90 dark:bg-[#0f172a]/90 backdrop-blur-md z-20 flex justify-between items-center border-b border-gray-200 dark:border-gray-800">
-        <div className="flex items-center gap-3">
-          <ChevronBack onClick={handleBack} />
-          <div>
-            <h1 className="text-xl font-black">
-              {activeView === 'dashboard'
-                ? 'Team Drank'
-                : activeView === 'balances'
-                  ? "Openstaande Saldo's"
-                  : 'Logboek'}
-            </h1>
-            <p className="text-xs text-gray-500 font-medium">Periode: {activePeriod?.naam || 'Geen'}</p>
-          </div>
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-inkt dark:text-white pb-nav-safe">
+      <header className="px-4 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-2 flex items-center gap-2">
+        <ChevronBack onClick={handleBack} />
+        <div className="min-w-0">
+          <h1 className="text-[28px] leading-tight font-extrabold tracking-tight truncate">{titel}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+            Periode: {activePeriod?.naam || 'geen open periode'}
+          </p>
         </div>
       </header>
 
-      <main className="px-4 py-6 space-y-8 pb-nav-safe">
+      <main className="flex-1 px-4 pt-2 space-y-6">
         {activeView === 'dashboard' && (
           <>
-            {/* Financiën Widget */}
-            <section>
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-6 shadow-xl text-white relative overflow-hidden">
-                <div className="absolute right-0 top-0 opacity-10">
-                  <span className="material-icons-round text-9xl">account_balance_wallet</span>
+            {/* Lopende rekeningen */}
+            <article className="rounded-[28px] bg-kaart-strepen dark:bg-kaart-strepen-d p-6">
+              <p className="text-base text-slate-600 dark:text-slate-300">Lopende rekeningen</p>
+              <p className="text-5xl font-extrabold leading-tight tabular-nums">{euro(totaalOpenstaand)}</p>
+              <div className="mt-5 grid grid-cols-2 gap-2">
+                <div className="rounded-2xl bg-white dark:bg-white/10 px-4 py-3">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Strepen</p>
+                  <p className="text-lg font-extrabold tabular-nums">{euro(totaalStrepen)}</p>
                 </div>
-                <p className="text-sm font-medium text-blue-100 uppercase tracking-wider mb-1">
-                  Totaal Lopende Rekeningen
-                </p>
-                <h2 className="text-4xl font-black">{euro(totaalOpenstaand)}</h2>
-                <div className="mt-4 pt-4 border-t border-white/20 flex justify-between text-sm font-semibold">
-                  <span>Strepen: {euro(drankrekeningen.reduce((a, b) => a + b.strepenKost, 0))}</span>
-                  <span>Frituur: {euro(drankrekeningen.reduce((a, b) => a + b.frietenKost, 0))}</span>
+                <div className="rounded-2xl bg-white dark:bg-white/10 px-4 py-3">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Friet</p>
+                  <p className="text-lg font-extrabold tabular-nums">{euro(totaalFriet)}</p>
                 </div>
               </div>
-            </section>
+            </article>
 
-            {/* Generieke Navigatie met NavCard */}
-            <section className="grid gap-3">
-              <NavCard
-                title="Openstaande Saldo's"
-                description="Bekijk schulden van leden"
-                icon="account_balance"
-                iconColorClass="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+            <Groep titel="Deze periode">
+              <Rij
+                icoon="account_balance"
+                label="Openstaande saldo's"
+                waarde={`${drankrekeningen.length} leiding`}
                 onClick={() => setActiveView('balances')}
               />
-              <NavCard
-                title="Logboek & Correcties"
-                description="Recente consumpties bekijken en wissen"
-                icon="history"
-                iconColorClass="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+              <Rij
+                icoon="history"
+                label="Logboek en correcties"
+                waarde={`${periodStreaks.length} strepen`}
                 onClick={() => setActiveView('logbook')}
               />
+            </Groep>
 
-              <div className="pt-2">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3 px-1">
-                  Beheer & Instellingen
-                </h4>
-                <div className="grid gap-3">
-                  <NavCard
-                    title="Voorraad & Prijzen"
-                    description="Dranken toevoegen of aanpassen"
-                    icon="inventory"
-                    iconColorClass="bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400"
-                    onClick={() => navigate('/strepen/voorraad')}
-                  />
-                  <NavCard
-                    title="Factuurbeheer"
-                    description="Facturen genereren voor leden"
-                    icon="receipt_long"
-                    iconColorClass="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
-                    onClick={() => navigate('/strepen/facturatie')}
-                  />
-                  <NavCard
-                    title="Excel Beheer"
-                    description="Gegevens rechtstreeks aanpassen"
-                    icon="grid_on"
-                    iconColorClass="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold"
-                    onClick={() => navigate('/strepen/facturatie/beheer')}
-                  />
-                  <NavCard
-                    title="Archief"
-                    description="Oude periodes en facturen inkijken"
-                    icon="inventory_2"
-                    iconColorClass="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
-                    onClick={() => navigate('/strepen/facturatie/archief')}
-                  />
-                  <NavCard
-                    title="Oudleiding"
-                    description="Code om te registreren, wachtwoorden, accounts"
-                    icon="elderly"
-                    iconColorClass="bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400"
-                    onClick={() => navigate('/strepen/oudleiding')}
-                  />
-                </div>
-              </div>
-            </section>
+            <Groep titel="Beheer">
+              <Rij
+                icoon="inventory"
+                label="Voorraad en prijzen"
+                sub="Dranken toevoegen of aanpassen"
+                onClick={() => navigate('/strepen/voorraad')}
+              />
+              <Rij
+                icoon="receipt_long"
+                label="Facturen"
+                sub="Periode afsluiten en facturen maken"
+                onClick={() => navigate('/strepen/facturatie')}
+              />
+              <Rij
+                icoon="grid_on"
+                label="Excel-beheer"
+                sub="Gegevens rechtstreeks aanpassen"
+                onClick={() => navigate('/strepen/facturatie/beheer')}
+              />
+              <Rij
+                icoon="inventory_2"
+                label="Archief"
+                sub="Oude periodes en facturen"
+                onClick={() => navigate('/strepen/facturatie/archief')}
+              />
+              <Rij
+                icoon="elderly"
+                label="Oudleiding"
+                sub="Code om te registreren, accounts"
+                onClick={() => navigate('/strepen/oudleiding')}
+              />
+            </Groep>
 
-            {/* Top 10 Bier Ranking */}
-            <section>
-              <div className="flex items-center gap-2 mb-4 px-1">
-                <span className="material-icons-round text-amber-500">emoji_events</span>
-                <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-sm">
-                  Top 10 Bier (Pinten)
-                </h3>
-              </div>
-
-              <div className="bg-white dark:bg-[#1e2330] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+            {/* Top 10 pinten */}
+            <section className="space-y-2">
+              <Kopje>Top 10 pinten</Kopje>
+              <div className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d overflow-hidden">
                 {topTenBeer.length > 0 ? (
-                  <div className="divide-y divide-gray-50 dark:divide-gray-800">
+                  <ol className="divide-y divide-white dark:divide-white/5">
                     {topTenBeer.map((item, index) => (
-                      <div key={item.userId} className="p-3 px-4 flex items-center justify-between group">
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${index === 0 ? 'bg-yellow-100 text-yellow-700' : index === 1 ? 'bg-gray-100 text-gray-700' : index === 2 ? 'bg-orange-100 text-orange-700' : 'bg-gray-50 text-gray-400'}`}
-                          >
-                            {index + 1}
-                          </span>
-                          <span className="font-bold text-gray-900 dark:text-white text-sm">{item.userName}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-black text-blue-600 dark:text-blue-400">{item.count}</span>
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
-                            pintjes
-                          </span>
-                        </div>
-                      </div>
+                      <li key={item.userId} className="px-5 py-3.5 flex items-center gap-3">
+                        <span
+                          className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-sm font-extrabold tabular-nums ${
+                            index === 0 ? 'bg-inkt text-white dark:bg-white dark:text-inkt' : 'bg-white dark:bg-white/10'
+                          }`}
+                        >
+                          {index + 1}
+                        </span>
+                        <span className="flex-1 min-w-0 font-semibold truncate">{item.userName}</span>
+                        <span className="text-lg font-extrabold tabular-nums">{item.count}</span>
+                      </li>
                     ))}
-                  </div>
+                  </ol>
                 ) : (
-                  <div className="p-8 text-center">
-                    <span className="material-icons-round text-gray-200 text-4xl mb-2">sports_bar</span>
-                    <p className="text-xs text-gray-400 font-medium">Nog geen pintjes gedronken deze periode.</p>
-                  </div>
+                  <p className="px-5 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                    Nog geen pinten gestreept deze periode.
+                  </p>
                 )}
               </div>
             </section>
           </>
         )}
 
-        {/* 2. Lopende Drankrekeningen per Leiding */}
+        {/* Openstaande saldo's per leider */}
         {activeView === 'balances' && (
-          <section>
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-sm px-1">
-                  Lopende Saldo's (Nu)
-                </h3>
-                <p className="text-[10px] text-gray-400 px-1 mt-0.5">Huidige consumpties van {activePeriod?.naam}</p>
-              </div>
+          <>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
+              <Pil
+                icoon="download"
+                onClick={() => navigate(`/strepen/facturatie/billing-excel?periodId=${activePeriod?.id}`)}
+              >
+                Excel
+              </Pil>
+              <Pil icoon="receipt_long" onClick={() => navigate('/strepen/facturatie')}>
+                Facturen en afsluiten
+              </Pil>
+              <Pil icoon="history" onClick={() => navigate('/strepen/facturatie/archief')}>
+                Oude saldo's
+              </Pil>
             </div>
 
-            <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4 pb-1">
-              <button
-                onClick={() => navigate(`/strepen/facturatie/billing-excel?periodId=${activePeriod?.id}`)}
-                className="shrink-0 flex items-center gap-1.5 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors hover:bg-green-100 border border-green-200 dark:border-green-800/50"
-              >
-                <span className="material-icons-round text-sm">download</span> Excel Downloaden
-              </button>
-              <button
-                onClick={() => navigate('/strepen/facturatie')}
-                className="shrink-0 flex items-center gap-1.5 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors hover:bg-blue-100 border border-blue-200 dark:border-blue-800/50"
-              >
-                <span className="material-icons-round text-sm">receipt_long</span> Alle Facturen / Afsluiten
-              </button>
-              <button
-                onClick={() => navigate('/strepen/facturatie/archief')}
-                className="shrink-0 flex items-center gap-1.5 bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors hover:bg-purple-100 border border-purple-200 dark:border-purple-800/50"
-              >
-                <span className="material-icons-round text-sm">history</span> Oude Saldo's
-              </button>
-            </div>
-            <div className="bg-white dark:bg-[#1e2330] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800">
-              {drankrekeningen.map(rek => (
-                <div key={rek.userId} className="p-4 flex justify-between items-center group">
-                  <div>
-                    <span className="font-bold text-gray-900 dark:text-white block">{rek.userName}</span>
-                    <span className="text-xs text-gray-400">
-                      Str: {euro(rek.strepenKost)} | Fri: {euro(rek.frietenKost)}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-black text-lg text-red-500 dark:text-red-400">
+            <section className="space-y-2">
+              <Kopje>Per leider</Kopje>
+              <div className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d overflow-hidden divide-y divide-white dark:divide-white/5">
+                {drankrekeningen.map(rek => (
+                  <div key={rek.userId} className="px-5 py-3.5 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{rek.userName}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
+                        Strepen {euro(rek.strepenKost)} · Friet {euro(rek.frietenKost)}
+                      </p>
+                    </div>
+                    <p className="text-lg font-extrabold tabular-nums shrink-0">
                       {euro(rek.strepenKost + rek.frietenKost)}
-                    </span>
+                    </p>
                   </div>
-                </div>
-              ))}
-              {drankrekeningen.length === 0 && (
-                <div className="p-4 text-center text-sm text-gray-400 font-medium">
-                  Geen rekeningen lopend in deze periode.
-                </div>
-              )}
-            </div>
-          </section>
+                ))}
+                {drankrekeningen.length === 0 && (
+                  <p className="px-5 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                    Nog geen rekeningen in deze periode.
+                  </p>
+                )}
+              </div>
+            </section>
+          </>
         )}
 
-        {/* 3. Logboek */}
+        {/* Logboek */}
         {activeView === 'logbook' && (
-          <section>
-            <div className="flex justify-between items-end mb-4">
-              <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-sm px-1">
-                Logboek (Correcties Maken)
-              </h3>
-              <button
-                onClick={() => navigate('/strepen/geschiedenis-alle')}
-                className="text-xs font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-lg hover:bg-indigo-100 transition-colors"
-              >
-                Alle Strepen Historiek
-              </button>
+          <>
+            <div className="flex gap-2">
+              <Pil icoon="list" onClick={() => navigate('/strepen/geschiedenis-alle')}>
+                Alle strepen
+              </Pil>
             </div>
-            <div className="space-y-3">
-              {Object.entries(weeklyStreaks).map(([weekLabel, data]) => (
-                <div
-                  key={weekLabel}
-                  className="bg-white dark:bg-[#1e2330] rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm"
-                >
-                  <button
-                    onClick={() => setExpandedWeek(expandedWeek === weekLabel ? null : weekLabel)}
-                    className="w-full p-4 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors gap-3"
-                  >
-                    <div className="shrink-0 flex items-center">
-                      <span className="font-bold text-sm text-gray-900 dark:text-white whitespace-nowrap">
-                        {weekLabel}
-                      </span>
-                    </div>
 
-                    <div className="flex-1 text-left min-w-0">
-                      <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-md truncate block max-w-full">
-                        {data.summary || 'Geen consumpties'}
-                      </span>
-                    </div>
+            <section className="space-y-2">
+              <Kopje>Per week</Kopje>
+              <div className="space-y-2">
+                {Object.entries(weeklyStreaks).map(([weekLabel, data]) => {
+                  const open = expandedWeek === weekLabel;
+                  return (
+                    <div key={weekLabel} className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedWeek(open ? null : weekLabel)}
+                        aria-expanded={open}
+                        className="w-full px-5 py-4 flex items-center gap-3 text-left active:bg-black/5 dark:active:bg-white/5"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-semibold">{weekLabel}</span>
+                          <span className="block text-sm text-gray-500 dark:text-gray-400 truncate">
+                            {data.summary || 'Geen consumpties'}
+                          </span>
+                        </span>
+                        <span
+                          className={`material-icons-round text-xl text-gray-500 dark:text-gray-400 transition-transform ${
+                            open ? 'rotate-180' : ''
+                          }`}
+                        >
+                          expand_more
+                        </span>
+                      </button>
 
-                    <span
-                      className="material-icons-round text-gray-400 transition-transform duration-200 shrink-0"
-                      style={{ transform: expandedWeek === weekLabel ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                    >
-                      expand_more
-                    </span>
-                  </button>
-
-                  {expandedWeek === weekLabel && (
-                    <div className="divide-y divide-gray-50 dark:divide-gray-800">
-                      {data.streaks.map(s => {
-                        const userName = (users || []).find(u => u.id === s.userId)?.naam || 'Onbekend';
-                        return (
-                          <div key={s.id} className="p-3 pl-4 flex items-center justify-between text-sm group">
-                            <div>
-                              <span className="font-bold text-gray-900 dark:text-white block">{userName}</span>
-                              <span className="text-xs font-medium text-gray-500">
-                                {s.amount}x {s.drinkName} ({euro(s.price)})
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => onMinKnop(s.id)}
-                              className="bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 p-2 rounded-xl transition-colors flex items-center gap-1 active:scale-95"
-                              title="Verwijder (corrigeer) dit kasticketje"
-                            >
-                              <span className="material-icons-round text-sm">remove_circle</span>
-                              <span className="text-xs font-bold">Wis</span>
-                            </button>
-                          </div>
-                        );
-                      })}
+                      {open && (
+                        <ul className="divide-y divide-white dark:divide-white/5 border-t border-white dark:border-white/5">
+                          {data.streaks.map(s => {
+                            const userName = (users || []).find(u => u.id === s.userId)?.naam || 'Onbekend';
+                            return (
+                              <li key={s.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="font-semibold truncate">{userName}</p>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
+                                    {s.amount}× {s.drinkName} · {euro(s.price)}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => onMinKnop(s.id)}
+                                  className="shrink-0 rounded-full bg-red-50 dark:bg-red-900/15 text-red-600 dark:text-red-400 px-3.5 py-2 text-sm font-bold active:scale-95"
+                                  aria-label={`Streep van ${userName} verwijderen`}
+                                >
+                                  Verwijder
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
-              {Object.keys(weeklyStreaks).length === 0 && (
-                <p className="text-xs text-center text-gray-400 italic">Geen strepen in deze periode.</p>
-              )}
-            </div>
-          </section>
+                  );
+                })}
+                {Object.keys(weeklyStreaks).length === 0 && (
+                  <p className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d px-5 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                    Nog geen strepen in deze periode.
+                  </p>
+                )}
+              </div>
+            </section>
+          </>
         )}
       </main>
     </div>
