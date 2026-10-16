@@ -133,20 +133,26 @@ async function laad(db: SupabaseClient) {
     ? strepenQuery.or(`period_id.eq.${periode.id},period_id.is.null`)
     : strepenQuery.is('period_id', null);
 
-  const [overzicht, strepen, dranken, facturen] = await Promise.all([
+  const [overzicht, strepen, dranken, facturen, profielen, godmode] = await Promise.all([
     db.rpc('periode_overzicht'),
     strepenQuery,
-    db.from('dranken').select('id, naam, is_temporary, geldig_van, geldig_tot'),
+    db.from('dranken').select('id, naam, is_temporary, geldig_van, geldig_tot, uit_lijst'),
     db
       .from('facturen')
       .select(
         'nummer, periode, user_naam, aantal_strepen, drank_bedrag, friet_bedrag, correctie_bedrag, totaal_bedrag, mededeling, status, betaald_op, profiles(naam), billing_periods(naam, start_datum)',
       ),
+    db.from('profiles').select('id, naam').eq('actief', true),
+    db.from('godmode_accounts').select('user_id'),
   ]);
-  for (const r of [overzicht, strepen, dranken, facturen]) if (r.error) throw r.error;
+  for (const r of [overzicht, strepen, dranken, facturen, profielen, godmode]) if (r.error) throw r.error;
+  // Vaste lijst leiders: alle actieve accounts behalve Godmode (testaccount)
+  const godmodeIds = new Set((godmode.data ?? []).map(g => g.user_id));
+  const leiders = (profielen.data ?? []).filter(p => !godmodeIds.has(p.id) && p.naam).map(p => p.naam);
 
   return {
     periode,
+    leiders,
     overzicht: overzicht.data ?? [],
     // deno-lint-ignore no-explicit-any
     strepen: (strepen.data ?? []).map((s: any) => ({ ...s, naam: s.profiles?.naam ?? s.user_naam })),
@@ -163,8 +169,8 @@ async function synchroniseer(db: SupabaseClient) {
   if (!id) throw new Fout('Er is nog geen Sheet gekoppeld (secret DRANK_SHEET_ID).', 409);
   const data = await laad(db);
   const inhoud: Record<string, unknown[][]> = {
-    Rekening: rekeningRijen(data.overzicht),
-    Strepen: strepenRijen(data.strepen, data.dranken),
+    Rekening: rekeningRijen(data.overzicht, data.leiders),
+    Strepen: strepenRijen(data.strepen, data.dranken, data.leiders),
     Facturen: factuurRijen(data.facturen),
     Info: infoRijen({ periode: data.periode }),
   };

@@ -18,6 +18,7 @@ test('strepen: per leider per drank, vaste dranken eerst, totalen', () => {
     { id: 2, naam: 'Cola', is_temporary: false },
     { id: 3, naam: 'Cocktail', is_temporary: true, geldig_van: '2026-10-16T16:00:00Z', geldig_tot: '2026-10-17T22:00:00Z' },
     { id: 4, naam: 'Water', is_temporary: false },
+    { id: 5, naam: 'Oud', is_temporary: false, uit_lijst: true },
   ];
   const rijen = strepenRijen(
     [
@@ -31,11 +32,12 @@ test('strepen: per leider per drank, vaste dranken eerst, totalen', () => {
     ],
     dranken,
   );
-  assert.deepEqual(rijen[0], ['Leider', 'Cola', 'Pils', 'Cocktail (16/10 – 17/10)', 'Totaal']);
-  assert.deepEqual(rijen[1], ['Anna', 1, 2, 0, 3]);
-  assert.deepEqual(rijen[2], ['Bert', 0, 2, 1, 3]);
-  assert.equal(rijen.length, 4); // Carl staat op 0 en valt weg; Water heeft geen strepen
-  assert.deepEqual(rijen[3], ['Totaal', 1, 4, 1, 6]);
+  // Vaste dranken altijd (ook Water zonder strepen), uit de lijst niet; tijdelijke enkel met strepen
+  assert.deepEqual(rijen[0], ['Leider', 'Cola', 'Pils', 'Water', 'Cocktail (16/10 – 17/10)', 'Totaal']);
+  assert.deepEqual(rijen[1], ['Anna', 1, 2, 0, 0, 3]);
+  assert.deepEqual(rijen[2], ['Bert', 0, 2, 0, 1, 3]);
+  assert.equal(rijen.length, 4); // Carl staat op 0 en zit niet in de vaste lijst: valt weg
+  assert.deepEqual(rijen[3], ['Totaal', 1, 4, 0, 1, 6]);
 });
 
 test('tijdelijke drank tot middernacht telt t.e.m. de dag ervoor', () => {
@@ -63,4 +65,29 @@ test('zelfdeInhoud: negeert lege cellen achteraan en getal vs tekst', async () =
   assert.ok(zelfdeInhoud([['a', '', 'b']], [['a', '', 'b']]));
   assert.ok(!zelfdeInhoud([['Anna', 3.5]], [['Anna', 4]]));
   assert.ok(!zelfdeInhoud(undefined, [['Leider']]));
+});
+
+test('start van een periode: alle leiders en vaste dranken met nullen', async () => {
+  const dranken = [
+    { id: 1, naam: 'Freedom', is_temporary: false },
+    { id: 2, naam: 'Fanta', is_temporary: false },
+    { id: 3, naam: 'Duvel', is_temporary: true, geldig_van: '2026-10-01T08:00:00Z', geldig_tot: '2026-10-02T08:00:00Z' },
+  ];
+  const strepen = strepenRijen([], dranken, ['Bert', 'Anna']);
+  assert.deepEqual(strepen, [
+    ['Leider', 'Fanta', 'Freedom', 'Totaal'],
+    ['Anna', 0, 0, 0],
+    ['Bert', 0, 0, 0],
+    ['Totaal', 0, 0, 0],
+  ]);
+  const rekening = rekeningRijen([], ['Bert', 'Anna']);
+  assert.deepEqual(rekening[1], ['Anna', 0, 0, 0, 0, 0]);
+  assert.equal(rekening.length, 4);
+});
+
+test('iemand buiten de vaste lijst met strepen (bv. Godmode) komt er toch bij', () => {
+  const rijen = strepenRijen([{ naam: 'Tibo D', drank_id: 1, aantal: 2 }], [{ id: 1, naam: 'Freedom' }], ['Anna']);
+  assert.deepEqual(rijen.map(r => r[0]), ['Leider', 'Anna', 'Tibo D', 'Totaal']);
+  const rek = rekeningRijen([{ naam: 'Tibo D', strepen: 2, drank_bedrag: 3, friet_bedrag: 0, correctie_bedrag: 0, totaal: 3 }], ['Anna']);
+  assert.deepEqual(rek.map(r => r[0]), ['Leider', 'Anna', 'Tibo D', 'Totaal']);
 });
