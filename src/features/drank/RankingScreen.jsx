@@ -43,8 +43,10 @@ export const RankingScreen = () => {
         {ranking.map((r, i) => (
           <div
             key={r.user_id}
-            className={`bg-white dark:bg-[#1e2330] p-3 rounded-xl border flex items-center gap-3 ${
-              r.user_id === currentUser?.id ? 'border-blue-400' : 'border-gray-100 dark:border-gray-800'
+            className={`p-3 rounded-xl border flex items-center gap-3 ${
+              r.user_id === currentUser?.id
+                ? 'bg-kaart-strepen dark:bg-kaart-strepen-d border-transparent'
+                : 'bg-white dark:bg-[#1e2330] border-gray-100 dark:border-gray-800'
             }`}
           >
             <div

@@ -151,12 +151,12 @@ export const MyInvoiceScreen = () => {
         )}
 
         {/* Lopende periode */}
-        <section className="bg-white dark:bg-[#1e2330] rounded-3xl p-6 border border-gray-200 dark:border-gray-800 text-center">
-          <p className="text-xs font-bold tracking-widest uppercase text-gray-500">Lopende periode</p>
-          <p className="text-4xl font-black text-blue-600 dark:text-blue-500 my-2">{euro(totaal)}</p>
-          <p className="text-xs text-gray-500">{activePeriod?.naam || 'Geen open periode'}</p>
+        <section className="bg-kaart-strepen dark:bg-kaart-strepen-d text-inkt dark:text-white rounded-[28px] p-6 text-center">
+          <p className="text-xs font-bold tracking-widest uppercase text-slate-600 dark:text-slate-300">Lopende periode</p>
+          <p className="text-5xl font-extrabold tabular-nums my-2">{euro(totaal)}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{activePeriod?.naam || 'Geen open periode'}</p>
           {overzicht?.strepen > 0 && (
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-2">
               Schatting: jouw strepen × de prijs van de drank. Bij het afsluiten verdeelt Drankteam de echte kost over
               alle strepen, dus het bedrag op je factuur kan nog wat verschillen.
             </p>
@@ -279,7 +279,7 @@ const BetaalInfo = ({ bedrag, mededeling, betaal, kopieer }) =>
             <dd className="font-semibold font-mono text-right flex items-center gap-1">
               {v}
               {kopie && (
-                <button onClick={() => kopieer(kopie)} className="text-blue-600" title="Kopieer">
+                <button onClick={() => kopieer(kopie)} className="text-gray-500 dark:text-gray-400 hover:text-inkt dark:hover:text-white" title="Kopieer">
                   <span className="material-icons-round text-base">content_copy</span>
                 </button>
               )}
