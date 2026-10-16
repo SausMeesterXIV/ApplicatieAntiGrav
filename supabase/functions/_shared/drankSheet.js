@@ -16,7 +16,7 @@
 //   Info      – wanneer bijgewerkt en uitleg
 
 // Verhoog bij een wijziging aan de formules of de indeling: dan schrijft de app alles opnieuw, ook als de cijfers gelijk bleven
-export const SHEET_VERSIE = 3;
+export const SHEET_VERSIE = 4;
 
 export const TABBLADEN = ['Drankrekening', 'Bakken', 'Rekening', 'Strepen', 'Facturen', 'Info'];
 
@@ -217,12 +217,22 @@ export const BAKKEN_KOP = [
 ];
 export const BAKKEN_INVOER = [1, 2, 3, 4, 5]; // B t.e.m. F vullen jullie zelf in; blijft bewaard per drank
 
-/** De zelf ingevulde waarden uit het bestaande tabblad Bakken (formules blijven formules), per drank-id en per naam */
-export function bewaardeInvoer(oudeRijen) {
+// In de verborgen kop van kolom M staat ook de periode: zo weet de app wanneer er een nieuwe periode begon
+export const bakkenIdKop = periodeId => (periodeId ? `${ID_KOP} · periode ${periodeId}` : ID_KOP);
+
+/**
+ * De zelf ingevulde waarden uit het bestaande tabblad Bakken (formules blijven formules), per drank-id en per naam.
+ * Begon er intussen een nieuwe periode (periodeId verschilt van wat in de kop staat), dan blijft enkel de
+ * aankoopprijs staan en worden de tellingen leeggemaakt: die horen bij de vorige periode.
+ */
+export function bewaardeInvoer(oudeRijen, periodeId) {
   const perId = new Map();
   const perNaam = new Map();
+  const kop = String(oudeRijen?.[0]?.[12] ?? '');
+  // Een kop zonder periode (oudere versie van de Sheet) telt als dezelfde periode: niets leegmaken
+  const nieuwePeriode = !!periodeId && kop.includes(' · periode ') && kop !== bakkenIdKop(periodeId);
   for (const rij of (oudeRijen || []).slice(1)) {
-    const waarden = BAKKEN_INVOER.map(i => rij?.[i] ?? '');
+    const waarden = BAKKEN_INVOER.map((i, j) => (nieuwePeriode && j > 0 ? '' : (rij?.[i] ?? '')));
     if (waarden.every(w => w === '')) continue;
     if (rij?.[12]) perId.set(String(rij[12]), waarden);
     if (rij?.[0]) perNaam.set(String(rij[0]), waarden);
@@ -256,9 +266,9 @@ export function appTellingen(strepen) {
  * scheiding: ',' of ';' tussen de delen van een formule (zie formuleScheiding)
  * Geeft { drankrekening, bakken, opmaak, stand } met waarden en formules (schrijven met USER_ENTERED);
  * stand = de aantallen die in de Sheet komen (om later te zien wat er in de Sheet veranderd is).
- * @param {{ rekening: any[], strepen: any[], dranken: any[], leiders?: { id: string, naam: string, oud?: boolean }[], oudeBakken?: unknown[][], nu?: Date, scheiding?: string }} invoer
+ * @param {{ rekening: any[], strepen: any[], dranken: any[], leiders?: { id: string, naam: string, oud?: boolean }[], oudeBakken?: unknown[][], nu?: Date, scheiding?: string, periodeId?: string }} invoer
  */
-export function drankrekeningTabbladen({ rekening, strepen, dranken, leiders = [], oudeBakken = [], nu = new Date(), scheiding = ',' }) {
+export function drankrekeningTabbladen({ rekening, strepen, dranken, leiders = [], oudeBakken = [], nu = new Date(), scheiding = ',', periodeId = undefined }) {
   const x = scheiding; // tussen de delen van een formule: , of ; (hangt af van de taal van de Sheet)
   const lijst = drankLijst(dranken, strepen, nu);
   const k = lijst.length;
@@ -324,8 +334,8 @@ export function drankrekeningTabbladen({ rekening, strepen, dranken, leiders = [
   rijen.push([ID_KOP, '', ...lijst.map(d => String(d.id))]);
 
   // Bakken: één rij per drank, in dezelfde volgorde als de kolommen van Drankrekening
-  const { perId: invoerPerId, perNaam: invoerPerNaam } = bewaardeInvoer(oudeBakken);
-  const bakken = [BAKKEN_KOP];
+  const { perId: invoerPerId, perNaam: invoerPerNaam } = bewaardeInvoer(oudeBakken, periodeId);
+  const bakken = [[...BAKKEN_KOP.slice(0, 12), bakkenIdKop(periodeId)]];
   lijst.forEach((d, i) => {
     const r = 2 + i;
     const invoer = invoerPerId.get(String(d.id)) || invoerPerNaam.get(drankNaam(d)) || ['', '', '', '', ''];

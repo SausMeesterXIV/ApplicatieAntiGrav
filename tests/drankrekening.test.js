@@ -178,3 +178,22 @@ test('prijzen uit Bakken: enkel met aankoopprijs en telling', () => {
   ];
   assert.deepEqual([...prijzenUitBakken(bakken)], [['d2', 0.3333]]);
 });
+
+test('nieuwe periode: aankoopprijs blijft, tellingen worden leeggemaakt', () => {
+  const oudeBakken = [
+    ['Drank', '', '', '', '', '', '', '', '', '', '', '', `${ID_KOP} · periode p-oud`],
+    ['Freedom', 0.3, 20, 96, 24, 0, '', '', '', '', '', 1, 'd1'],
+  ];
+  const zelfde = drankrekeningTabbladen({ rekening: [], strepen: [], dranken, leiders: [anna], oudeBakken, nu, periodeId: 'p-oud' });
+  assert.deepEqual(zelfde.bakken[2].slice(1, 6), [0.3, 20, 96, 24, 0]);
+  assert.equal(zelfde.bakken[0][12], `${ID_KOP} · periode p-oud`);
+  const nieuw = drankrekeningTabbladen({ rekening: [], strepen: [], dranken, leiders: [anna], oudeBakken, nu, periodeId: 'p-nieuw' });
+  assert.deepEqual(nieuw.bakken[2].slice(1, 6), [0.3, '', '', '', '']);
+  assert.equal(nieuw.bakken[0][12], `${ID_KOP} · periode p-nieuw`);
+});
+
+test('Bakken uit een oudere versie (kop zonder periode): tellingen blijven staan', () => {
+  const oudeBakken = [['Drank', '', '', '', '', '', '', '', '', '', '', '', ID_KOP], ['Freedom', 0.3, 20, 96, 24, 0, '', '', '', '', '', 1, 'd1']];
+  const r = drankrekeningTabbladen({ rekening: [], strepen: [], dranken, leiders: [anna], oudeBakken, nu, periodeId: 'p1' });
+  assert.deepEqual(r.bakken[2].slice(1, 6), [0.3, 20, 96, 24, 0]);
+});

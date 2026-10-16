@@ -387,6 +387,7 @@ async function synchroniseerMetSlot(db: SupabaseClient, id: string) {
     dranken: data.dranken,
     leiders: data.leiders,
     oudeBakken,
+    periodeId: data.periode?.id,
     scheiding: formuleScheiding(meta.properties?.locale),
   });
   const resultaat = {
