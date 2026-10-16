@@ -90,30 +90,26 @@ export const StrepenAdminPanel = ({ onDrinkDeleted }) => {
   };
 
   return (
-    <section className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="material-icons-round text-orange-500">settings_applications</span>
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Beheer (Admin & Team Drank)</h2>
-      </div>
+    <section className="pb-4 text-inkt dark:text-white">
 
       <form
         onSubmit={handleAddNewDrink}
-        className="bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 p-5 rounded-2xl space-y-4"
+        className="bg-kaart-event dark:bg-kaart-event-d p-5 rounded-2xl space-y-4"
       >
         <div className="flex justify-between items-center">
-          <h3 className="text-sm font-bold text-orange-800 dark:text-orange-200">Nieuwe drank toevoegen</h3>
-          <div className="bg-white dark:bg-[#1f293b] p-1 rounded-lg border border-orange-200 dark:border-orange-800 flex text-xs font-bold transition-colors">
+          <h3 className="text-sm font-bold">Nieuwe drank</h3>
+          <div className="bg-white dark:bg-white/10 p-1 rounded-full flex text-xs font-bold">
             <button
               type="button"
               onClick={() => setIsTemporary(false)}
-              className={`px-3 py-1 rounded-md transition-all ${!isTemporary ? 'bg-orange-100 text-orange-700' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-3 py-1 rounded-full transition-all ${!isTemporary ? 'bg-inkt text-white dark:bg-white dark:text-inkt' : 'text-gray-500'}`}
             >
               Permanent
             </button>
             <button
               type="button"
               onClick={() => setIsTemporary(true)}
-              className={`px-3 py-1 rounded-md transition-all ${isTemporary ? 'bg-orange-100 text-orange-700' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-3 py-1 rounded-full transition-all ${isTemporary ? 'bg-inkt text-white dark:bg-white dark:text-inkt' : 'text-gray-500'}`}
             >
               Tijdelijk
             </button>
@@ -128,7 +124,7 @@ export const StrepenAdminPanel = ({ onDrinkDeleted }) => {
               placeholder="Naam (bv. Mojito)"
               value={newDrinkName}
               onChange={e => setNewDrinkName(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors"
+              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
             />
           </div>
           <div>
@@ -140,7 +136,7 @@ export const StrepenAdminPanel = ({ onDrinkDeleted }) => {
               placeholder="€"
               value={newDrinkPrice}
               onChange={e => setNewDrinkPrice(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors"
+              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
             />
           </div>
         </div>
@@ -152,7 +148,7 @@ export const StrepenAdminPanel = ({ onDrinkDeleted }) => {
               type="date"
               value={validUntil}
               onChange={e => setValidUntil(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors"
+              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
             />
           </div>
         )}
@@ -160,26 +156,26 @@ export const StrepenAdminPanel = ({ onDrinkDeleted }) => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          className="w-full bg-inkt dark:bg-white text-white dark:text-inkt font-bold py-3 rounded-2xl active:scale-[0.99] disabled:opacity-40 flex items-center justify-center gap-2"
         >
           {isSubmitting ? (
             <span className="text-xs">Toevoegen...</span>
           ) : (
             <>
               <span className="material-icons-round text-sm">add</span>
-              {isTemporary ? 'Tijdelijke Drank Toevoegen' : 'Toevoegen aan Lijst'}
+              {isTemporary ? 'Tijdelijke drank toevoegen' : 'Drank toevoegen'}
             </>
           )}
         </button>
       </form>
 
-      <div className="mt-4 bg-white dark:bg-[#1f293b] border border-gray-100 dark:border-gray-800 p-5 rounded-2xl transition-colors">
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Bestaande Dranken Beheren</h3>
-        <div className="space-y-3">
+      <div className="mt-4 bg-kaart-event dark:bg-kaart-event-d p-5 rounded-2xl">
+        <h3 className="text-sm font-bold mb-4">Bestaande dranken</h3>
+        <div className="space-y-2">
           {drinks.map(drink => (
             <div
               key={drink.id}
-              className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl transition-colors"
+              className="flex items-center gap-2 p-3 bg-white dark:bg-white/10 rounded-xl"
             >
               {editingDrinkId === drink.id ? (
                 <>
@@ -187,9 +183,9 @@ export const StrepenAdminPanel = ({ onDrinkDeleted }) => {
                     type="text"
                     value={editDrinkName}
                     onChange={e => setEditDrinkName(e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1f2937] text-sm w-1/2 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors"
+                    className="flex-1 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/10 text-sm w-1/2 focus:outline-none focus:ring-2 focus:ring-inkt/20"
                   />
-                  <div className="flex items-center gap-1 bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-gray-700 rounded-lg px-2 w-24 focus-within:ring-2 focus-within:ring-blue-500/50 transition-colors">
+                  <div className="flex items-center gap-1 bg-gray-50 dark:bg-white/10 rounded-lg px-2 w-24 focus-within:ring-2 focus-within:ring-inkt/20">
                     <span className="text-gray-500 text-sm">€</span>
                     <input
                       type="number"
@@ -214,8 +210,8 @@ export const StrepenAdminPanel = ({ onDrinkDeleted }) => {
                 </>
               ) : (
                 <>
-                  <span className="flex-1 text-sm font-bold text-gray-900 dark:text-white truncate">{drink.name}</span>
-                  <span className="text-sm font-medium bg-white dark:bg-gray-700 px-2 py-1 rounded-md shadow-sm border border-gray-100 dark:border-gray-600 transition-colors">
+                  <span className="flex-1 text-sm font-bold truncate">{drink.name}</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400 tabular-nums px-1">
                     {euro(drink.price)}
                   </span>
                   <button
@@ -224,13 +220,15 @@ export const StrepenAdminPanel = ({ onDrinkDeleted }) => {
                       setEditDrinkName(drink.name);
                       setEditDrinkPrice(drink.price.toString());
                     }}
-                    className="p-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 rounded-lg shadow-sm transition-colors"
+                    aria-label="Aanpassen"
+                    className="p-2 text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/10 rounded-lg"
                   >
                     <span className="material-icons-round text-sm">edit</span>
                   </button>
                   <button
                     onClick={() => handleDeleteDrink(drink.id)}
-                    className="p-2 text-red-600 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 rounded-lg shadow-sm transition-colors"
+                    aria-label="Verwijderen"
+                    className="p-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/15 rounded-lg"
                   >
                     <span className="material-icons-round text-sm">delete</span>
                   </button>

@@ -1,403 +1,333 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useDrink } from './DrinkContext';
 
 import { ChevronBack } from '../../components/ChevronBack';
+import { BottomSheet } from '../../components/Modal';
 import { hapticSuccess } from '../../lib/haptics';
 import { StrepenAdminPanel } from './StrepenAdminPanel';
 import { SPECIAL_DRINKS, inVasteVolgorde } from '../../lib/constants';
 import { updateProfile } from '../../lib/supabaseService';
 import { showToast } from '../../components/Toast';
 import { hasRole } from '../../lib/roleUtils';
-import { UserAvatar } from '../../components/UserAvatar';
 import { euro } from '../../lib/geld';
+
+// Strepen (design-update): zelfde stijl als het startscherm en Instellingen.
+// Bovenaan wat je vandaag streepte en je voorlopige rekening, daaronder drank kiezen en strepen,
+// en onderaan een gegroepeerde lijst (geschiedenis, ranking, nudge, snelle drank).
+// Het Team Drank-dashboard staat hier niet meer: daarvoor is er een eigen bol op het startscherm.
+
+const isVandaag = d => {
+  const x = new Date(d);
+  const n = new Date();
+  return x.getFullYear() === n.getFullYear() && x.getMonth() === n.getMonth() && x.getDate() === n.getDate();
+};
+
+const Groep = ({ titel, children }) => (
+  <section className="space-y-2">
+    <h2 className="px-2 text-xs font-bold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">{titel}</h2>
+    <div className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d overflow-hidden divide-y divide-white dark:divide-white/5">
+      {children}
+    </div>
+  </section>
+);
+
+const Rij = ({ icoon, label, waarde, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="w-full flex items-center gap-3 px-5 py-4 text-left active:bg-black/5 dark:active:bg-white/5"
+  >
+    <span className="material-icons-round text-xl text-gray-500 dark:text-gray-400">{icoon}</span>
+    <span className="flex-1 font-semibold text-base">{label}</span>
+    <span className="flex items-center gap-1 min-w-0 text-gray-500 dark:text-gray-400">
+      {waarde && <span className="truncate text-sm">{waarde}</span>}
+      <span className="material-icons-round text-xl">chevron_right</span>
+    </span>
+  </button>
+);
+
+const Label = ({ children }) => (
+  <p className="text-xs font-bold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400 mb-2">{children}</p>
+);
 
 export const StrepenScreen = () => {
   const navigate = useNavigate();
-  const { currentUser, setCurrentUser: onUpdateUser, users } = useAuth();
-  const { balances, handleAddCost: onAddCost, dranken: drinks, activePeriod } = useDrink();
-  const currentBalance = balances && currentUser ? balances[currentUser?.id || ''] || 0 : 0;
-
-  const [drinkCounts, setDrinkCounts] = useState({});
-  const [selectedDrink, setSelectedDrink] = useState(null);
-  const [totalToday, setTotalToday] = useState(0);
-  const [isManageMode, setIsManageMode] = useState(false);
-  const [showFloatingPlus, setShowFloatingPlus] = useState(false);
+  const { currentUser, setCurrentUser, users } = useAuth();
+  const { balances, streaks, handleAddCost, dranken, activePeriod } = useDrink();
 
   const isTeamDrank = hasRole(currentUser, 'drank') || hasRole(currentUser, 'hoofdleiding');
   // Drankteam kan strepen voor iemand anders (bv. correcties); standaard voor jezelf
   const [strepenVoorId, setStrepenVoorId] = useState(null);
   const doelUser = (isTeamDrank && strepenVoorId && users.find(u => u.id === strepenVoorId)) || currentUser;
+  const voorMezelf = doelUser?.id === currentUser?.id;
 
-  const getCurrentCountRaw = () => {
-    if (!selectedDrink) return 1;
-    const val = drinkCounts[String(selectedDrink.id)];
-    return val !== undefined ? val : 1;
-  };
+  const [selectedDrink, setSelectedDrink] = useState(null);
+  const [aantal, setAantal] = useState(1);
+  const [plusEen, setPlusEen] = useState(null); // korte "+N"-animatie
+  const [beheerOpen, setBeheerOpen] = useState(false);
+  const [snelOpen, setSnelOpen] = useState(false);
 
-  const updateCurrentCount = val => {
-    if (!selectedDrink) return;
-    setDrinkCounts(prev => ({ ...prev, [String(selectedDrink.id)]: Math.max(0, val) }));
-  };
-
-  // Per ongeluk dubbel tikken (binnen 0,6 s) telt als één keer toevoegen
-  const laatsteTik = React.useRef(0);
-  const handleAddStripe = async () => {
-    if (!selectedDrink) return;
-    if (Date.now() - laatsteTik.current < 600) return;
-    laatsteTik.current = Date.now();
-
-    // Visuele feedback trigger
-    setShowFloatingPlus(true);
-
-    const raw = getCurrentCountRaw();
-    const countToAdd = raw === 0 ? 1 : raw;
-    onAddCost(doelUser?.id || '', selectedDrink.id, countToAdd, doelUser?.naam);
-
-    // De verbeterde haptics aanroepen
-    await hapticSuccess();
-
-    setTotalToday(prev => prev + countToAdd);
-    updateCurrentCount(1);
-
-    // Reset animatie na korte tijd
-    setTimeout(() => setShowFloatingPlus(false), 800);
-  };
-
-  const displayCount = getCurrentCountRaw();
-
-  // De drankknoppen onder "Kies drank": alle dranken (Freedom eerst), behalve Bak Freedom (eigen knop).
-  // Enkel een drank uit deze lijst mag klaarstaan: anders stond bij het openen bv. "Bak Freedom" (eerste
-  // in het alfabet) klaar zonder dat je hem zag.
-  const keuzeDranken = useMemo(
+  const rekening = (balances && currentUser && balances[currentUser.id]) || 0;
+  const vandaag = useMemo(
     () =>
-      inVasteVolgorde(drinks.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM)),
-    [drinks],
+      streaks
+        .filter(s => s.userId === doelUser?.id && isVandaag(s.timestamp))
+        .reduce((som, s) => som + (s.amount || 1), 0),
+    [streaks, doelUser?.id],
   );
+
+  // Alle dranken (Freedom eerst), behalve Bak Freedom (eigen knop). Enkel een drank uit deze lijst mag
+  // klaarstaan: anders stond bij het openen bv. "Bak Freedom" (eerste in het alfabet) klaar zonder dat je hem zag.
+  const keuzeDranken = useMemo(
+    () => inVasteVolgorde(dranken.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM)),
+    [dranken],
+  );
+  const bakFreedom = dranken.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM);
 
   useEffect(() => {
     if (!keuzeDranken.some(d => d.id === selectedDrink?.id)) setSelectedDrink(keuzeDranken[0] || null);
   }, [keuzeDranken, selectedDrink]);
 
-  const validQuickDrinks = keuzeDranken;
+  const snelleDrank =
+    keuzeDranken.find(d => String(d.id) === String(currentUser?.quickDrinkId)) ||
+    keuzeDranken.find(d => d.name === SPECIAL_DRINKS.PINT_FREEDOM) ||
+    keuzeDranken[0];
 
-  const activeQuickDrinkId = String(
-    currentUser?.quickDrinkId || (validQuickDrinks.length > 0 ? validQuickDrinks[0].id : ''),
-  );
+  // Per ongeluk dubbel tikken (binnen 0,6 s) telt als één keer toevoegen
+  const laatsteTik = useRef(0);
+  const streep = async (drank, n) => {
+    if (!drank || !doelUser) return;
+    if (Date.now() - laatsteTik.current < 600) return;
+    laatsteTik.current = Date.now();
+
+    handleAddCost(doelUser.id, drank.id, n, doelUser.naam);
+    setPlusEen(n);
+    setTimeout(() => setPlusEen(null), 800);
+    await hapticSuccess();
+  };
+
+  const kiesSnelleDrank = async drank => {
+    try {
+      await updateProfile(currentUser.id, { quick_drink_id: drank.id });
+      setCurrentUser({ ...currentUser, quickDrinkId: drank.id, quick_drink_id: drank.id });
+      showToast(`Snelle drank: ${drank.name}`, 'success');
+      setSnelOpen(false);
+    } catch {
+      showToast('Snelle drank opslaan mislukt', 'error');
+    }
+  };
+
+  const n = Math.max(1, aantal || 1);
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-200">
-      <header className="bg-white dark:bg-[#1e2330] pt-[calc(1.5rem+env(safe-area-inset-top,0px))] pb-6 px-4 shadow-sm relative z-10 rounded-b-[2rem] transition-colors">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2">
-            <ChevronBack onClick={() => navigate(-1)} />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Strepen</h1>
-          </div>
-          {isTeamDrank && (
-            <div
-              onClick={() => setIsManageMode(!isManageMode)}
-              className={`p-2 rounded-full cursor-pointer transition-colors ${isManageMode ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-            >
-              <span className="material-icons-round">{isManageMode ? 'close' : 'settings'}</span>
-            </div>
-          )}
-        </div>
-        <div
-          onClick={() => navigate('/mijn-factuur')}
-          className="bg-blue-600 dark:bg-blue-600 text-white p-4 rounded-xl flex items-center justify-between shadow-lg shadow-blue-600/20 cursor-pointer active:scale-[0.98] transition-transform group"
-        >
-          <div>
-            <p className="text-xs font-medium text-blue-100 uppercase tracking-wider">
-              {activePeriod ? `Voorlopige Rekening (${activePeriod.naam})` : 'Voorlopige Rekening'}
-            </p>
-            <p className="text-2xl font-bold">{euro(currentBalance)}</p>
-          </div>
-          <span className="material-icons-round text-white/70">chevron_right</span>
-        </div>
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0f172a] text-inkt dark:text-white pb-nav-safe">
+      <header className="px-4 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-2 flex items-center gap-2">
+        <ChevronBack onClick={() => navigate(-1)} />
+        <h1 className="flex-1 text-[28px] font-extrabold tracking-tight">Strepen</h1>
+        {isTeamDrank && (
+          <button
+            type="button"
+            onClick={() => setBeheerOpen(true)}
+            className="w-10 h-10 rounded-full bg-kaart-event dark:bg-kaart-event-d flex items-center justify-center"
+            aria-label="Dranken beheren"
+          >
+            <span className="material-icons-round text-xl">tune</span>
+          </button>
+        )}
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
-        {/* Mijn geschiedenis & Admin Dashboard Links */}
-        <div className="space-y-3">
-          <div
-            onClick={() => navigate('/strepen/geschiedenis')}
-            className="bg-white dark:bg-[#1e2330] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:shadow-md transition-all group"
+      <main className="flex-1 px-4 pt-2 space-y-6">
+        {/* Vandaag en voorlopige rekening */}
+        <article className="rounded-[28px] bg-kaart-strepen dark:bg-kaart-strepen-d p-6">
+          <p className="text-base text-slate-600 dark:text-slate-300">
+            {voorMezelf ? 'Vandaag gestreept' : `Vandaag gestreept door ${doelUser?.naam}`}
+          </p>
+          <p className="text-7xl font-extrabold leading-none tabular-nums">{vandaag}</p>
+          <button
+            type="button"
+            onClick={() => navigate('/mijn-factuur')}
+            className="mt-6 w-full rounded-2xl bg-white dark:bg-white/10 px-5 py-4 flex items-center justify-between text-left active:scale-[0.99]"
           >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
-                <span className="material-icons-round text-sm">history</span>
-              </div>
-              <span className="font-bold text-gray-900 dark:text-white">Mijn geschiedenis</span>
-            </div>
-            <span className="material-icons-round text-gray-400">chevron_right</span>
-          </div>
+            <span className="min-w-0">
+              <span className="block text-sm text-gray-500 dark:text-gray-400 truncate">
+                Voorlopige rekening{activePeriod ? ` · ${activePeriod.naam}` : ''}
+              </span>
+              <span className="block text-2xl font-extrabold tabular-nums">{euro(rekening)}</span>
+            </span>
+            <span className="material-icons-round text-xl text-gray-500 dark:text-gray-400">chevron_right</span>
+          </button>
+        </article>
 
-          {isTeamDrank && (
-            <div
-              onClick={() => navigate('/strepen/dashboard')}
-              className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl shadow-sm border border-blue-200 dark:border-blue-800 flex items-center justify-between cursor-pointer hover:shadow-md transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 dark:bg-blue-800/50 rounded-lg text-blue-700 dark:text-blue-400 group-hover:scale-110 transition-transform">
-                  <span className="material-icons-round text-sm">admin_panel_settings</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-bold text-blue-900 dark:text-blue-100">Team Drank Dashboard</span>
-                  <span className="text-[10px] text-blue-600 dark:text-blue-400">
-                    Beheer voorraad, strepen & facturen
-                  </span>
-                </div>
-              </div>
-              <span className="material-icons-round text-blue-500">chevron_right</span>
+        {/* Strepen zetten */}
+        <section className="relative rounded-[28px] bg-kaart-event dark:bg-kaart-event-d p-5 space-y-5">
+          {plusEen && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <span className="text-5xl font-extrabold animate-bounce-up">+{plusEen}</span>
             </div>
           )}
-        </div>
 
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <span className="material-icons-round text-blue-600 dark:text-blue-500">add_circle</span>Strepen zetten
-            </h2>
-          </div>
-          <div className="bg-white dark:bg-[#1e2330] p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 transition-colors relative">
-            {/* Zwevende +1 Animatie */}
-            {showFloatingPlus && (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
-                <span className="text-4xl font-black text-blue-600 dark:text-blue-400 animate-bounce-up">
-                  +{displayCount === 0 ? 1 : displayCount}
-                </span>
-              </div>
-            )}
+          {isTeamDrank && (
+            <label className="block">
+              <Label>Strepen voor</Label>
+              <select
+                value={strepenVoorId || ''}
+                onChange={e => setStrepenVoorId(e.target.value || null)}
+                className="w-full px-4 py-3 rounded-xl bg-white dark:bg-white/10 border-0 font-semibold"
+              >
+                <option value="">Mezelf</option>
+                {users
+                  .filter(u => u.actief && u.id !== currentUser?.id)
+                  .sort((a, b) => (a.naam || '').localeCompare(b.naam || ''))
+                  .map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.naam}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          )}
 
-            <div className="flex items-center gap-3 mb-6">
-              <UserAvatar user={doelUser} size="md" />
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-900 dark:text-white">
-                  {doelUser?.id === currentUser?.id ? 'Jouw Totaal' : `Strepen voor ${doelUser?.naam}`}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Vandaag: {totalToday} streepjes</p>
-              </div>
-            </div>
-
-            {isTeamDrank && (
-              <label className="block mb-6">
-                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Strepen voor
-                </span>
-                <select
-                  value={strepenVoorId || ''}
-                  onChange={e => setStrepenVoorId(e.target.value || null)}
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-                >
-                  <option value="">Mezelf</option>
-                  {users
-                    .filter(u => u.actief && u.id !== currentUser?.id)
-                    .sort((a, b) => (a.naam || '').localeCompare(b.naam || ''))
-                    .map(u => (
-                      <option key={u.id} value={u.id}>
-                        {u.naam}
-                      </option>
-                    ))}
-                </select>
-              </label>
-            )}
-
-            <div className="mb-6">
-              <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2.5">
-                Kies Drank
-              </p>
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                {keuzeDranken.map(drink => (
+          <div>
+            <Label>Drank</Label>
+            <div className="flex flex-wrap gap-2">
+              {keuzeDranken.map(drank => {
+                const actief = selectedDrink?.id === drank.id;
+                return (
                   <button
-                    key={drink.id}
-                    onClick={() => setSelectedDrink(drink)}
-                    className={`px-4 py-2.5 text-sm font-medium rounded-xl whitespace-nowrap shadow-sm transition-all flex items-center gap-2 ${selectedDrink?.id === drink.id ? 'bg-blue-600 text-white ring-2 ring-blue-600 ring-offset-2 dark:ring-offset-[#1e2330]' : 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 hover:bg-gray-100'}`}
+                    key={drank.id}
+                    type="button"
+                    onClick={() => setSelectedDrink(drank)}
+                    aria-pressed={actief}
+                    className={`rounded-full px-4 py-2.5 text-sm font-bold flex items-center gap-1 ${
+                      actief ? 'bg-inkt text-white dark:bg-white dark:text-inkt' : 'bg-white dark:bg-white/10'
+                    }`}
                   >
-                    {drink.name}
-                    {drink.isTemporary && <span className="material-icons-round text-[10px] opacity-70">timer</span>}
+                    {drank.name}
+                    {drank.isTemporary && <span className="material-icons-round text-sm opacity-70">timer</span>}
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
-
-            <div className="mb-6">
-              <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2.5">
-                Aantal
-              </p>
-              <div className="flex items-center justify-between gap-4">
-                <button
-                  onClick={() => updateCurrentCount(displayCount - 1)}
-                  className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-200 active:scale-95 transition-all flex items-center justify-center shadow-sm"
-                >
-                  <span className="material-icons-round text-3xl">remove</span>
-                </button>
-                <div className="flex-1 flex flex-col items-center justify-center h-14 bg-gray-50 dark:bg-[#151a25] rounded-2xl border border-gray-200 dark:border-gray-700/50 relative overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    min="1"
-                    value={displayCount === 0 ? '' : displayCount}
-                    onChange={e => {
-                      const val = e.target.value === '' ? 0 : parseInt(e.target.value);
-                      if (!isNaN(val)) updateCurrentCount(val);
-                    }}
-                    onClick={e => e.target.select()}
-                    className="w-full text-center bg-transparent border-none p-0 text-2xl font-black text-gray-900 dark:text-white focus:ring-0 appearance-none m-0 focus:outline-none"
-                    style={{ MozAppearance: 'textfield' }}
-                  />
-                </div>
-                <button
-                  onClick={() => updateCurrentCount(displayCount + 1)}
-                  className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-200 active:scale-95 transition-all flex items-center justify-center shadow-sm"
-                >
-                  <span className="material-icons-round text-3xl">add</span>
-                </button>
-              </div>
-            </div>
-
-            <button
-              onClick={handleAddStripe}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-blue-500/30 flex items-center justify-between group active:scale-[0.98] transition-all"
-            >
-              <div className="flex flex-col items-start">
-                <span className="text-xs font-medium text-blue-200 uppercase">Toevoegen</span>
-                <span className="text-lg">
-                  {displayCount === 0 ? 1 : displayCount}x {selectedDrink ? selectedDrink.name : 'Selecteer'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold bg-white/20 px-3 py-1 rounded-lg">
-                  {euro((selectedDrink?.price || 0) * (displayCount === 0 ? 1 : displayCount))}
-                </span>
-                <span className="material-icons-round text-white/70">chevron_right</span>
-              </div>
-            </button>
-
-            {drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM) && (
-              <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <button
-                  onClick={async () => {
-                    const bak = drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM);
-                    setShowFloatingPlus(true);
-                    onAddCost(currentUser?.id || '', bak.id, 1, currentUser?.naam);
-                    await hapticSuccess();
-                    setTotalToday(prev => prev + 1);
-                    setTimeout(() => setShowFloatingPlus(false), 800);
-                  }}
-                  className="w-full bg-amber-50 dark:bg-amber-900/10 hover:bg-amber-100 dark:hover:bg-amber-900/20 text-amber-800 dark:text-amber-400 py-3 px-4 rounded-2xl shadow-sm flex items-center justify-between active:scale-[0.98] transition-all group border border-amber-200 dark:border-amber-800/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 bg-amber-100 dark:bg-amber-800/30 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <span className="material-icons-round text-2xl text-amber-600 dark:text-amber-500">
-                        sports_bar
-                      </span>
-                    </div>
-                    <div className="text-left flex flex-col justify-center">
-                      <span className="text-[10px] font-extrabold text-amber-600 dark:text-amber-500 uppercase tracking-wider block mb-0.5 opacity-80">
-                        Snel Actie
-                      </span>
-                      <span className="text-base font-bold leading-tight text-gray-900 dark:text-white">
-                        {SPECIAL_DRINKS.BAK_FREEDOM}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black bg-amber-100 dark:bg-amber-800/40 text-amber-700 dark:text-amber-300 px-2.5 py-1.5 rounded-lg border border-amber-200 dark:border-amber-700">
-                      {euro(drinks.find(d => d.name === SPECIAL_DRINKS.BAK_FREEDOM)?.price)}
-                    </span>
-                    <div className="bg-amber-600 text-white w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg shadow-sm group-hover:scale-110 transition-transform">
-                      +1
-                    </div>
-                  </div>
-                </button>
-              </div>
-            )}
           </div>
+
+          <div>
+            <Label>Aantal</Label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setAantal(Math.max(1, n - 1))}
+                className="w-14 h-14 rounded-2xl bg-white dark:bg-white/10 flex items-center justify-center active:scale-95"
+                aria-label="Eén minder"
+              >
+                <span className="material-icons-round text-2xl">remove</span>
+              </button>
+              <input
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                min="1"
+                value={aantal || ''}
+                onChange={e => {
+                  const val = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                  if (!isNaN(val)) setAantal(Math.max(0, val));
+                }}
+                onBlur={() => setAantal(n)}
+                onClick={e => e.target.select()}
+                aria-label="Aantal"
+                className="flex-1 min-w-0 h-14 rounded-2xl bg-white dark:bg-white/10 border-0 text-center text-3xl font-extrabold tabular-nums focus:outline-none focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
+              />
+              <button
+                type="button"
+                onClick={() => setAantal(n + 1)}
+                className="w-14 h-14 rounded-2xl bg-white dark:bg-white/10 flex items-center justify-center active:scale-95"
+                aria-label="Eén meer"
+              >
+                <span className="material-icons-round text-2xl">add</span>
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={!selectedDrink}
+            onClick={async () => {
+              await streep(selectedDrink, n);
+              setAantal(1);
+            }}
+            className="w-full rounded-2xl bg-inkt dark:bg-white px-5 py-4 flex items-center justify-between gap-3 text-white dark:text-inkt active:scale-[0.99] disabled:opacity-40"
+          >
+            <span className="text-xl font-bold truncate">
+              {selectedDrink ? `${n}× ${selectedDrink.name}` : 'Kies een drank'}
+            </span>
+            <span className="text-xl font-extrabold tabular-nums shrink-0">
+              {euro((selectedDrink?.price || 0) * n)}
+            </span>
+          </button>
+
+          {bakFreedom && (
+            <button
+              type="button"
+              onClick={() => streep(bakFreedom, 1)}
+              className="w-full rounded-2xl bg-white dark:bg-white/10 px-5 py-4 flex items-center justify-between gap-3 active:scale-[0.99]"
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <span className="material-icons-round text-2xl text-gray-500 dark:text-gray-400">sports_bar</span>
+                <span className="text-base font-bold truncate">{bakFreedom.name}</span>
+              </span>
+              <span className="flex items-center gap-3 shrink-0">
+                <span className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">{euro(bakFreedom.price)}</span>
+                <span className="text-xl font-extrabold">+1</span>
+              </span>
+            </button>
+          )}
         </section>
 
-        {isTeamDrank && isManageMode && (
+        <Groep titel="Meer">
+          <Rij icoon="history" label="Mijn geschiedenis" onClick={() => navigate('/strepen/geschiedenis')} />
+          <Rij icoon="emoji_events" label="Ranking" waarde="Deze periode" onClick={() => navigate('/strepen/ranking')} />
+          <Rij icoon="back_hand" label="Stuur een nudge" onClick={() => navigate('/nudges')} />
+          <Rij
+            icoon="bolt"
+            label="Snelle drank"
+            waarde={snelleDrank?.name || 'Kies'}
+            onClick={() => setSnelOpen(true)}
+          />
+        </Groep>
+      </main>
+
+      <BottomSheet
+        isOpen={snelOpen}
+        onClose={() => setSnelOpen(false)}
+        title="Snelle drank"
+        subtitle="De grote +1-knop op je startscherm"
+      >
+        <ul className="pb-4 divide-y divide-gray-100 dark:divide-gray-800">
+          {keuzeDranken.map(d => (
+            <li key={d.id}>
+              <button
+                type="button"
+                onClick={() => kiesSnelleDrank(d)}
+                className="w-full flex items-center justify-between py-3.5 text-left"
+              >
+                <span className="font-semibold">{d.name}</span>
+                {String(d.id) === String(snelleDrank?.id) && <span className="material-icons-round">check</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </BottomSheet>
+
+      {isTeamDrank && (
+        <BottomSheet isOpen={beheerOpen} onClose={() => setBeheerOpen(false)} title="Dranken beheren">
           <StrepenAdminPanel
             onDrinkDeleted={id => {
               if (selectedDrink?.id === id) setSelectedDrink(null);
             }}
           />
-        )}
-
-        <div
-          onClick={() => navigate('/strepen/ranking')}
-          className="bg-white dark:bg-[#1e2330] rounded-xl p-4 border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-all"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center">
-              <span className="material-icons-round text-2xl text-amber-500">emoji_events</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-900 dark:text-white text-base">Ranking</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Wie streepte het meest deze periode?</p>
-            </div>
-          </div>
-          <span className="material-icons-round text-gray-300">chevron_right</span>
-        </div>
-
-        <div
-          onClick={() => navigate('/nudges')}
-          className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-4 shadow-lg shadow-indigo-500/20 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-all"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-              <span className="material-icons-round text-2xl text-white">back_hand</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-base">Stuur een Nudge</h3>
-              <p className="text-xs text-indigo-100 leading-tight">
-                Stuur een anonieme herinnering
-                <br />
-                naar een medeleider
-              </p>
-            </div>
-          </div>
-          <span className="material-icons-round text-white/70">chevron_right</span>
-        </div>
-
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <span className="material-icons-round text-blue-600 dark:text-blue-500">bolt</span>Quick Streep Instelling
-            </h2>
-          </div>
-          <div className="bg-white dark:bg-[#1e2330] p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 transition-colors">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-              Kies welk drankje je direct wilt kunnen strepen vanaf het startscherm. Dit wordt opgeslagen in je profiel.
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {validQuickDrinks.map(drink => (
-                <button
-                  key={`quick-${drink.id}`}
-                  onClick={async () => {
-                    const newDrinkId = String(drink.id);
-                    onUpdateUser({ ...currentUser, id: currentUser?.id || '', quickDrinkId: newDrinkId });
-                    try {
-                      await updateProfile(currentUser?.id || '', { quick_drink_id: newDrinkId });
-                      showToast(`${drink.name} ingesteld als Quick Streep!`, 'success');
-                    } catch (e) {
-                      showToast('Kon instelling niet opslaan', 'error');
-                    }
-                  }}
-                  className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center justify-between ${activeQuickDrinkId === String(drink.id) ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 text-blue-700 shadow-sm' : 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 text-gray-600 hover:bg-gray-100'}`}
-                >
-                  <span className="truncate">{drink.name}</span>
-                  {activeQuickDrinkId === String(drink.id) && (
-                    <span className="material-icons-round text-sm">check_circle</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-      </main>
+        </BottomSheet>
+      )}
     </div>
   );
 };
