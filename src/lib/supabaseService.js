@@ -229,11 +229,11 @@ export async function fetchRanking() {
   return (data || []).map(r => ({ ...r, strepen: Number(r.strepen || 0) }));
 }
 
-// Godmode (migratie 003100): enkel over jezelf; false als de migratie nog niet gedraaid is
-export async function fetchMijnGodmode() {
-  const { data, error } = await supabase.rpc('mijn_godmode');
-  if (error) return false;
-  return !!data;
+// Godmode (migratie 003300): ids van alle Godmode-accounts; [] als de migratie nog niet gedraaid is
+export async function fetchGodmodeIds() {
+  const { data, error } = await supabase.rpc('godmode_ids');
+  if (error) return [];
+  return (data || []).map(r => (typeof r === 'string' ? r : r.godmode_ids));
 }
 
 // --- Nieuwe accounts goedkeuren (migratie 002700) ---

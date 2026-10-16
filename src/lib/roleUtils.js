@@ -26,8 +26,7 @@ const LEGACY_NAAR_RECHT = {
 };
 const HOOFDLEIDING_NAMEN = ['hoofdleiding', 'admin', 'godmode'];
 
-// Rechten van hoofdleiding: echte hoofdleiding of het verborgen Godmode-account (migratie 003100).
-// Godmode kent de app enkel van de ingelogde gebruiker zelf (isGodmode); voor anderen is het onzichtbaar.
+// Rechten van hoofdleiding: echte hoofdleiding of een Godmode-account (label "Godmode", migratie 003100/003300).
 // Voor het label "Hoofdleiding" gebruik je user.isHoofdleiding, niet deze functie.
 export const isHoofdleiding = user => !!(user?.isHoofdleiding || user?.isGodmode);
 
@@ -51,8 +50,9 @@ export const hasRole = hasAccess;
  * Vult een profiel aan met isHoofdleiding, groepIds, werkgroepIds, rechten en roles (labels voor weergave).
  * Zonder rolData (nieuwe tabellen nog niet gemigreerd) wordt teruggevallen op de oude kolommen rol/roles.
  */
-export function verrijkGebruiker(user, rolData) {
-  if (!rolData) return verrijkUitOudeRollen(user);
+export function verrijkGebruiker(user, rolData, godmodeIds = []) {
+  const isGodmode = godmodeIds.includes(user.id);
+  if (!rolData) return { ...verrijkUitOudeRollen(user), isGodmode };
 
   const groepIds = rolData.profielGroepen.filter(pg => pg.profile_id === user.id).map(pg => pg.groep_id);
   const werkgroepIds = rolData.profielWerkgroepen.filter(pw => pw.profile_id === user.id).map(pw => pw.werkgroep_id);
@@ -64,11 +64,14 @@ export function verrijkGebruiker(user, rolData) {
   return {
     ...user,
     isHoofdleiding: isHoofd,
+    // Godmode: alle rechten van hoofdleiding, eigen label; enkel in de database aan te passen (003100/003300)
+    isGodmode,
     isOudleiding: !!user.is_oudleiding,
     groepIds,
     werkgroepIds,
     rechten,
     roles: [
+      ...(isGodmode ? ['Godmode'] : []),
       ...(isHoofd ? ['Hoofdleiding'] : []),
       ...(user.is_oudleiding ? ['Oudleiding'] : []),
       ...groepen.map(g => g.naam),

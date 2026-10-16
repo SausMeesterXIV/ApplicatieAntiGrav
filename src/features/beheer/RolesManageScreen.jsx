@@ -180,7 +180,9 @@ const LeiderBewerken = ({ leider, isZelf, groepen, werkgroepen, onClose, onSaved
   const gebruikersnaam = gebruikersnaamVan(leider.email);
 
   const opslaan = async () => {
-    if (!oudleiding && !groepId && leider.rol !== 'godmode') return showToast('Kies de groep van deze leider', 'warning');
+    if (!oudleiding && !groepId && !leider.isGodmode && leider.rol !== 'godmode') {
+      return showToast('Kies de groep van deze leider', 'warning');
+    }
     setBezig(true);
     try {
       const groepVeranderd = groepId !== (leider.groepIds[0] ?? null) || leider.groepIds.length !== 1;
@@ -250,6 +252,15 @@ const LeiderBewerken = ({ leider, isZelf, groepen, werkgroepen, onClose, onSaved
           </section>
         )}
 
+        {leider.isGodmode ? (
+          // Godmode: rol en status enkel in de database aan te passen (tabel godmode_accounts)
+          <section className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d px-4 py-3">
+            <p className="font-bold">Godmode</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Heeft alle rechten. Rol en status zijn enkel in de database aan te passen.
+            </p>
+          </section>
+        ) : (
         <section className="divide-y divide-gray-100 dark:divide-gray-800">
           <Schakelaar
             label="Oudleiding"
@@ -286,6 +297,7 @@ const LeiderBewerken = ({ leider, isZelf, groepen, werkgroepen, onClose, onSaved
             disabled={isZelf}
           />
         </section>
+        )}
 
         <button
           onClick={opslaan}

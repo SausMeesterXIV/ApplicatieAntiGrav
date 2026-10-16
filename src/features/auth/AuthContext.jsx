@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 
 import * as db from '../../lib/supabaseService';
@@ -16,7 +16,6 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   // Nieuw account dat nog wacht op goedkeuring ('wacht') of afgewezen is ('afgewezen'); anders null
   const [goedkeuring, setGoedkeuring] = useState(null);
-  const godmodeRef = useRef(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -47,8 +46,12 @@ export function AuthProvider({ children }) {
 
   async function loadAuthData(userId) {
     try {
-      const [profielen, rollen] = await Promise.all([db.fetchAllProfiles(), db.fetchRolData()]);
-      const verrijkt = profielen.map(p => verrijkGebruiker(p, rollen));
+      const [profielen, rollen, godmodeIds] = await Promise.all([
+        db.fetchAllProfiles(),
+        db.fetchRolData(),
+        db.fetchGodmodeIds(),
+      ]);
+      const verrijkt = profielen.map(p => verrijkGebruiker(p, rollen, godmodeIds));
       setRolData(rollen);
       setUsers(verrijkt);
 
@@ -66,10 +69,7 @@ export function AuthProvider({ children }) {
         return;
       }
       setGoedkeuring(null);
-      // Verborgen beheeraccount: enkel de ingelogde gebruiker weet of hij Godmode is (zie roleUtils)
-      const godmode = await db.fetchMijnGodmode();
-      godmodeRef.current = godmode;
-      setCurrentUser({ ...cUser, isGodmode: godmode });
+      setCurrentUser(cUser);
 
       // Voor de migratie: de oude rollenlijst uit app_settings (enkel weergave, niets hardcoded)
       if (!rollen) setLegacyRoles(await db.fetchAvailableRoles().catch(() => []));
@@ -83,12 +83,15 @@ export function AuthProvider({ children }) {
   // Na een wijziging in het rollenscherm: alles opnieuw ophalen en verrijken
   const refreshRoles = async () => {
     if (!session?.user?.id) return;
-    const [profielen, rollen] = await Promise.all([db.fetchAllProfiles(), db.fetchRolData()]);
-    const verrijkt = profielen.map(p => verrijkGebruiker(p, rollen));
+    const [profielen, rollen, godmodeIds] = await Promise.all([
+      db.fetchAllProfiles(),
+      db.fetchRolData(),
+      db.fetchGodmodeIds(),
+    ]);
+    const verrijkt = profielen.map(p => verrijkGebruiker(p, rollen, godmodeIds));
     setRolData(rollen);
     setUsers(verrijkt);
-    const cUser = verrijkt.find(u => u.id === session.user.id);
-    setCurrentUser(cUser ? { ...cUser, isGodmode: godmodeRef.current } : null);
+    setCurrentUser(verrijkt.find(u => u.id === session.user.id) || null);
   };
 
   const groepen = rolData?.groepen || [];
