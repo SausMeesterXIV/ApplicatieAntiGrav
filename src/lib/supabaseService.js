@@ -1331,3 +1331,60 @@ export async function stemOpPoll(pollId, userId, optieId) {
 export async function deletePoll(pollId) {
   await verwijderRij('polls', pollId, 'Enkel de maker of hoofdleiding kan deze poll verwijderen');
 }
+
+// ==================== AANKOOPFACTUREN (migratie 003800) ====================
+// Facturen die KSA krijgt (brouwer, drankcentrale, ...), per drankperiode, met een foto of PDF.
+// Team Drank en Financiën (en hoofdleiding).
+
+export async function fetchAankoopfacturen() {
+  const { data, error } = await supabase
+    .from('aankoopfacturen')
+    .select('*')
+    .order('factuurdatum', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(f => ({ ...f, bedrag: Number(f.bedrag) }));
+}
+
+async function uploadAankoopfactuurFoto(periodId, file) {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const pad = `${periodId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage.from('aankoopfacturen').upload(pad, file, { contentType: file.type || undefined });
+  if (error) throw error;
+  return pad;
+}
+
+/** velden: { id?, period_id, leverancier, bedrag, mededeling, factuurdatum, betaald, notitie }; foto: File of null */
+export async function bewaarAankoopfactuur(velden, foto = null, oudeFotoPad = null) {
+  const rij = { ...velden };
+  delete rij.id;
+  let nieuwPad = null;
+  if (foto) {
+    nieuwPad = await uploadAankoopfactuurFoto(velden.period_id, foto);
+    rij.foto_pad = nieuwPad;
+  }
+  const query = velden.id
+    ? supabase.from('aankoopfacturen').update(rij).eq('id', velden.id)
+    : supabase.from('aankoopfacturen').insert({ ...rij, aangemaakt_door: (await supabase.auth.getUser()).data.user?.id });
+  const { data, error } = await query.select().single();
+  if (error) {
+    if (nieuwPad) await supabase.storage.from('aankoopfacturen').remove([nieuwPad]); // geen losse bestanden achterlaten
+    throw error;
+  }
+  if (nieuwPad && oudeFotoPad) await supabase.storage.from('aankoopfacturen').remove([oudeFotoPad]);
+  return data;
+}
+
+export async function verwijderAankoopfactuur(factuur) {
+  const { error } = await supabase.from('aankoopfacturen').delete().eq('id', factuur.id);
+  if (error) throw error;
+  if (factuur.foto_pad) await supabase.storage.from('aankoopfacturen').remove([factuur.foto_pad]);
+}
+
+/** Tijdelijke link (1 uur) naar de foto of PDF van een aankoopfactuur. */
+export async function aankoopfactuurLink(pad) {
+  if (!pad) return null;
+  const { data, error } = await supabase.storage.from('aankoopfacturen').createSignedUrl(pad, 3600);
+  if (error) throw error;
+  return data.signedUrl;
+}

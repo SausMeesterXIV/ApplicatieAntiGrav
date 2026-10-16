@@ -109,6 +109,7 @@ const VerslagenScreen = scherm(() => import('./features/verslagen/VerslagenScree
 const FotosScreen = scherm(() => import('./features/fotos/FotosScreen'), 'FotosScreen');
 const BollenVolgordeScreen = scherm(() => import('./features/beheer/BollenVolgordeScreen'), 'BollenVolgordeScreen');
 const ExtraKostenScreen = scherm(() => import('./features/drank/ExtraKostenScreen'), 'ExtraKostenScreen');
+const AankoopfacturenScreen = scherm(() => import('./features/drank/AankoopfacturenScreen'), 'AankoopfacturenScreen');
 const OudleidingBeheerScreen = scherm(
   () => import('./features/drank/OudleidingBeheerScreen'),
   'OudleidingBeheerScreen',
@@ -297,6 +298,14 @@ const AppRoutes = () => {
               element={
                 <RoleRoute role={['drank', 'financiën']}>
                   <ExtraKostenScreen />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="aankoopfacturen"
+              element={
+                <RoleRoute role={['drank', 'financiën']}>
+                  <AankoopfacturenScreen />
                 </RoleRoute>
               }
             />

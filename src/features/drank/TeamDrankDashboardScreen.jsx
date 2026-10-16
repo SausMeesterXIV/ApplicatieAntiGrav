@@ -277,6 +277,12 @@ export const TeamDrankDashboardScreen = () => {
                 sub="Periode afsluiten en facturen maken"
                 onClick={() => navigate('/strepen/facturatie')}
               />
+              <Rij
+                icoon="request_quote"
+                label="Aankoopfacturen"
+                sub="Brouwer, drankcentrale: bedrag, mededeling en foto"
+                onClick={() => navigate('/aankoopfacturen')}
+              />
               {sheetUrl && (
                 <Rij icoon="table_chart" label="Google Sheet" sub="Drankrekening, bakken en facturen" onClick={openSheet} />
               )}
