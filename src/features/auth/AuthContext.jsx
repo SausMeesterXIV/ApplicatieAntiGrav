@@ -14,6 +14,8 @@ export function AuthProvider({ children }) {
   const [rolData, setRolData] = useState(null);
   const [legacyRoles, setLegacyRoles] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Nieuw account dat nog wacht op goedkeuring ('wacht') of afgewezen is ('afgewezen'); anders null
+  const [goedkeuring, setGoedkeuring] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -34,6 +36,7 @@ export function AuthProvider({ children }) {
         loadAuthData(session.user.id);
       } else {
         setCurrentUser(null);
+        setGoedkeuring(null);
         setLoading(false);
       }
     });
@@ -50,10 +53,18 @@ export function AuthProvider({ children }) {
 
       const cUser = verrijkt.find(u => u.id === userId);
       if (!cUser || !cUser.actief) {
+        // Nieuw account: wachten op goedkeuring of afgewezen -> ingelogd blijven en een wachtscherm tonen
+        const status = await db.fetchMijnGoedkeuring();
+        if (status === 'wacht' || status === 'afgewezen') {
+          setCurrentUser(null);
+          setGoedkeuring(status);
+          return;
+        }
         console.warn('Profiel niet gevonden of inactief. Uitloggen...');
         await supabase.auth.signOut();
         return;
       }
+      setGoedkeuring(null);
       setCurrentUser(cUser);
 
       // Voor de migratie: de oude rollenlijst uit app_settings (enkel weergave, niets hardcoded)
@@ -101,6 +112,9 @@ export function AuthProvider({ children }) {
         werkgroepen,
         availableRoles,
         refreshRoles,
+        goedkeuring,
+        // Wachtscherm: opnieuw kijken of het account intussen goedgekeurd is
+        controleerGoedkeuring: () => session?.user?.id && loadAuthData(session.user.id),
       }}
     >
       {children}

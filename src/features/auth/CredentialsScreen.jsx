@@ -9,7 +9,9 @@ export const CredentialsScreen = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [naam, setNaam] = useState('');
+  const [voornaam, setVoornaam] = useState('');
+  const [achternaam, setAchternaam] = useState('');
+  const naam = `${voornaam.trim()} ${achternaam.trim()}`.trim();
   const [loading, setLoading] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
   // Oudleiding registreert met gebruikersnaam en de code van Drankteam (geen @ksa-aalter.be-mail)
@@ -107,8 +109,8 @@ export const CredentialsScreen = () => {
 
   const handleRegister = async e => {
     e.preventDefault();
-    if (!naam.trim()) {
-      showToast('Vul je naam in', 'error');
+    if (!voornaam.trim() || !achternaam.trim()) {
+      showToast('Vul je voornaam en achternaam in', 'error');
       return;
     }
 
@@ -119,7 +121,7 @@ export const CredentialsScreen = () => {
       }
       setLoading(true);
       try {
-        await registreerOudleiding({ naam: naam.trim(), gebruikersnaam: email, wachtwoord: password, code });
+        await registreerOudleiding({ naam, gebruikersnaam: email, wachtwoord: password, code });
         showToast('Welkom terug! Je account voor oudleiding is klaar.', 'success');
       } catch (error) {
         showToast(authFout(error, error.message || 'Fout bij het registreren'), 'error');
@@ -141,17 +143,20 @@ export const CredentialsScreen = () => {
         password,
         options: {
           data: {
-            naam: naam.trim(),
-            full_name: naam.trim(),
-            display_name: naam.trim(),
+            voornaam: voornaam.trim(),
+            achternaam: achternaam.trim(),
+            naam,
+            full_name: naam,
+            display_name: naam,
           },
         },
       });
       if (error) throw error;
 
-      // Het profiel maakt de database zelf aan (trigger handle_new_user, met de naam uit full_name)
+      // Het profiel maakt de database zelf aan (trigger handle_new_user). Een nieuw account wacht op
+      // goedkeuring door de leiding; de app toont dan het wachtscherm.
       if (data.session) {
-        showToast('Account aangemaakt! Je bent nu ingelogd.', 'success');
+        showToast('Account aangemaakt! Iemand van de leiding moet je nog goedkeuren.', 'success');
       } else {
         showToast(
           'Account aangemaakt! Bevestig je e-mailadres via de link in je mailbox (kijk ook in spam).',
@@ -185,18 +190,26 @@ export const CredentialsScreen = () => {
 
           <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4">
             {isRegister && (
-              <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2 ml-1">
-                  Naam
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={naam}
-                  onChange={e => setNaam(e.target.value)}
-                  className="w-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-2xl px-5 py-4 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
-                  placeholder="Voornaam Achternaam"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  ['Voornaam', voornaam, setVoornaam, 'given-name', 'bv. Jan'],
+                  ['Achternaam', achternaam, setAchternaam, 'family-name', 'bv. Peeters'],
+                ].map(([label, waarde, zet, autoComplete, placeholder]) => (
+                  <div key={label} className="min-w-0">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2 ml-1">
+                      {label}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      autoComplete={autoComplete}
+                      value={waarde}
+                      onChange={e => zet(e.target.value)}
+                      className="w-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-2xl px-5 py-4 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
+                      placeholder={placeholder}
+                    />
+                  </div>
+                ))}
               </div>
             )}
             <div>

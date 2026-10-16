@@ -229,6 +229,29 @@ export async function fetchRanking() {
   return (data || []).map(r => ({ ...r, strepen: Number(r.strepen || 0) }));
 }
 
+// --- Nieuwe accounts goedkeuren (migratie 002700) ---
+
+// Eigen status: 'wacht' | 'goedgekeurd' | 'afgewezen' (null als de migratie nog niet gedraaid is)
+export async function fetchMijnGoedkeuring() {
+  const { data, error } = await supabase.rpc('mijn_goedkeuring');
+  if (error) return null;
+  return data;
+}
+
+// Accounts die wachten op goedkeuring (leeg voor wie geen actieve leiding is)
+export async function fetchWachtendeAccounts() {
+  const { data, error } = await supabase.rpc('wachtende_accounts');
+  if (error) throw error;
+  return data || [];
+}
+
+// Geeft de status na de beslissing terug (die van een ander als die sneller was)
+export async function beoordeelAccount(id, goedkeuren) {
+  const { data, error } = await supabase.rpc('beoordeel_account', { p_id: id, p_goedkeuren: goedkeuren });
+  if (error) throw error;
+  return data;
+}
+
 export async function corrigeerVoorraad(drankId, nieuweVoorraad, notitie) {
   const { error } = await supabase.rpc('corrigeer_voorraad', {
     p_drank_id: drankId,

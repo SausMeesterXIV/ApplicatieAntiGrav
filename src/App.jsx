@@ -11,6 +11,8 @@ import { herlaadNaUpdate, vergeetHerladen } from './lib/herladen';
 import { BottomNav, Zijbalk } from './components/BottomNav';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CredentialsScreen } from './features/auth/CredentialsScreen';
+import { WachtOpGoedkeuringScreen } from './features/auth/WachtOpGoedkeuringScreen';
+import { GoedkeuringPopup } from './features/auth/GoedkeuringPopup';
 import { GroepKiezenScreen } from './features/auth/GroepKiezenScreen';
 import { HomeScreen } from './features/home/HomeScreen';
 import { AuthProvider, useAuth } from './features/auth/AuthContext';
@@ -179,7 +181,7 @@ const MainLayout = () => {
 };
 
 const AppRoutes = () => {
-  const { session, currentUser, loading } = useAuth();
+  const { session, currentUser, loading, goedkeuring } = useAuth();
   const { pathname } = useLocation();
   usePushNotifications(currentUser);
 
@@ -190,6 +192,9 @@ const AppRoutes = () => {
       </div>
     );
   }
+
+  // Nieuw account dat nog goedgekeurd moet worden (of afgewezen is)
+  if (session && !currentUser && goedkeuring) return <WachtOpGoedkeuringScreen />;
 
   // Ingelogd, maar het profiel kon niet geladen worden (meestal geen internet): geen half startscherm tonen
   if (session && !currentUser) {
@@ -211,6 +216,8 @@ const AppRoutes = () => {
 
   return (
     <Suspense fallback={<Laden />}>
+      {/* Nieuw account wacht op goedkeuring: pop-up voor alle actieve leiding, over elk scherm */}
+      {session && currentUser && <GoedkeuringPopup />}
       <Routes>
         <Route path="/login" element={!session ? <CredentialsScreen /> : <Navigate to="/" />} />
         <Route path="/reset-password" element={<ResetPasswordScreen />} />
