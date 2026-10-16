@@ -10,3 +10,7 @@ content_path = "./supabase/templates/recovery.html"
 # Oudleiding registreert vóór het inloggen: de functie controleert zelf de code en de rechten
 [functions.oudleiding]
 verify_jwt = false
+
+# Wachtwoord vergeten: vóór het inloggen; de database controleert de code van de gekozen leider
+[functions.wachtwoord-reset]
+verify_jwt = false

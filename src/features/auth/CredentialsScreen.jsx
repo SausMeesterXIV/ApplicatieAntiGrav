@@ -30,44 +30,13 @@ export const CredentialsScreen = () => {
   // Inloggen: leiding met e-mail, oudleiding met gebruikersnaam (zonder @)
   const isGebruikersnaam = invoer => !invoer.includes('@');
 
-  const handleForgotPassword = async () => {
-    if (!email.trim()) {
-      showToast('Vul eerst je email in.', 'error');
-      return;
-    }
-
-    if (isGebruikersnaam(email)) {
+  // Er wordt nooit gemaild: je vraagt een code aan een leider die je zelf kiest (scherm Wachtwoord vergeten)
+  const handleForgotPassword = () => {
+    if (email.trim() && isGebruikersnaam(email)) {
       showToast('Oudleiding: vraag Drankteam om een nieuw wachtwoord.', 'info');
       return;
     }
-
-    // Check of de mail wel toegestaan is (@ksa-aalter.be of test-mail)
-    if (!isValidEmailDomain(email)) {
-      showToast(`Wachtwoord reset alleen voor @ksa-aalter.be adressen.`, 'error');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Dynamische redirect: werkt op localhost én op de echte site
-      const baseUrl = window.location.origin;
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${baseUrl}/reset-password`,
-      });
-
-      if (error) throw error;
-
-      showToast('Check je inbox (en spam)! De link is verstuurd.', 'success');
-    } catch (error) {
-      // Geef duidelijke foutmelding bij rate limits
-      if (error.status === 429) {
-        showToast('Te veel aanvragen. Probeer het over een uur opnieuw.', 'error');
-      } else {
-        showToast(authFout(error, 'Fout bij verzenden van de link'), 'error');
-      }
-    } finally {
-      setLoading(false);
-    }
+    navigate('/wachtwoord-vergeten', { state: { email: email.trim() } });
   };
 
   const handleLogin = async e => {

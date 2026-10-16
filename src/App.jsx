@@ -13,6 +13,8 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { CredentialsScreen } from './features/auth/CredentialsScreen';
 import { WachtOpGoedkeuringScreen } from './features/auth/WachtOpGoedkeuringScreen';
 import { GoedkeuringPopup } from './features/auth/GoedkeuringPopup';
+import { ResetVerzoekPopup } from './features/auth/ResetVerzoekPopup';
+import { WachtwoordVergetenScreen } from './features/auth/WachtwoordVergetenScreen';
 import { GroepKiezenScreen } from './features/auth/GroepKiezenScreen';
 import { HomeScreen } from './features/home/HomeScreen';
 import { AuthProvider, useAuth } from './features/auth/AuthContext';
@@ -217,10 +219,12 @@ const AppRoutes = () => {
   return (
     <Suspense fallback={<Laden />}>
       {/* Nieuw account wacht op goedkeuring: pop-up voor alle actieve leiding, over elk scherm */}
+      {session && currentUser && <ResetVerzoekPopup />}
       {session && currentUser && <GoedkeuringPopup />}
       <Routes>
         <Route path="/login" element={!session ? <CredentialsScreen /> : <Navigate to="/" />} />
         <Route path="/reset-password" element={<ResetPasswordScreen />} />
+        <Route path="/wachtwoord-vergeten" element={!session ? <WachtwoordVergetenScreen /> : <Navigate to="/" />} />
         <Route path="/credits" element={<CreditsScreen />} />
 
         {/* Protected Routes */}

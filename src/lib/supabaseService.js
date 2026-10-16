@@ -252,6 +252,53 @@ export async function beoordeelAccount(id, goedkeuren) {
   return data;
 }
 
+// --- Wachtwoord vergeten zonder mail: code via een gekozen leider (migratie 002900) ---
+
+// Actieve leiding om uit te kiezen (ook zonder login)
+export async function fetchResetLeiders() {
+  const { data, error } = await supabase.rpc('reset_leiders');
+  if (error) throw error;
+  return data || [];
+}
+
+// Antwoordt altijd hetzelfde, ook als het adres niet bestaat
+export async function vraagWachtwoordReset(email, leiderId) {
+  const { error } = await supabase.rpc('vraag_wachtwoord_reset', { p_email: email, p_leider: leiderId });
+  if (error) throw error;
+}
+
+// Voor de gekozen leider: open verzoeken aan mij
+export async function fetchMijnResetverzoeken() {
+  const { data, error } = await supabase.rpc('mijn_resetverzoeken');
+  if (error) throw error;
+  return data || [];
+}
+
+export async function maakResetcode(id) {
+  const { data, error } = await supabase.rpc('maak_resetcode', { p_id: id });
+  if (error) throw error;
+  return data;
+}
+
+export async function weigerReset(id) {
+  const { error } = await supabase.rpc('weiger_reset', { p_id: id });
+  if (error) throw error;
+}
+
+// Nieuw wachtwoord met de code (edge function 'wachtwoord-reset')
+export async function zetWachtwoordMetCode(email, code, wachtwoord) {
+  const { error } = await supabase.functions.invoke('wachtwoord-reset', { body: { email, code, wachtwoord } });
+  if (error) {
+    let bericht = null;
+    try {
+      bericht = (await error.context.json()).error;
+    } catch {
+      // geen JSON-antwoord (bv. functie nog niet gedeployed)
+    }
+    throw new Error(bericht || 'Wachtwoord opnieuw instellen lukte niet. Probeer het later opnieuw.');
+  }
+}
+
 export async function corrigeerVoorraad(drankId, nieuweVoorraad, notitie) {
   const { error } = await supabase.rpc('corrigeer_voorraad', {
     p_drank_id: drankId,
