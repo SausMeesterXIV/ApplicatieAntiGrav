@@ -8,6 +8,7 @@ import { hasRecht } from '../../lib/roleUtils';
 import { useAuth } from '../auth/AuthContext';
 import { useDrink } from '../drank/DrinkContext';
 import { euro } from '../../lib/geld';
+import { verkleinFoto } from '../../lib/foto';
 
 const FriesContext = createContext(undefined);
 const UUR = 60 * 60 * 1000;
@@ -255,7 +256,7 @@ export const FriesProvider = ({ children }) => {
       // 1. Upload kasticket (optioneel, blokkeert de rest niet bij waarschuwing)
       if (receiptFile) {
         try {
-          receiptUrl = await db.uploadReceipt(frituurSessieId, receiptFile);
+          receiptUrl = await db.uploadReceipt(frituurSessieId, await verkleinFoto(receiptFile));
         } catch (e) {
           console.warn('Kon kasticket niet uploaden', e);
         }

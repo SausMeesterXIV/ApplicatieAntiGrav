@@ -14,6 +14,7 @@ import { WachtwoordWijzigen } from './WachtwoordWijzigen';
 import { PushInstelling } from './PushInstelling';
 import { bollenVoor, gekozenVolgorde } from '../home/bollen';
 import { openRondleiding } from '../home/Rondleiding';
+import { verkleinFoto } from '../../lib/foto';
 
 // Instellingen (design-update): gegroepeerde lijst — Account, Startscherm, Meldingen, Weergave, Beheer.
 
@@ -134,7 +135,8 @@ export const SettingsScreen = () => {
     e.target.value = '';
     if (!file) return;
     try {
-      const url = await db.uploadAvatar(currentUser.id, file);
+      // Profielfoto klein houden (max. 800 px): sneller laden in Mijn leiding, en onder de limiet van 5 MB
+      const url = await db.uploadAvatar(currentUser.id, await verkleinFoto(file, 800, 0.85));
       setCurrentUser({ ...currentUser, avatar: url, avatar_url: url });
       showToast('Profielfoto opgeslagen', 'success');
     } catch (err) {

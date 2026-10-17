@@ -145,7 +145,9 @@ const NotificationCard = ({ data, senderUser, onClick }) => {
 
   const handleActionClick = e => {
     e.stopPropagation();
-    if (actionInfo?.url) navigate(actionInfo.url);
+    // Enkel naar schermen in de app (bv. /frituur); nooit naar een andere site (//…, \…, https:, javascript:)
+    const url = actionInfo?.url || '';
+    if (/^\/(?![/\\])[^\s:]*$/.test(url)) navigate(url);
   };
 
   return (
