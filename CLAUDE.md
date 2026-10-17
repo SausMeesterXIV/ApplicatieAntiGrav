@@ -183,7 +183,8 @@ src/
 
 ## Commando's
 - `npm install`: dependencies installeren
-- `npm run dev`: app lokaal starten (http://localhost:5173)
+- `npm run dev`: app lokaal starten in **demomodus** (http://localhost:5173): een nep-Supabase in de browser met verzonnen testdata (`src/demo/`), de echte database wordt nooit geraakt. Inloggen met elk wachtwoord, of via de oranje knop **DEMO** rechtsonder (snel wisselen tussen gewone leiding, Drankteam, Financiën en hoofdleiding, en "Reset data"). Wijzigingen blijven bewaard in je browser tot je reset. Edge functions (Google Sheet, Drive, push) doen in de demo niets. Komt er een tabel of databasefunctie bij, voeg ze dan ook toe in `src/demo/schema.js` en `src/demo/rpc.js`.
+- `npm run dev:echt`: app lokaal starten met de **echte** database uit `.env` (pas op: echte data)
 - `npm run build`: productieversie bouwen
 - `npm run preview`: gebouwde versie lokaal draaien (nodig om pushmeldingen en de PWA te testen)
 - `npm test`: automatische tests (Node-testrunner, map `tests/`) voor rekenlogica zoals betaal-QR en bankuittreksel
