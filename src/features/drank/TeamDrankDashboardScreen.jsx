@@ -140,7 +140,7 @@ export const TeamDrankDashboardScreen = () => {
         drinkTotals[s.drinkLabel || s.drinkName] = (drinkTotals[s.drinkLabel || s.drinkName] || 0) + s.amount;
       });
       weeks[label].summary = Object.entries(drinkTotals)
-        .map(([name, count]) => `${count}× ${name}`)
+        .map(([name, count]) => `${count} ${name}`)
         .join(', ');
     });
 
@@ -456,7 +456,7 @@ export const TeamDrankDashboardScreen = () => {
                                   <p className="font-semibold truncate">{userName}</p>
                                   <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
                                     {s.bron === 'sheet' && s.amount > 0 ? '+' : ''}
-                                    {s.amount}× {s.drinkLabel || s.drinkName} · {euro(s.price)}
+                                    {s.amount} {s.drinkLabel || s.drinkName} · {euro(s.price)}
                                     {/* Aangepast in de Google Sheet: enkel hier zichtbaar, geen melding voor de leider */}
                                     {s.bron === 'sheet' && (
                                       <span className="ml-2 inline-block whitespace-nowrap rounded-full bg-white dark:bg-white/10 px-2 py-0.5 text-xs font-bold text-gray-600 dark:text-gray-300">

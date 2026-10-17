@@ -71,7 +71,7 @@ export const ExternFriet = () => {
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-sm text-gray-900 dark:text-white">{b.extern_naam}</p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {(b.items || []).map(i => `${i.quantity || 1}x ${i.name}`).join(', ')}
+                  {(b.items || []).map(i => `${i.quantity || 1} ${i.name}`).join(', ')}
                 </p>
                 <p className="text-[11px] text-gray-400 mt-0.5">
                   {new Date(b.created_at).toLocaleDateString('nl-BE')} · besteld door{' '}

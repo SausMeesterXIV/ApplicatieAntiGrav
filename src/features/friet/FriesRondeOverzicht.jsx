@@ -24,7 +24,7 @@ export const PerItem = ({ orders }) => {
       {items.length === 0 && <p className="p-4 text-center text-sm text-gray-500">Geen items.</p>}
       {items.map(i => (
         <div key={i.naam} className="p-3 flex items-center gap-3">
-          <span className="w-8 text-center font-bold text-blue-600">{i.aantal}×</span>
+          <span className="w-8 text-center font-bold text-blue-600">{i.aantal}</span>
           <span className="flex-1">{i.naam}</span>
           <span className="text-sm text-gray-500">{euro(i.bedrag)}</span>
         </div>
@@ -71,7 +71,7 @@ export const PerPersoon = ({ orders }) => {
             <span>{euro(p.totaal)}</span>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            {p.items.map(i => `${i.quantity || 1}× ${i.name}`).join(', ') || 'Geen items'}
+            {p.items.map(i => `${i.quantity || 1} ${i.name}`).join(', ') || 'Geen items'}
           </p>
         </div>
       ))}

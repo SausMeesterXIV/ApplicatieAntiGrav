@@ -163,8 +163,8 @@ export const MyInvoiceScreen = () => {
           <p className="text-sm text-slate-600 dark:text-slate-300">{activePeriod?.naam || 'Geen open periode'}</p>
           {overzicht?.strepen > 0 && (
             <p className="text-xs text-slate-600 dark:text-slate-300 mt-2">
-              Schatting: jouw strepen × de prijs van de drank. Bij het afsluiten verdeelt Drankteam de echte kost over
-              alle strepen, dus het bedrag op je factuur kan nog wat verschillen.
+              Voorlopig bedrag. Drankteam berekent de prijs per streep uit wat er echt gedronken en betaald is, dus het
+              bedrag op je factuur kan nog wat verschillen.
             </p>
           )}
         </section>
@@ -178,7 +178,7 @@ export const MyInvoiceScreen = () => {
             {perDrank.map(([naam, aantal]) => (
               <div key={naam} className="p-4 flex justify-between">
                 <span>{naam}</span>
-                <span className="font-semibold">{aantal}×</span>
+                <span className="font-semibold">{aantal}</span>
               </div>
             ))}
             {frietOpen.map(o => (

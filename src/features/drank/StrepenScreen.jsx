@@ -210,7 +210,7 @@ export const StrepenScreen = () => {
             className="w-full rounded-2xl bg-inkt dark:bg-white px-5 py-4 flex items-center justify-between gap-3 text-white dark:text-inkt active:scale-[0.99] disabled:opacity-40"
           >
             <span className="text-xl font-bold truncate">
-              {selectedDrink ? `${n}× ${selectedDrink.name}` : 'Kies een drank'}
+              {selectedDrink ? `${n} ${selectedDrink.name}` : 'Kies een drank'}
             </span>
             <span className="text-xl font-extrabold tabular-nums shrink-0">
               {euro((selectedDrink?.price || 0) * n)}

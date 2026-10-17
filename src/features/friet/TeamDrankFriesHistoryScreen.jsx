@@ -244,7 +244,7 @@ export const TeamDrankFriesHistoryScreen = () => {
                                 )}
                               </p>
                               <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                                {(order.items || []).map(i => `${i.quantity}x ${i.name}`).join(', ')}
+                                {(order.items || []).map(i => `${i.quantity} ${i.name}`).join(', ')}
                               </p>
                             </div>
                             <span className="font-bold text-blue-600 dark:text-blue-400 text-sm ml-3 shrink-0">

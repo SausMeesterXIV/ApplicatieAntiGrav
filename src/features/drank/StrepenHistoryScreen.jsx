@@ -195,7 +195,7 @@ export const StrepenHistoryScreen = ({ adminMode = false }) => {
                       <div className="min-w-0 pr-2">
                         <div className="flex items-baseline justify-between w-full">
                           <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                            {bundle.totalAmount > 1 ? `${bundle.totalAmount}x ` : ''}
+                            {bundle.totalAmount > 1 ? `${bundle.totalAmount} ` : ''}
                             {bundle.drinkName}
                           </h4>
                           <span className="text-xs font-bold text-gray-900 dark:text-white ml-2 shrink-0">

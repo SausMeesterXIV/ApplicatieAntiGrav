@@ -60,13 +60,13 @@ export const LeiderStrepenSheet = ({ leider, onClose }) => {
     if (Date.now() - laatsteTik.current < 600) return;
     laatsteTik.current = Date.now();
     handleAddCost(leider.id, drank.id, n, leider.naam);
-    showToast(`${n}× ${drank.name} bij ${leider.naam}`, 'success');
+    showToast(`${n} ${drank.name} bij ${leider.naam}`, 'success');
     setAantal(1);
     await hapticSuccess();
   };
 
   const verwijder = s => {
-    if (window.confirm(`${s.amount}× ${s.drinkLabel || s.drinkName} van ${leider.naam} verwijderen?`)) handleDeleteStreak(s.id);
+    if (window.confirm(`${s.amount} ${s.drinkLabel || s.drinkName} van ${leider.naam} verwijderen?`)) handleDeleteStreak(s.id);
   };
 
   return (
@@ -154,7 +154,7 @@ export const LeiderStrepenSheet = ({ leider, onClose }) => {
               className="w-full rounded-2xl bg-inkt dark:bg-white text-white dark:text-inkt px-5 py-3.5 flex items-center justify-between gap-3 text-lg font-bold active:scale-[0.99] disabled:opacity-40"
             >
               <span className="truncate">
-                +{n}× {drank?.name}
+                +{n} {drank?.name}
               </span>
               <span className="tabular-nums shrink-0">{euro((drank?.price || 0) * n)}</span>
             </button>
@@ -173,7 +173,7 @@ export const LeiderStrepenSheet = ({ leider, onClose }) => {
                 <li key={s.id} className="px-4 py-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-semibold truncate">
-                      {s.amount}× {s.drinkLabel || s.drinkName}
+                      {s.amount} {s.drinkLabel || s.drinkName}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
                       {tijdstip(s.timestamp)} · {euro(s.price * s.amount)}
@@ -183,7 +183,7 @@ export const LeiderStrepenSheet = ({ leider, onClose }) => {
                     type="button"
                     onClick={() => verwijder(s)}
                     className="shrink-0 rounded-full bg-red-50 dark:bg-red-900/15 text-red-600 dark:text-red-400 px-3.5 py-2 text-sm font-bold active:scale-95"
-                    aria-label={`${s.amount}× ${s.drinkLabel || s.drinkName} verwijderen`}
+                    aria-label={`${s.amount} ${s.drinkLabel || s.drinkName} verwijderen`}
                   >
                     Verwijder
                   </button>

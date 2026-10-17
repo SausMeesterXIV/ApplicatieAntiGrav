@@ -453,7 +453,7 @@ export const FriesScreen = () => {
                     className="flex justify-between border-b border-dashed border-gray-100 dark:border-gray-800 pb-1 last:border-0"
                   >
                     <span>
-                      {item.quantity}x {item.name}
+                      {item.quantity} {item.name}
                     </span>
                     <span className="text-gray-400">{euro(item.price * item.quantity)}</span>
                   </div>

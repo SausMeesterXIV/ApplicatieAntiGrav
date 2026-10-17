@@ -108,7 +108,7 @@ export const FriesHistoryScreen = () => {
                             className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400"
                           >
                             <span>
-                              {item.quantity}x {item.name}
+                              {item.quantity} {item.name}
                             </span>
                             <span>{euro(item.price * item.quantity)}</span>
                           </div>
