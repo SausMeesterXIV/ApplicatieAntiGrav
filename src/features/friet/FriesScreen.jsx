@@ -647,7 +647,6 @@ export const FriesScreen = () => {
               onChange={e => setNewItemCategory(e.target.value)}
               className="w-full p-2 text-sm bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 rounded dark:text-white"
             >
-              <option value="actie">Actie</option>
               <option value="frieten">Frieten</option>
               <option value="snacks">Snacks</option>
               <option value="vegetarisch">Vegetarisch</option>
