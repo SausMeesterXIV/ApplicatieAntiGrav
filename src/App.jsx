@@ -16,6 +16,7 @@ import { GoedkeuringPopup } from './features/auth/GoedkeuringPopup';
 import { ResetVerzoekPopup } from './features/auth/ResetVerzoekPopup';
 import { WachtwoordVergetenScreen } from './features/auth/WachtwoordVergetenScreen';
 import { GroepKiezenScreen } from './features/auth/GroepKiezenScreen';
+import { Rondleiding } from './features/home/Rondleiding';
 import { HomeScreen } from './features/home/HomeScreen';
 import { AuthProvider, useAuth } from './features/auth/AuthContext';
 import { DrinkProvider } from './features/drank/DrinkContext';
@@ -220,6 +221,8 @@ const AppRoutes = () => {
       {/* Nieuw account wacht op goedkeuring: pop-up voor alle actieve leiding, over elk scherm */}
       {session && currentUser && <ResetVerzoekPopup />}
       {session && currentUser && <GoedkeuringPopup />}
+      {/* Nieuw account: rondleiding (één keer per account, opnieuw te openen in Instellingen) */}
+      {session && currentUser && <Rondleiding />}
       <Routes>
         <Route path="/login" element={!session ? <CredentialsScreen /> : <Navigate to="/" />} />
         <Route path="/reset-password" element={<ResetPasswordScreen />} />

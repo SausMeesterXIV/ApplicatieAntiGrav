@@ -24,6 +24,7 @@ export const DEMO_PERSONEN = [
   { email: 'sara.desmet@ksa-aalter.be', voornaam: 'Sara', achternaam: 'De Smet', groep: 4, werkgroep: 'Financiën', wat: 'Financiën' },
   { email: 'ruben.maes@ksa-aalter.be', voornaam: 'Ruben', achternaam: 'Maes', groep: 6, hoofdleiding: true, wat: 'Hoofdleiding' },
   { email: 'emma.janssens@ksa-aalter.be', voornaam: 'Emma', achternaam: 'Janssens', groep: 7, werkgroep: 'Sfeerbeheer', wat: 'Sfeerbeheer (agenda)' },
+  { email: 'nina.nieuw@ksa-aalter.be', voornaam: 'Nina', achternaam: 'Nieuw', groep: 3, nieuw: true, wat: 'Nieuw account (rondleiding)' },
 ];
 
 const ANDEREN = [
@@ -68,7 +69,7 @@ export function maakTestdata() {
   ]) werkgroep[naam] = rij('werkgroepen', { naam, rechten }).id;
 
   const leiders = [];
-  const nieuweLeider = ({ voornaam, achternaam, email, groep, werkgroep: wg, hoofdleiding = false, oudleiding = false }) => {
+  const nieuweLeider = ({ voornaam, achternaam, email, groep, werkgroep: wg, hoofdleiding = false, oudleiding = false, nieuw = false }) => {
     const p = rij('profiles', {
       id: id(),
       voornaam,
@@ -79,7 +80,9 @@ export function maakTestdata() {
       is_oudleiding: oudleiding,
       groep_werkjaar: oudleiding ? null : werkjaar,
       push_enabled: false,
-      created_at: iso(nu - 300 * DAG),
+      // Nieuwe accounts krijgen de rondleiding; de rest heeft ze al gezien
+      rondleiding_gezien_op: nieuw ? null : iso(nu - 300 * DAG),
+      created_at: iso(nu - (nieuw ? 1 : 300) * DAG),
     });
     if (groep) rij('profiel_groepen', { profile_id: p.id, groep_id: groep });
     if (wg) rij('profiel_werkgroepen', { profile_id: p.id, werkgroep_id: werkgroep[wg] });

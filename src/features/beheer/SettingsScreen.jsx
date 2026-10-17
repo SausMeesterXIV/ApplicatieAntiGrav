@@ -13,6 +13,7 @@ import { UserAvatar } from '../../components/UserAvatar';
 import { WachtwoordWijzigen } from './WachtwoordWijzigen';
 import { PushInstelling } from './PushInstelling';
 import { bollenVoor, gekozenVolgorde } from '../home/bollen';
+import { openRondleiding } from '../home/Rondleiding';
 
 // Instellingen (design-update): gegroepeerde lijst — Account, Startscherm, Meldingen, Weergave, Beheer.
 
@@ -200,6 +201,7 @@ export const SettingsScreen = () => {
           {isHoofdleiding(currentUser) && (
             <Rij label="Rollen en werkgroepen" onClick={() => navigate('/admin/rollen')} />
           )}
+          <Rij label="Rondleiding bekijken" onClick={openRondleiding} />
           <Rij label="Credits" onClick={() => navigate('/credits')} />
         </Groep>
 
