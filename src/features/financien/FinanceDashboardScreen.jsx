@@ -5,6 +5,7 @@ import { ChevronBack } from '../../components/ChevronBack';
 import { showToast } from '../../components/Toast';
 import { euro } from '../../lib/geld';
 import * as fin from '../../lib/financien';
+import { UittrekselInlezen } from '../drank/UittrekselInlezen';
 import { DrankSheetKaart } from './DrankSheetKaart';
 import { BetalingSheet } from './BetalingSheet';
 import { LeiderSheet } from './LeiderSheet';
@@ -54,6 +55,23 @@ export const FinanceDashboardScreen = () => {
   const zichtbareGroepen = groepen.filter(
     g => !z || g.titel.toLowerCase().includes(z) || g.posten.some(p => (p.naam || '').toLowerCase().includes(z)),
   );
+
+  // Voor het inlezen van het bankuittreksel: alle open posten in de vorm die UittrekselInlezen verwacht
+  const uittrekselPosten = useMemo(
+    () =>
+      posten
+        .filter(fin.isOpen)
+        .map(p => ({ ...p, id: `${p.soort}:${p.id}`, totaal_bedrag: p.bedrag, user_naam: `${p.naam} · ${p.titel}` })),
+    [posten],
+  );
+
+  const zetBetaaldVanUittreksel = async ids => {
+    for (const sleutel of ids) {
+      const [soort, id] = sleutel.split(':');
+      await fin.zetBetaald(soort, id, true);
+    }
+    await laad();
+  };
 
   const groep = groepen.find(g => g.sleutel === openGroep);
   const leider = leiders.find(l => l.userId === openLeider);
@@ -169,6 +187,7 @@ export const FinanceDashboardScreen = () => {
               </p>
             </section>
 
+            <UittrekselInlezen facturen={uittrekselPosten} onBetaald={zetBetaaldVanUittreksel} />
             <DrankSheetKaart />
             {/* Aankoopfacturen (brouwer, drankcentrale, ...), zie AankoopfacturenScreen */}
             <button

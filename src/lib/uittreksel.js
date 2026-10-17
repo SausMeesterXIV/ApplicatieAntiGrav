@@ -217,18 +217,27 @@ export function koppelAankopen(verrichtingen, facturen) {
 // "16-10-2026 COLRUYT AALTER -54,20 EUR"
 const PDF_HOOFDREGEL = /^(\d{2}-\d{2}-\d{4})\s+(.+?)\s+([+-]?\d{1,3}(?:\.\d{3})*,\d{2})(?:\s*EUR)?$/;
 
+/** Verrichtingen in een PDF-afschrift: per hoofdregel { datumTekst, datum, naam, bedragTekst, bedrag, regels }. */
+function pdfBlokken(regels) {
+  const blokken = [];
+  for (const regel of regels) {
+    const m = regel.match(PDF_HOOFDREGEL);
+    if (m) {
+      blokken.push({ datumTekst: m[1], datum: leesDatum(m[1]), naam: m[2].trim(), bedragTekst: m[3], bedrag: leesBedrag(m[3]), regels: [] });
+    } else if (blokken.length) blokken[blokken.length - 1].regels.push(regel);
+  }
+  return blokken;
+}
+
+/** Een PDF-afschrift als rijen zoals parseCsv ze geeft (één rij per verrichting), voor zoekBetalingen. */
+export const pdfRijen = regels => pdfBlokken(regels).map(b => [b.datumTekst, b.naam, b.bedragTekst, ...b.regels]);
+
 /**
  * Uitgaande verrichtingen uit de regels van een PDF-afschrift (zie pdfRegels).
  * Onder de hoofdregel staan labels met de waarde op de volgende regel, bv. "Mededeling" / "+++123/4567/89012+++".
  */
 export function verrichtingenUitPdf(regels) {
-  const blokken = [];
-  for (const regel of regels) {
-    const m = regel.match(PDF_HOOFDREGEL);
-    if (m) blokken.push({ datum: leesDatum(m[1]), naam: m[2].trim(), bedrag: leesBedrag(m[3]), regels: [] });
-    else if (blokken.length) blokken[blokken.length - 1].regels.push(regel);
-  }
-  return blokken
+  return pdfBlokken(regels)
     .filter(b => b.bedrag !== null && b.bedrag < 0)
     .map(b => {
       const code = [b.naam, ...b.regels].flatMap(mededelingenIn)[0] || null;

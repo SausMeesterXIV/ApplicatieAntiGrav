@@ -72,3 +72,16 @@ test('zoekBetalingen: betaalde facturen worden niet meegegeven, dus niet gevonde
   const csv = `x;12,50;+++000/0000/01295+++`;
   assert.deepEqual(zoekBetalingen(parseCsv(csv), []), []);
 });
+
+test('pdfRijen: betaling van een leider in een KBC-PDF wordt gevonden', async () => {
+  const { pdfRijen } = await import('../src/lib/uittreksel.js');
+  const regels = [
+    'Elektronisch afschrift',
+    '17-10-2026 JAN PEETERS 12,50 EUR',
+    'Mededeling',
+    '+++000/0000/01295+++',
+    '17-10-2026 COLRUYT AALTER -54,20 EUR',
+  ];
+  const gevonden = zoekBetalingen(pdfRijen(regels), facturen);
+  assert.deepEqual(gevonden.map(g => [g.factuur.id, g.bedragKlopt]), [['a', true]]);
+});
