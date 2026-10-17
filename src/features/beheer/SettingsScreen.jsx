@@ -204,7 +204,7 @@ export const SettingsScreen = () => {
 
         <button
           type="button"
-          onClick={() => supabase.auth.signOut()}
+          onClick={() => supabase.auth.signOut({ scope: 'local' })}
           className="w-full rounded-2xl py-4 font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/15"
         >
           Uitloggen

@@ -280,25 +280,43 @@ const BetaalInfo = ({ bedrag, mededeling, betaal, kopieer }) =>
           size={184}
         />
       </div>
-      <p className="text-xs text-center text-gray-500">Scan met je bank-app of Payconiq. Er gaat geen geld via deze app.</p>
-      <dl className="text-sm space-y-2">
+      <p className="text-xs text-center text-gray-500">
+        Scan met je bank-app of Payconiq. Betaal je met deze gsm? Open de KSA-app op een ander toestel (bv. je laptop) en
+        scan daar, of kopieer de gegevens hieronder. Er gaat geen geld via deze app.
+      </p>
+
+      <div className="rounded-xl bg-orange-50 dark:bg-orange-900/20 p-3 text-sm text-orange-900 dark:text-orange-200">
+        <p className="font-bold">Overschrijven met de hand? Kopieer alle 3 exact.</p>
+        <p className="mt-1">
+          Rekening, bedrag en mededeling zijn verplicht. Gebruik zeker deze gestructureerde mededeling: zonder of met een
+          andere mededeling herkent de app je betaling niet en blijft je factuur open.
+        </p>
+      </div>
+
+      <p className="text-sm text-gray-500">
+        Begunstigde: <span className="font-semibold text-inkt dark:text-white">{betaal.naam}</span>
+      </p>
+      <dl className="space-y-2">
         {/* [label, weergave, te kopiëren tekst] — bedrag zonder €-teken, zoals bank-apps het verwachten */}
         {[
-          ['Begunstigde', betaal.naam, null],
-          ['Rekening', formatIban(betaal.iban), formatIban(betaal.iban)],
-          ['Bedrag', euro(bedrag), Number(bedrag).toFixed(2).replace('.', ',')],
-          ['Mededeling', mededeling, mededeling],
+          ['1. Rekening', formatIban(betaal.iban), formatIban(betaal.iban)],
+          ['2. Bedrag', euro(bedrag), Number(bedrag).toFixed(2).replace('.', ',')],
+          ['3. Mededeling', mededeling, mededeling],
         ].map(([k, v, kopie]) => (
-          <div key={k} className="flex items-center justify-between gap-2">
-            <dt className="text-gray-500">{k}</dt>
-            <dd className="font-semibold font-mono text-right flex items-center gap-1">
-              {v}
-              {kopie && (
-                <button onClick={() => kopieer(kopie)} className="text-gray-500 dark:text-gray-400 hover:text-inkt dark:hover:text-white" title="Kopieer">
-                  <span className="material-icons-round text-base">content_copy</span>
-                </button>
-              )}
-            </dd>
+          <div key={k} className="flex items-center gap-3 rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-2.5">
+            <div className="flex-1 min-w-0">
+              <dt className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                {k} <span className="text-orange-600 dark:text-orange-400">· verplicht</span>
+              </dt>
+              <dd className="font-semibold font-mono break-all">{v}</dd>
+            </div>
+            <button
+              onClick={() => kopieer(kopie)}
+              className="shrink-0 rounded-lg bg-inkt text-white dark:bg-white dark:text-inkt px-3 py-2 text-sm font-bold flex items-center gap-1"
+              aria-label={`${k.slice(3)} kopiëren`}
+            >
+              <span className="material-icons-round text-base">content_copy</span> Kopieer
+            </button>
           </div>
         ))}
       </dl>

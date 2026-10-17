@@ -61,7 +61,7 @@ export const WachtOpGoedkeuringScreen = () => {
           )}
           <button
             type="button"
-            onClick={() => supabase.auth.signOut()}
+            onClick={() => supabase.auth.signOut({ scope: 'local' })}
             className="w-full rounded-2xl bg-kaart-event dark:bg-kaart-event-d py-4 font-bold active:scale-[0.99]"
           >
             Uitloggen

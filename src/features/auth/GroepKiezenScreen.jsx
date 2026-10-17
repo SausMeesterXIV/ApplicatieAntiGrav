@@ -69,7 +69,7 @@ export const GroepKiezenScreen = () => {
         </button>
         <button
           type="button"
-          onClick={() => supabase.auth.signOut()}
+          onClick={() => supabase.auth.signOut({ scope: 'local' })}
           className="mt-3 text-sm font-semibold text-gray-500 dark:text-gray-400"
         >
           Uitloggen
