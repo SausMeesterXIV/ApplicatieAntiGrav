@@ -28,7 +28,7 @@ export const DEMO_PERSONEN = [
 
 const ANDEREN = [
   ['Wout', 'Wouters', 1], ['Fien', 'Mertens', 1], ['Arne', 'Willems', 3],
-  ['Lien', 'Goossens', 3, 'Drankteam'], ['Bram', 'Vermeulen', 5], ['Jana', 'Dubois', 2], ['Seppe', 'Lambrecht', 6],
+  ['Lien', 'Goossens', 3, 'Drankteam'], ['Bram', 'Vermeulen', 5, 'Kampleiding'], ['Jana', 'Dubois', 2], ['Seppe', 'Lambrecht', 6, 'Kampleiding'],
   ['Noor', 'Hermans', 4, 'Financiën'], ['Mathias', 'Jacobs', 5], ['Ines', 'Martens', 6], ['Lars', 'Coppens', 7],
   ['Hanne', 'Smets', 1], ['Thomas', 'De Clercq', 2],
 ];
@@ -64,6 +64,7 @@ export function maakTestdata() {
     ['Financiën', ['financien']],
     ['Sfeerbeheer', ['agenda_beheren']],
     ['Winkeltje', ['winkeltje_beheren']],
+    ['Kampleiding', ['drank_beheren', 'agenda_beheren', 'financien', 'polls_maken', 'berichten_sturen']],
   ]) werkgroep[naam] = rij('werkgroepen', { naam, rechten }).id;
 
   const leiders = [];
@@ -220,6 +221,8 @@ export function maakTestdata() {
   ].map(([titel, dagen, type, tijd, locatie]) =>
     rij('events', { titel, datum: datum(nu + dagen * DAG), type, tijd, start_time: tijd, locatie, beschrijving: `${titel} (demo)`, created_by: ruben.id }),
   );
+  // Meerdaags item dat nu loopt (gisteren tot en met morgen): blijft op het startscherm tot de laatste dag
+  rij('events', { titel: 'Groepsweekend Jim', datum: datum(nu - DAG), eind_datum: datum(nu + DAG), type: 'activiteit', tijd: '19:00', start_time: '19:00', locatie: 'Brugge', beschrijving: 'Meerdaags (demo)', created_by: ruben.id });
   for (const p of leiders.slice(0, 12)) rij('event_aanwezigheid', { event_id: ev[0].id, user_id: p.id, status: r() < 0.75 ? 'aanwezig' : 'afwezig' });
   rij('verslagen', { titel: 'Verslag leidingsvergadering', datum: ev[3].datum, event_id: ev[3].id, auteur_id: sara.id, inhoud: 'Afspraken: drankrekening afsluiten, truien bestellen, planning weekend.' });
 

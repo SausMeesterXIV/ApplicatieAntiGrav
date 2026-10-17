@@ -11,6 +11,7 @@ import { SkeletonCard, SkeletonEvent } from '../../components/Skeleton';
 import { Bollenrij } from './Bollenrij';
 import { HomeCarrousel } from './HomeCarrousel';
 import { bollenVoor, gekozenVolgorde } from './bollen';
+import { aankomendeEvents, totEnMetTekst, valtOp } from '../agenda/datums';
 
 // Startscherm (design-update, Instagram-stijl):
 // bollen bovenaan · groot veegbaar vierkant (friet als er een ronde loopt, strepen, ranking)
@@ -67,13 +68,8 @@ export const HomeScreen = () => {
     return s;
   }, [notifications, rondeLoopt, openPolls]);
 
-  const eerstvolgend = useMemo(() => {
-    const vandaag = middernacht(new Date());
-    return (events || [])
-      .filter(e => e?.date && new Date(e.date) >= vandaag)
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-      .slice(0, 2);
-  }, [events]);
+  // Meerdaagse items blijven staan tot en met hun laatste dag (zelfde regel als de agenda)
+  const eerstvolgend = useMemo(() => aankomendeEvents((events || []).filter(e => e?.date)).slice(0, 2), [events]);
 
   const aftelling = useMemo(() => {
     const vandaag = middernacht(new Date());
@@ -153,8 +149,11 @@ export const HomeScreen = () => {
 };
 
 const EventRij = ({ event, onClick }) => {
-  const d = new Date(event.date);
+  // Loopt het item al (meerdaags, gestart vóór vandaag)? Dan tonen we vandaag in het blokje, met "nu bezig"
+  const bezig = valtOp(event, new Date()) && new Date(event.date).toDateString() !== new Date().toDateString();
+  const d = bezig ? new Date() : new Date(event.date);
   const dag = d.toLocaleDateString('nl-BE', { weekday: 'short' }).replace('.', '').slice(0, 2).toUpperCase();
+  const tot = totEnMetTekst(event);
   return (
     <button
       type="button"
@@ -168,7 +167,8 @@ const EventRij = ({ event, onClick }) => {
       <span className="min-w-0">
         <span className="block font-bold text-base truncate">{event.title}</span>
         <span className="block text-sm text-gray-500 dark:text-gray-400 truncate">
-          {event.startTime}
+          {bezig ? 'Nu bezig' : event.startTime}
+          {tot ? ` · ${tot}` : ''}
           {event.location ? ` · ${event.location}` : ''}
         </span>
       </span>

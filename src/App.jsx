@@ -58,6 +58,7 @@ const FriesOverviewScreen = scherm(() => import('./features/friet/FriesOverviewS
 const FriesScreen = scherm(() => import('./features/friet/FriesScreen'), 'FriesScreen');
 const FriesSummaryScreen = scherm(() => import('./features/friet/FriesSummaryScreen'), 'FriesSummaryScreen');
 const MyInvoiceScreen = scherm(() => import('./features/drank/MyInvoiceScreen'), 'MyInvoiceScreen');
+const MijnLeidingScreen = scherm(() => import('./features/leiding/MijnLeidingScreen'), 'MijnLeidingScreen');
 const NewMessageScreen = scherm(() => import('./features/berichten/NewMessageScreen'), 'NewMessageScreen');
 const NewPollScreen = scherm(() => import('./features/polls/NewPollScreen'), 'NewPollScreen');
 const NotificationsScreen = scherm(() => import('./features/berichten/NotificationsScreen'), 'NotificationsScreen');
@@ -253,6 +254,7 @@ const AppRoutes = () => {
             <Route path="nudges" element={<NudgeSelectorScreen />} />
 
             <Route path="polls" element={<PollsScreen />} />
+            <Route path="leiding" element={<MijnLeidingScreen />} />
             <Route
               path="polls/nieuw"
               element={

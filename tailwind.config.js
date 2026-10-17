@@ -20,11 +20,13 @@ export default {
           polls: '#e6ddff',
           verslagen: '#d5f0e4',
           fotos: '#ffdccf',
+          leiding: '#ffe0ec',
           'friet-d': '#4a3d12',
           'agenda-d': '#1f2b4d',
           'polls-d': '#2f2550',
           'verslagen-d': '#173a2c',
           'fotos-d': '#4a2a20',
+          'leiding-d': '#4a1f33',
         },
         kaart: {
           strepen: '#e6edff',

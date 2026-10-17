@@ -54,6 +54,14 @@ export const BOLLEN = [
     zichtbaar: leiding,
   },
   {
+    id: 'leiding',
+    afk: 'ML',
+    label: 'Mijn leiding',
+    route: '/leiding',
+    kleur: 'bg-bol-leiding dark:bg-bol-leiding-d',
+    zichtbaar: leiding,
+  },
+  {
     id: 'teamdrank',
     afk: 'DR',
     label: 'Team drank',

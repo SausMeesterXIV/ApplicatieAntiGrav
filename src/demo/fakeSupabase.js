@@ -8,7 +8,7 @@ import { maakTestdata } from './testdata';
 import { RPC, zetInvoeger } from './rpc';
 import { mededelingVan } from './hulp';
 
-const OPSLAG = 'ksa-demo-db-v3';
+const OPSLAG = 'ksa-demo-db-v4';
 const SESSIE = 'ksa-demo-sessie';
 
 // ==================== Database in het geheugen ====================

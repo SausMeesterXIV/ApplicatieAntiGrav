@@ -11,7 +11,7 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - **Groepen** (vaste lijst, van jong naar oud): Pagadders, Kabouters, Sloebers, Tieners, Jim, Sim, Kim.
 - **Precies één groep per leider**, opnieuw te kiezen elk werkjaar: bij de eerste keer in de app en vanaf **1 september** vraagt de app je groep (scherm "Wat is je groep?"). Daarna past enkel de hoofdleiding ze nog aan. Werkgroepen: geen, één of meer.
 - **Oudleiding**: heeft geen `@ksa-aalter.be`-mail meer en logt in met **gebruikersnaam + wachtwoord** (intern `<gebruikersnaam>@oudleiding.ksa-aalter.be`, er wordt nooit naar gemaild). Ze registreren zelf met een **code die Drankteam instelt** (edge function `oudleiding`; na 10 foute codes een uur geblokkeerd). Ze zien enkel: strepen (ook de ranking, samen met leiding), hun drankrekening (betalen met QR), friet en de agenda-items die met oudleiding gedeeld zijn (daar duiden ze ook aanwezigheid aan). Geen andere agenda-items, bijlagen, verslagen, polls, foto's of meldingen aan alle leiding. Wachtwoord vergeten: Drankteam stelt een nieuw in. Leiding die stopt, zet de hoofdleiding op "Oudleiding" (account en historiek blijven).
-- **Werkgroepen**: vrij in te stellen door de hoofdleiding in de app, bv. Drankteam of Sfeerbeheer.
+- **Werkgroepen**: vrij in te stellen door de hoofdleiding in de app, bv. Drankteam of Sfeerbeheer. **Kampleiding** (migratie 004100) heeft de rechten van Team Drank, Agenda beheren, Financiën, Polls en Berichten (niet Winkeltje, niet Rollen).
 - **Hoofdleiding** is ook admin.
 - **Godmode** (beheeraccount, migraties 003100 en 003300): alle rechten van hoofdleiding (telt in de database als hoofdleiding, dus ook elk werkgroeprecht), met een eigen label **"Godmode"** dat iedereen ziet. Staat in de tabel `godmode_accounts`, waar de app niet aan kan: enkel in de database toe te voegen of weg te halen (de app leest de lijst via `godmode_ids()`). Niemand in de app (ook hoofdleiding of het account zelf) kan rollen, status of e-mail van een Godmode-account aanpassen of het verwijderen; in Rollen staat dan "Godmode, enkel in de database". Telt mee voor "altijd minstens één hoofdleiding". In de frontend: `isHoofdleiding(user)` = rechten (incl. Godmode), `user.isHoofdleiding` / `user.isGodmode` = labels.
 - **Alleen hoofdleiding** kent groepen en werkgroepen toe aan leiding.
@@ -48,17 +48,20 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 ## Functies
 
 ### Startscherm — design-update (Instagram-stijl)
-- **Bollen** bovenaan, horizontaal scrollbaar: Friet, Agenda, Polls, Verslagen, Foto's voor iedereen; rol-bollen (Team drank, Friet beheer, Agenda beheer, Berichten, Nieuwe poll, Financiën, Winkeltje, Rollen) enkel met dat recht; hoofdleiding ziet alles. Oranje ring = iets nieuws of open. Definitie in `src/features/home/bollen.js`.
+- **Bollen** bovenaan, horizontaal scrollbaar: Friet, Agenda, Polls, Verslagen, Foto's, Mijn leiding voor iedereen; rol-bollen (Team drank, Friet beheer, Agenda beheer, Berichten, Nieuwe poll, Financiën, Winkeltje, Rollen) enkel met dat recht; hoofdleiding ziet alles. Oranje ring = iets nieuws of open. Definitie in `src/features/home/bollen.js`.
 - **Groot veegbaar vierkant**: frietronde (enkel als er een ronde loopt), strepen (vandaag gestreept, snelle drank +1, twee andere dranken, "Alle…"), ranking.
 - Daaronder de **twee eerstvolgende agenda-items** en onderaan de **aftelklok** (bv. kamp).
 - **Instellingen**: gegroepeerde lijst; "Volgorde bollen" (per leider, bewaard op het profiel) en "Snelle drank".
 - Stijl: lettertype Plus Jakarta Sans, pastels per bol en donkere knoppen (`inkt`), tokens in `tailwind.config.js`.
 - **Computer** (vanaf 1024px, Tailwind `lg:`): zijbalk links i.p.v. menubalk onderaan, inhoud met leesbreedte (`max-w-3xl`), startscherm breder in twee kolommen, pop-ups als gecentreerd venster. Vaste balken onderaan krijgen `lg:left-60` zodat ze naast de zijbalk staan. Op gsm verandert er niets.
 
+### Mijn leiding — nieuw
+- Bol voor alle leiding (niet oudleiding): alle actieve leiding met profielfoto (geen oudleiding, geen Godmode). Indelen per groep, per rol of A–Z, filteren op een groep, hoofdleiding of werkgroep, en zoeken op naam. Tik op iemand voor groep en rollen.
+
 ### Agenda — behouden
 - Inhoud: **grote evenementen** (kamp, weekends, fuiven, eetfestijn) en **leidingsvergaderingen**. Geen wekelijkse activiteiten per groep.
 - **Aanwezigheid**: leiding duidt aan of ze komt (komt / komt niet / misschien).
-- **Meerdaags**: een item kan meerdere dagen duren (eerste en laatste dag, bv. weekend of kamp). Het blijft in "aankomend" staan tot de laatste dag voorbij is.
+- **Meerdaags**: een item kan meerdere dagen duren (eerste en laatste dag, bv. weekend of kamp). Het blijft in "aankomend" en bij "Eerstvolgend" op het startscherm staan tot de laatste dag voorbij is ("Nu bezig · t.e.m. …").
 - **Delen met oudleiding**: per item aan te vinken ("Ook voor oudleiding"). Oudleiding ziet enkel die items, duidt aanwezigheid aan en krijgt een eigen melding en herinnering. Bijlagen blijven enkel voor leiding.
 - **Beheerscherm** ("Maak nieuw event" naast "Nieuwe events"): toont enkel aankomende items, chronologisch.
 - **Meldingen**: pushmelding bij een nieuw item en een herinnering de dag vooraf om 18u (Belgische tijd).
