@@ -361,14 +361,15 @@ const RankingKaart = ({ positie }) => {
           </li>
         ))}
       </ol>
+      {/* Extra ruimte tussen de top 3 en de knop; de knop staat altijd onderaan */}
+      <div className="flex-1 min-h-3" />
       <button
         type="button"
         onClick={() => navigate('/strepen/ranking')}
-        className="mt-3 w-full rounded-2xl bg-white dark:bg-white/10 py-3 text-sm font-bold"
+        className="w-full rounded-2xl bg-white dark:bg-white/10 py-3.5 text-base font-bold"
       >
         {mijnPlek >= 3 ? `Jij staat ${mijnPlek + 1}e · volledige ranking` : 'Volledige ranking'}
       </button>
-      <div className="flex-1" />
     </article>
   );
 };
