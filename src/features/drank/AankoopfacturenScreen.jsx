@@ -7,6 +7,8 @@ import * as db from '../../lib/supabaseService';
 import { euro } from '../../lib/geld';
 import { MAX_FOTO_MB, verkleinFoto } from '../../lib/foto';
 import { UittrekselAankopen } from './UittrekselAankopen';
+import { useAuth } from '../auth/AuthContext';
+import { deelOfDownload, factuurRef, laadBijlage, maakMiniFactuur, miniFactuurNaam } from '../../lib/miniFactuur';
 
 // Aankoopfacturen (migratie 003800): facturen die KSA krijgt (brouwer, drankcentrale, ...), voor Team Drank en
 // Financiën. Per factuur een bedrag, mededeling, datum, betaald en een foto of PDF; gebundeld per drankperiode.
@@ -33,6 +35,7 @@ const leegFormulier = periodId => ({
 
 export const AankoopfacturenScreen = () => {
   const navigate = useNavigate();
+  const { users } = useAuth();
   const [facturen, setFacturen] = useState([]);
   const [periodes, setPeriodes] = useState([]);
   const [laden, setLaden] = useState(true);
@@ -41,6 +44,7 @@ export const AankoopfacturenScreen = () => {
   const [foto, setFoto] = useState(null); // nieuw gekozen bestand
   const [fotoLink, setFotoLink] = useState(null); // link naar de bestaande foto
   const [bezig, setBezig] = useState(false);
+  const [pdfBezig, setPdfBezig] = useState(false);
 
   const laad = useCallback(async () => {
     try {
@@ -129,6 +133,34 @@ export const AankoopfacturenScreen = () => {
     }
   };
 
+  const naamVan = id => users?.find(u => u.id === id)?.naam || 'onbekend';
+  const tijdstip = t => (t ? new Date(t).toLocaleString('nl-BE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
+
+  // Mini-factuur als PDF van de bewaarde gegevens, met de foto of PDF van de factuur achteraan
+  const maakPdf = async () => {
+    const f = facturen.find(x => x.id === form?.id);
+    if (!f || pdfBezig) return;
+    setPdfBezig(true);
+    try {
+      const link = f.foto_pad ? fotoLink || (await db.aankoopfactuurLink(f.foto_pad)) : null;
+      const bijlage = link ? await laadBijlage(link) : null;
+      const bytes = await maakMiniFactuur({
+        factuur: f,
+        periodeNaam: periodes.find(p => p.id === f.period_id)?.naam,
+        ingevoerdDoor: naamVan(f.aangemaakt_door),
+        bijlage,
+      });
+      const uitkomst = await deelOfDownload(bytes, miniFactuurNaam(f));
+      if (uitkomst === 'gedownload') showToast('PDF gedownload', 'success');
+      if (f.foto_pad && !bijlage) showToast('De foto kon niet mee in de PDF', 'warning');
+    } catch (e) {
+      console.error(e);
+      showToast('PDF maken lukte niet', 'error');
+    } finally {
+      setPdfBezig(false);
+    }
+  };
+
   const kopieer = async tekst => {
     try {
       await navigator.clipboard.writeText(tekst);
@@ -166,7 +198,16 @@ export const AankoopfacturenScreen = () => {
         >
           <span className="material-icons-round">add_a_photo</span> Nieuwe factuur
         </button>
-        <UittrekselAankopen facturen={facturen} periodes={periodes} standaardPeriode={openPeriode?.id || periodes[0]?.id} onKlaar={laad} />
+        <UittrekselAankopen
+          facturen={facturen}
+          periodes={periodes}
+          standaardPeriode={openPeriode?.id || periodes[0]?.id}
+          onKlaar={laad}
+          onManueel={bestand => {
+            open(null);
+            if (bestand) setFoto(bestand);
+          }}
+        />
 
         {laden && <p className="px-2 text-sm text-gray-500">Laden…</p>}
 
@@ -341,6 +382,33 @@ export const AankoopfacturenScreen = () => {
             >
               {bezig ? 'Bezig…' : form.id ? 'Aanpassingen bewaren' : 'Factuur bewaren'}
             </button>
+            {form.id && (
+              <div className="rounded-2xl bg-kaart-event dark:bg-white/10 p-4 space-y-3">
+                <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5">
+                  <p>
+                    <span className="font-mono font-semibold text-inkt dark:text-white">{factuurRef(form)}</span>
+                  </p>
+                  <p>
+                    Ingevoerd door {naamVan(form.aangemaakt_door)}
+                    {form.created_at && ` op ${tijdstip(form.created_at)}`}
+                  </p>
+                  {form.updated_at && form.updated_at !== form.created_at && <p>Laatst aangepast op {tijdstip(form.updated_at)}</p>}
+                </div>
+                <button
+                  type="button"
+                  onClick={maakPdf}
+                  disabled={pdfBezig}
+                  className="w-full rounded-xl bg-white dark:bg-white/10 py-3 font-bold flex items-center justify-center gap-2 disabled:opacity-40"
+                >
+                  <span className="material-icons-round">picture_as_pdf</span>
+                  {pdfBezig ? 'PDF maken…' : 'Mini-factuur als PDF'}
+                </button>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Een nette samenvatting van de bewaarde gegevens, met de foto of PDF van de factuur erbij. Handig om in de
+                  Drive te zetten.
+                </p>
+              </div>
+            )}
             {form.id && (
               <button type="button" onClick={verwijder} className="w-full rounded-xl py-3 font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/15">
                 Verwijderen

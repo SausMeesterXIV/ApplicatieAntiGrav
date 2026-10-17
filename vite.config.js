@@ -40,13 +40,19 @@ export default defineConfig({
       workbox: {
         // Pushmeldingen tonen en openen (public/push-sw.js)
         importScripts: ['push-sw.js'],
-        // pdf.js (bankafschrift lezen in Aankoopfacturen) enkel laden wanneer iemand een PDF kiest
-        globIgnores: ['**/pdf-*.js', '**/pdf.worker*'],
+        // pdf.js (bankafschrift lezen) en pdf-lib (mini-factuur) pas laden wanneer iemand ze nodig heeft
+        globIgnores: ['**/pdf-*.js', '**/pdf.worker*'], // pdf.js en pdf-lib
         // Supabase-data wordt bewust NIET gecachet: strepen, saldo en facturen moeten altijd actueel zijn.
         // (Vroeger stond hier StaleWhileRevalidate, waardoor de app eerst verouderde gegevens toonde.)
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      // pdf-lib (mini-factuur) een herkenbare naam geven, zodat het buiten de offline-cache blijft
+      output: { manualChunks: id => (id.includes('node_modules/pdf-lib') ? 'pdf-lib' : undefined) },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(path.dirname(fileURLToPath(import.meta.url)), './src'),

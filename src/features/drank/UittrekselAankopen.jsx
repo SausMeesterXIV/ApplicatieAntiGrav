@@ -12,7 +12,7 @@ import { pdfRegels } from '../../lib/pdfTekst';
 
 const datumTekst = d => (d ? new Date(`${d}T12:00:00`).toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' }) : '');
 
-export const UittrekselAankopen = ({ facturen, periodes, standaardPeriode, onKlaar }) => {
+export const UittrekselAankopen = ({ facturen, periodes, standaardPeriode, onKlaar, onManueel }) => {
   const invoer = useRef(null);
   const [resultaat, setResultaat] = useState(null);
   const [betalen, setBetalen] = useState([]); // factuur-id's
@@ -24,27 +24,33 @@ export const UittrekselAankopen = ({ facturen, periodes, standaardPeriode, onKla
     const files = [...(e.target.files || [])];
     e.target.value = '';
     if (!files.length) return;
-    try {
-      const verrichtingen = [];
-      for (const file of files) {
-        if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
-          // PDF uit KBC Mobile: de PDF zelf gaat mee als bijlage bij een nieuwe factuur
-          const uitPdf = verrichtingenUitPdf(await pdfRegels(file));
-          verrichtingen.push(...uitPdf.map(v => ({ ...v, bestand: uitPdf.length === 1 ? file : null })));
-        } else {
-          verrichtingen.push(...uitgaandeVerrichtingen(parseCsv(await leesBestand(file))));
-        }
+    const verrichtingen = [];
+    const mislukt = []; // bestanden waarin we geen uitgaande betaling herkenden
+    for (const file of files) {
+      const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+      try {
+        const gevonden = isPdf
+          ? verrichtingenUitPdf(await pdfRegels(file))
+          : uitgaandeVerrichtingen(parseCsv(await leesBestand(file)));
+        if (!gevonden.length) mislukt.push(file);
+        // Een PDF met één betaling gaat mee als bijlage bij een nieuwe factuur
+        verrichtingen.push(...gevonden.map(v => ({ ...v, bestand: isPdf && gevonden.length === 1 ? file : null })));
+      } catch (err) {
+        console.error(err);
+        mislukt.push(file);
       }
-      if (!verrichtingen.length) return showToast('Geen uitgaande betalingen gevonden in dit bestand', 'warning');
-      const r = koppelAankopen(verrichtingen, facturen);
-      setResultaat(r);
-      setBetalen(r.teBetalen.filter(x => x.zeker).map(x => x.factuur.id));
-      setNieuw({});
-      setPeriodId(standaardPeriode || '');
-    } catch (err) {
-      console.error(err);
-      showToast('Kon het bestand niet lezen. Is het een CSV of PDF van de bank?', 'error');
     }
+    const r = koppelAankopen(verrichtingen, facturen);
+    setResultaat({ ...r, mislukt });
+    setBetalen(r.teBetalen.filter(x => x.zeker).map(x => x.factuur.id));
+    setNieuw({});
+    setPeriodId(standaardPeriode || '');
+  };
+
+  // Niet te lezen: manueel invoeren, met het bestand als bijlage als het een PDF is
+  const manueel = file => {
+    setResultaat(null);
+    onManueel(file && (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') ? file : null);
   };
 
   const wisselBetalen = id => setBetalen(p => (p.includes(id) ? p.filter(x => x !== id) : [...p, id]));
@@ -59,6 +65,8 @@ export const UittrekselAankopen = ({ facturen, periodes, standaardPeriode, onKla
   const gekozenNieuw = Object.keys(nieuw).map(Number);
   const zonderNaam = gekozenNieuw.some(i => !nieuw[i].trim());
   const aantal = betalen.length + gekozenNieuw.length;
+  // Niets herkend in geen enkel bestand
+  const niets = resultaat && !resultaat.teBetalen.length && !resultaat.nieuw.length && !resultaat.alInOrde;
 
   const bevestig = async () => {
     if (!aantal || zonderNaam || (gekozenNieuw.length && !periodId)) return;
@@ -132,15 +140,49 @@ export const UittrekselAankopen = ({ facturen, periodes, standaardPeriode, onKla
       <BottomSheet
         isOpen={!!resultaat}
         onClose={() => setResultaat(null)}
-        title="Bankuittreksel"
+        title={niets ? 'Niet ingelezen' : 'Bankuittreksel'}
         subtitle={
-          resultaat &&
-          (n => `${n} uitgaande ${n === 1 ? 'betaling' : 'betalingen'}`)(resultaat.teBetalen.length + resultaat.nieuw.length + resultaat.alInOrde) +
-            (resultaat.alInOrde ? ` · ${resultaat.alInOrde} al in orde` : '')
+          resultaat && !niets
+            ? (n => `${n} uitgaande ${n === 1 ? 'betaling' : 'betalingen'}`)(resultaat.teBetalen.length + resultaat.nieuw.length + resultaat.alInOrde) +
+              (resultaat.alInOrde ? ` · ${resultaat.alInOrde} al in orde` : '')
+            : undefined
         }
       >
         {resultaat && (
           <div className="space-y-5 pb-2">
+            {resultaat.mislukt.length > 0 && (
+              <section role="alert" className="rounded-2xl bg-orange-50 dark:bg-orange-900/20 p-4 space-y-3">
+                <div className="flex gap-3">
+                  <span className="material-icons-round text-orange-600 dark:text-orange-400">error_outline</span>
+                  <div className="min-w-0 text-sm">
+                    <p className="font-bold text-orange-800 dark:text-orange-300">
+                      {resultaat.mislukt.length === 1
+                        ? 'Dit bestand kon niet ingelezen worden als factuur'
+                        : `${resultaat.mislukt.length} bestanden konden niet ingelezen worden als factuur`}
+                    </p>
+                    <p className="text-orange-800/80 dark:text-orange-300/80 mt-1">
+                      We vonden er geen uitgaande betaling in. Misschien is het geen afschrift van KBC, of staan er enkel
+                      inkomende betalingen in. Voer de factuur manueel in.
+                    </p>
+                  </div>
+                </div>
+                <ul className="space-y-2">
+                  {resultaat.mislukt.map((file, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <span className="flex-1 min-w-0 truncate text-sm font-semibold">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => manueel(file)}
+                        className="shrink-0 rounded-xl bg-white dark:bg-white/10 px-3 py-2 text-sm font-bold"
+                      >
+                        Manueel invoeren
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             {resultaat.teBetalen.length > 0 && (
               <section className="space-y-2">
                 <p className="text-xs font-bold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">Op betaald zetten</p>
@@ -238,25 +280,36 @@ export const UittrekselAankopen = ({ facturen, periodes, standaardPeriode, onKla
               </section>
             )}
 
-            {!resultaat.teBetalen.length && !resultaat.nieuw.length && (
+            {!niets && !resultaat.teBetalen.length && !resultaat.nieuw.length && (
               <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-4">
                 Alle uitgaande betalingen in dit bestand staan al als betaald in de lijst.
               </p>
             )}
 
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Een CSV wordt niet opgeslagen. Een PDF met één betaling komt als bijlage bij de nieuwe factuur; een foto van de
-              factuur zelf voeg je daarna toe door op de factuur te tikken.
-            </p>
-
-            <button
-              type="button"
-              onClick={bevestig}
-              disabled={bezig || !aantal || zonderNaam}
-              className="w-full rounded-2xl bg-inkt dark:bg-white text-white dark:text-inkt py-4 font-bold disabled:opacity-40"
-            >
-              {bezig ? 'Bezig…' : zonderNaam ? 'Vul de leverancier in' : `${aantal || 'Niets'} ${aantal === 1 ? 'factuur' : 'facturen'} bewaren`}
-            </button>
+            {niets ? (
+              <button
+                type="button"
+                onClick={() => manueel(resultaat.mislukt.length === 1 ? resultaat.mislukt[0] : null)}
+                className="w-full rounded-2xl bg-inkt dark:bg-white text-white dark:text-inkt py-4 font-bold"
+              >
+                Factuur manueel invoeren
+              </button>
+            ) : (
+              <>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Een CSV wordt niet opgeslagen. Een PDF met één betaling komt als bijlage bij de nieuwe factuur; een foto van
+                  de factuur zelf voeg je daarna toe door op de factuur te tikken.
+                </p>
+                <button
+                  type="button"
+                  onClick={bevestig}
+                  disabled={bezig || !aantal || zonderNaam}
+                  className="w-full rounded-2xl bg-inkt dark:bg-white text-white dark:text-inkt py-4 font-bold disabled:opacity-40"
+                >
+                  {bezig ? 'Bezig…' : zonderNaam ? 'Vul de leverancier in' : `${aantal || 'Niets'} ${aantal === 1 ? 'factuur' : 'facturen'} bewaren`}
+                </button>
+              </>
+            )}
           </div>
         )}
       </BottomSheet>
