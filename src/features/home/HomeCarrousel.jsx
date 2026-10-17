@@ -342,20 +342,20 @@ const RankingKaart = ({ positie }) => {
     <article className="h-full rounded-[28px] bg-kaart-event dark:bg-kaart-event-d p-6 flex flex-col text-inkt dark:text-white">
       <Kop label="Ranking" positie={positie} />
       <p className="mt-3 text-base text-slate-600 dark:text-slate-300">Meeste strepen deze periode</p>
-      {/* Top 3: de rijen groeien mee met de kaart, zodat er geen gat is boven de knop */}
-      <ol className="mt-3 flex-1 min-h-0 flex flex-col gap-2">
+      {/* Top 3 met de knop er meteen onder; op een kleine kaart krimpen de rijen, op een grote blijft de ruimte onderaan */}
+      <ol className="mt-3 shrink min-h-0 flex flex-col gap-2">
         {ranking === null && <li className="text-sm text-slate-500">Laden…</li>}
         {ranking?.length === 0 && <li className="text-sm text-slate-500">Nog geen strepen deze periode.</li>}
         {top.map((r, i) => (
           <li
             key={r.user_id}
-            className={`flex-1 min-h-0 max-h-28 flex items-center gap-3 rounded-2xl px-4 text-lg ${
+            className={`basis-[60px] shrink min-h-[36px] flex items-center gap-3 rounded-2xl px-4 text-[17px] ${
               r.user_id === currentUser?.id
                 ? 'bg-inkt text-white dark:bg-white dark:text-inkt'
                 : 'bg-white dark:bg-white/10'
             }`}
           >
-            <span className="text-2xl font-extrabold w-7 tabular-nums">{i + 1}</span>
+            <span className="text-xl font-extrabold w-6 tabular-nums">{i + 1}</span>
             <span className="flex-1 font-bold truncate">{r.naam}</span>
             <span className="font-extrabold tabular-nums">{r.strepen}</span>
           </li>
@@ -368,6 +368,7 @@ const RankingKaart = ({ positie }) => {
       >
         {mijnPlek >= 3 ? `Jij staat ${mijnPlek + 1}e · volledige ranking` : 'Volledige ranking'}
       </button>
+      <div className="flex-1" />
     </article>
   );
 };
