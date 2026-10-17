@@ -4,8 +4,24 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-export default defineConfig({
+const map = path.dirname(fileURLToPath(import.meta.url));
+
+// Demomodus (npm run dev): src/lib/supabase.js wordt vervangen door een nep-Supabase met testdata (src/demo).
+// Zo kan je vrij testen zonder de echte database te raken. npm run dev:echt gebruikt de echte database.
+const demoModus = {
+  name: 'ksa-demo',
+  enforce: 'pre',
+  async resolveId(bron, importeur, opties) {
+    if (!/(^|\/)supabase(\.js)?$/.test(bron) || !importeur || importeur.replace(/\\/g, '/').includes('/src/demo/')) return null;
+    const echt = await this.resolve(bron, importeur, { ...opties, skipSelf: true });
+    if (echt && echt.id.replace(/\\/g, '/').endsWith('/src/lib/supabase.js')) return path.resolve(map, 'src/demo/fakeSupabase.js');
+    return null;
+  },
+};
+
+export default defineConfig(({ mode }) => ({
   plugins: [
+    mode === 'demo' && demoModus,
     react(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -55,7 +71,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(path.dirname(fileURLToPath(import.meta.url)), './src'),
+      '@': path.resolve(map, './src'),
     },
   },
   server: {
@@ -64,4 +80,4 @@ export default defineConfig({
   preview: {
     allowedHosts: true,
   },
-});
+}));
