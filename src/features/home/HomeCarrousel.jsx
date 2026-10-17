@@ -335,26 +335,27 @@ const RankingKaart = ({ positie }) => {
       .catch(() => setRanking([]));
   }, [strepenVersie]);
 
-  const top = (ranking || []).slice(0, 3);
+  const top = (ranking || []).slice(0, 5);
   const mijnPlek = (ranking || []).findIndex(r => r.user_id === currentUser?.id);
 
   return (
-    <article className="h-full rounded-[28px] bg-kaart-event dark:bg-kaart-event-d p-6 flex flex-col text-inkt dark:text-white">
+    <article className="h-full rounded-[28px] bg-kaart-event dark:bg-kaart-event-d p-6 max-[379px]:p-5 flex flex-col text-inkt dark:text-white">
       <Kop label="Ranking" positie={positie} />
-      <p className="mt-6 text-base text-slate-600 dark:text-slate-300">Meeste strepen deze periode</p>
-      <ol className="mt-4 space-y-2 flex-1">
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300 max-[379px]:hidden">Meeste strepen deze periode</p>
+      {/* Top 5: compacte rijen zodat ze in het vierkant passen */}
+      <ol className="mt-2 space-y-1 flex-1 min-h-0 overflow-hidden">
         {ranking === null && <li className="text-sm text-slate-500">Laden…</li>}
         {ranking?.length === 0 && <li className="text-sm text-slate-500">Nog geen strepen deze periode.</li>}
         {top.map((r, i) => (
           <li
             key={r.user_id}
-            className={`flex items-center gap-3 rounded-2xl px-4 py-3 ${
+            className={`flex items-center gap-3 rounded-xl px-3.5 py-1 text-[15px] leading-6 ${
               r.user_id === currentUser?.id
                 ? 'bg-inkt text-white dark:bg-white dark:text-inkt'
                 : 'bg-white dark:bg-white/10'
             }`}
           >
-            <span className="text-2xl font-extrabold w-6 tabular-nums">{i + 1}</span>
+            <span className="text-base font-extrabold w-5 tabular-nums">{i + 1}</span>
             <span className="flex-1 font-bold truncate">{r.naam}</span>
             <span className="font-bold tabular-nums">{r.strepen}</span>
           </li>
@@ -363,9 +364,9 @@ const RankingKaart = ({ positie }) => {
       <button
         type="button"
         onClick={() => navigate('/strepen/ranking')}
-        className="w-full rounded-2xl bg-white dark:bg-white/10 py-3 text-sm font-bold"
+        className="mt-2 w-full rounded-2xl bg-white dark:bg-white/10 py-2.5 max-[379px]:py-2 text-sm font-bold"
       >
-        {mijnPlek >= 3 ? `Jij staat ${mijnPlek + 1}e · volledige ranking` : 'Volledige ranking'}
+        {mijnPlek >= 5 ? `Jij staat ${mijnPlek + 1}e · volledige ranking` : 'Volledige ranking'}
       </button>
     </article>
   );
