@@ -81,7 +81,7 @@ export async function fetchSheetKoppeling() {
   return data;
 }
 
-/** actie: 'aanmaken' | 'sync' | 'koppeling' (extra: { aan: true/false }) */
+/** actie: 'koppelen' (extra: { link }) | 'sync' | 'koppeling' (extra: { aan: true/false }) | 'robot' */
 export async function sheetActie(actie, extra = {}) {
   const { data, error } = await supabase.functions.invoke('financien-sheet', { body: { actie, ...extra } });
   if (error) {

@@ -561,6 +561,9 @@ const functions = {
       return { data: { url: 'https://docs.google.com/spreadsheets/', demo: true, ongewijzigd: true }, error: null };
     }
     if (naam === 'drive-fotos') return { data: { albums: [], fotos: [] }, error: null };
+    if (naam === 'financien-sheet' && body?.actie === 'robot') {
+      return { data: { email: 'ksa-sheets@ksa-app-511821.iam.gserviceaccount.com' }, error: null };
+    }
     if (naam === 'send-push') return { data: { verzonden: 0 }, error: null };
     return { data: null, error: { message: `"${naam}" werkt niet in de demomodus (${body?.actie || 'geen actie'})` } };
   },

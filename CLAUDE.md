@@ -103,14 +103,14 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - **Herinneringen**: met één knop een melding (en push) naar wie nog niet betaalde, per betaling of per leider; optioneel ook bij het aanmaken.
 - **Bankuittreksel**: het CSV-inlezen werkt voor drankfacturen én andere betalingen.
 - **Mijn rekening** (alle leiding): eigen open drankfacturen, eigen andere betalingen met QR en deadline, en de voorlopige rekening van de lopende drankperiode.
-- **Google Sheet, in twee richtingen** (edge function `financien-sheet`, logica in `supabase/functions/_shared/financienSheet.js`, getest in `tests/financienSheet.test.js`):
+- **Google Sheet, in twee richtingen** (edge function `financien-sheet`, logica in `supabase/functions/_shared/financienSheet.js`, getest in `tests/financienSheet.test.js`). Zelfde robot als de Drank-Sheet (service account): Financiën maakt zelf een leeg rekenblad, deelt het met de robot (bewerker) en plakt de link in Financiën → Financiën-Sheet → Rekenblad koppelen. De app maakt de tabbladen en vult ze.
   - tabblad *Betalingen*: één rij per bedrag per leider; aanpasbaar in de Sheet: Betaald, Betaald op, Opmerking en het bedrag van andere betalingen. Een nieuwe rij (Omschrijving + Leider + Bedrag) wordt een nieuwe andere betaling.
   - tabblad *Overzicht*: per leider wat openstaat (enkel lezen).
   - tabblad *Strepen*: aantal strepen per leider per drank in de lopende periode, met totalen per drank en de prijs per streep uit de app (enkel lezen). Elke streep (erbij of eraf) en elke prijswijziging staat er binnen enkele seconden; bij het afsluiten van een periode begint het opnieuw. Zo kan Financiën/Drankteam de prijs per streep ook in de Sheet berekenen.
   - app → Sheet: binnen enkele seconden (databasetrigger + pg_net). Sheet → app: elke 30 seconden (pg_cron) of met "Nu synchroniseren".
   - wijzigingen worden herkend door te vergelijken met de vorige synchronisatie; past iemand dezelfde cel tegelijk in de app en in de Sheet aan, dan wint de app. Verwijderen gebeurt enkel in de app.
   - **Noodplan (terug naar de Sheet zoals vroeger)**: schakelaar "Koppeling met de app" AAN/UIT in de Sheet zelf (tabblad Uitleg, cel B2) én in de app. Op UIT raakt de app het rekenblad niet meer aan; werkt ook als de app plat ligt. Terug op AAN: eerst een reservekopie, dan neemt de app de aanpassingen uit de Sheet over (betaald, datums, opmerkingen, bedragen, nieuwe rijen) en zet ze terug wat de app beheert (verwijderde rijen, grijze kolommen, Overzicht, Strepen).
-  - **Reservekopie**: elke dag een losse, niet-gekoppelde kopie van het rekenblad in dezelfde Drive-map, 14 dagen bewaard.
+  - **Reservekopie**: de robot heeft geen eigen opslag en maakt geen kopieën; Google bewaart elke versie (Bestand → Versiegeschiedenis).
   - **Veiligheid**: zijn de kolommen van Betalingen veranderd (bv. een kolom ingevoegd), dan weigert de app te synchroniseren tot ze terug kloppen.
 
 ### Friet — behouden

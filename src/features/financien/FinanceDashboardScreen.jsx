@@ -7,6 +7,7 @@ import { euro } from '../../lib/geld';
 import * as fin from '../../lib/financien';
 import { UittrekselInlezen } from '../drank/UittrekselInlezen';
 import { DrankSheetKaart } from './DrankSheetKaart';
+import { SheetKoppeling } from './SheetKoppeling';
 import { BetalingSheet } from './BetalingSheet';
 import { LeiderSheet } from './LeiderSheet';
 import { NieuweBetalingSheet } from './NieuweBetalingSheet';
@@ -188,6 +189,7 @@ export const FinanceDashboardScreen = () => {
             </section>
 
             <UittrekselInlezen facturen={uittrekselPosten} onBetaald={zetBetaaldVanUittreksel} />
+            <SheetKoppeling onGesynchroniseerd={laad} />
             <DrankSheetKaart />
             {/* Aankoopfacturen (brouwer, drankcentrale, ...), zie AankoopfacturenScreen */}
             <button
