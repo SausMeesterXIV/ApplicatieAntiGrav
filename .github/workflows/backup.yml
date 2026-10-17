@@ -1,0 +1,58 @@
+# Wekelijkse backup van de database (gratis Supabase maakt zelf geen downloadbare backups).
+# De backup wordt VERSLEUTELD (AES-256, wachtwoord BACKUP_WACHTWOORD) en 90 dagen bewaard als artifact van deze
+# workflow (Actions > Wekelijkse backup > een run > Artifacts). Nodig: twee repository-secrets
+#   SUPABASE_DB_URL     postgresql://postgres.<ref>:<databasewachtwoord>@aws-1-eu-central-1.pooler.supabase.com:5432/postgres
+#   BACKUP_WACHTWOORD   zelf gekozen; zonder dit wachtwoord is de backup onleesbaar (ook voor jezelf!)
+# Terugzetten: gpg --decrypt backup-....sql.gz.gpg | gunzip > backup.sql  (zie supabase/README.md)
+name: Wekelijkse backup
+
+on:
+  schedule:
+    - cron: "23 2 * * 0" # elke zondagnacht
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Secrets aanwezig?
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          WACHTWOORD: ${{ secrets.BACKUP_WACHTWOORD }}
+        run: |
+          test -n "$DB" || { echo "Secret SUPABASE_DB_URL ontbreekt"; exit 1; }
+          test -n "$WACHTWOORD" || { echo "Secret BACKUP_WACHTWOORD ontbreekt"; exit 1; }
+
+      - name: pg_dump 17 installeren (zelfde versie als de database)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+
+      - name: Backup maken en versleutelen
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          WACHTWOORD: ${{ secrets.BACKUP_WACHTWOORD }}
+        run: |
+          naam="backup-$(date -u +%Y-%m-%d).sql.gz.gpg"
+          # Tabellen en data van de app (public), accounts (auth) en de lijst van bestanden (storage)
+          /usr/lib/postgresql/17/bin/pg_dump "$DB" --no-owner --no-privileges \
+            --schema=public --schema=auth --schema=storage \
+            | gzip -9 \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase "$WACHTWOORD" -o "$naam"
+          test -s "$naam"
+          ls -la "$naam"
+          echo "NAAM=$naam" >> "$GITHUB_ENV"
+
+      - name: Bewaren (90 dagen)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NAAM }}
+          path: ${{ env.NAAM }}
+          retention-days: 90
+          if-no-files-found: error

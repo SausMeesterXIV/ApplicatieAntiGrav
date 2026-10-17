@@ -1,0 +1,25 @@
+# Houdt het gratis Supabase-project wakker: Supabase pauzeert een gratis project na een week zonder gebruik.
+# Elke dag de databasefunctie ping() aanroepen met de PUBLIEKE sleutel (die zit ook in de app zelf, geen geheim).
+# Tweede vangnet naast de Vercel-cron /api/keepalive (vercel.json), die hetzelfde doet.
+name: Supabase wakker houden
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # elke dag rond 8u Belgische tijd
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Database aanspreken
+        env:
+          URL: https://ukndvvsqreidugcfuiqq.supabase.co
+          SLEUTEL: sb_publishable_vKdGw8v2RvVte65dqPNrvw_dSomFy7G
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$URL/rest/v1/rpc/ping" -H "apikey: $SLEUTEL" -H "Content-Type: application/json" -d "{}")
+          echo "Antwoord: $code"
+          test "$code" = "200"

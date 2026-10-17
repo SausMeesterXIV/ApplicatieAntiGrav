@@ -210,6 +210,24 @@ die `ping()` aanroept (migratie `001800`). Nodig op Vercel: de variabelen `VITE_
 `VITE_SUPABASE_ANON_KEY` (staan er al voor de app). Optioneel: zet ook `CRON_SECRET` (een willekeurige lange tekst),
 dan kan enkel Vercel zelf de functie aanroepen.
 Controleren: Vercel-dashboard > project > Settings > Cron Jobs (of open `/api/keepalive`: `"ok": true`).
+Tweede vangnet: de GitHub-workflow `.github/workflows/wakker-houden.yml` roept elke dag `ping()` aan met de publieke
+sleutel. Let op: in een openbare repository zet GitHub geplande workflows na 60 dagen zonder commits stil.
+
+## 5. Wekelijkse backup (GitHub Actions, versleuteld)
+
+`.github/workflows/backup.yml` maakt elke zondagnacht een volledige dump (schema's public, auth en storage), versleutelt
+ze met AES-256 en bewaart ze 90 dagen als artifact (Actions > Wekelijkse backup > run > Artifacts).
+Nodig: twee repository-secrets (GitHub > Settings > Secrets and variables > Actions > New repository secret):
+- `SUPABASE_DB_URL`: `postgresql://postgres.<ref>:<databasewachtwoord>@aws-1-eu-central-1.pooler.supabase.com:5432/postgres`
+  (Supabase-dashboard > Connect > Session pooler). Na een reset van het databasewachtwoord ook hier aanpassen.
+- `BACKUP_WACHTWOORD`: zelf gekozen, lang. Bewaar het goed (bv. in een wachtwoordbeheerder): zonder is de backup onleesbaar.
+
+Meteen een backup maken: Actions > Wekelijkse backup > Run workflow.
+Terugzetten (enkel als het echt nodig is, eerst overleggen):
+```
+gpg --decrypt backup-JJJJ-MM-DD.sql.gz.gpg | gunzip > backup.sql
+psql "<SUPABASE_DB_URL>" -f backup.sql   # best in een nieuw/leeg project, niet bovenop de live database
+```
 
 ## Niet meer gebruikt
 
