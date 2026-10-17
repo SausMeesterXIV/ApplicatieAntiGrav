@@ -14,7 +14,7 @@ import { FRITUUR_STATUS, FRITUUR_DB_CATEGORIES } from '../../lib/constants';
 import { hasRecht } from '../../lib/roleUtils';
 import { euro } from '../../lib/geld';
 
-const TABS = ['favorieten', 'frieten', 'snacks', 'sauzen', 'huisbereid', 'burgers', 'spaghetti'];
+const TABS = ['favorieten', ...FRITUUR_DB_CATEGORIES];
 
 export const FriesScreen = () => {
   const navigate = useNavigate();
@@ -647,8 +647,10 @@ export const FriesScreen = () => {
               onChange={e => setNewItemCategory(e.target.value)}
               className="w-full p-2 text-sm bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 rounded dark:text-white"
             >
+              <option value="actie">Actie</option>
               <option value="frieten">Frieten</option>
               <option value="snacks">Snacks</option>
+              <option value="vegetarisch">Vegetarisch</option>
               <option value="sauzen">Sauzen</option>
               <option value="huisbereid">Huisbereid</option>
               <option value="burgers">Burgers</option>

@@ -6,7 +6,7 @@ export const FRITUUR_STATUS = {
   COMPLETED: 'completed',
 };
 
-export const FRITUUR_DB_CATEGORIES = ['frieten', 'snacks', 'sauzen', 'huisbereid', 'burgers', 'spaghetti'];
+export const FRITUUR_DB_CATEGORIES = ['actie', 'frieten', 'snacks', 'vegetarisch', 'sauzen', 'huisbereid', 'burgers', 'spaghetti'];
 
 export const SPECIAL_DRINKS = {
   PINT_FREEDOM: 'Freedom',

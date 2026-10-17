@@ -16,6 +16,10 @@ const getCategoryStyling = category => {
       return { emoji: '🧑‍🍳', color: 'bg-green-100 dark:bg-green-900/30' };
     case 'spaghetti':
       return { emoji: '🍝', color: 'bg-amber-100 dark:bg-amber-900/30' };
+    case 'actie':
+      return { emoji: '⭐', color: 'bg-pink-100 dark:bg-pink-900/30' };
+    case 'vegetarisch':
+      return { emoji: '🥦', color: 'bg-lime-100 dark:bg-lime-900/30' };
     case 'dranken':
       return { emoji: '🥤', color: 'bg-purple-100 dark:bg-purple-900/30' };
     default:
