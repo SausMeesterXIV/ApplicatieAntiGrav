@@ -40,6 +40,8 @@ export default defineConfig({
       workbox: {
         // Pushmeldingen tonen en openen (public/push-sw.js)
         importScripts: ['push-sw.js'],
+        // pdf.js (bankafschrift lezen in Aankoopfacturen) enkel laden wanneer iemand een PDF kiest
+        globIgnores: ['**/pdf-*.js', '**/pdf.worker*'],
         // Supabase-data wordt bewust NIET gecachet: strepen, saldo en facturen moeten altijd actueel zijn.
         // (Vroeger stond hier StaleWhileRevalidate, waardoor de app eerst verouderde gegevens toonde.)
       }

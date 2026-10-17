@@ -212,3 +212,35 @@ export function koppelAankopen(verrichtingen, facturen) {
   }
   return { teBetalen, nieuw, alInOrde };
 }
+
+// Hoofdregel van een verrichting in een KBC-afschrift (PDF uit KBC Mobile):
+// "16-10-2026 COLRUYT AALTER -54,20 EUR"
+const PDF_HOOFDREGEL = /^(\d{2}-\d{2}-\d{4})\s+(.+?)\s+([+-]?\d{1,3}(?:\.\d{3})*,\d{2})(?:\s*EUR)?$/;
+
+/**
+ * Uitgaande verrichtingen uit de regels van een PDF-afschrift (zie pdfRegels).
+ * Onder de hoofdregel staan labels met de waarde op de volgende regel, bv. "Mededeling" / "+++123/4567/89012+++".
+ */
+export function verrichtingenUitPdf(regels) {
+  const blokken = [];
+  for (const regel of regels) {
+    const m = regel.match(PDF_HOOFDREGEL);
+    if (m) blokken.push({ datum: leesDatum(m[1]), naam: m[2].trim(), bedrag: leesBedrag(m[3]), regels: [] });
+    else if (blokken.length) blokken[blokken.length - 1].regels.push(regel);
+  }
+  return blokken
+    .filter(b => b.bedrag !== null && b.bedrag < 0)
+    .map(b => {
+      const code = [b.naam, ...b.regels].flatMap(mededelingenIn)[0] || null;
+      const label = b.regels.findIndex(r => /^(vrije |gestructureerde )?mededeling$/i.test(r));
+      const vrij = label > -1 ? b.regels[label + 1] || '' : '';
+      return {
+        datum: b.datum,
+        bedrag: Math.round(-b.bedrag * 100) / 100,
+        tegenpartij: b.naam,
+        mededeling: (code ? mooieMededeling(code) : vrij).slice(0, 140),
+        code,
+        tekst: [b.naam, ...b.regels].join(' ').toLowerCase(),
+      };
+    });
+}

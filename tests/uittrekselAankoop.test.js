@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { koppelAankopen, leesDatum, parseCsv, uitgaandeVerrichtingen } from '../src/lib/uittreksel.js';
+import { koppelAankopen, leesDatum, parseCsv, uitgaandeVerrichtingen, verrichtingenUitPdf } from '../src/lib/uittreksel.js';
 
 // Vereenvoudigde KBC-export: Naam is de eigen rekening, Naam tegenpartij de leverancier
 const kbc = [
@@ -53,4 +53,31 @@ test('koppelAankopen: op mededeling, op naam + bedrag, enkel bedrag, al betaald 
 
   const leeg = koppelAankopen(v, []);
   assert.equal(leeg.nieuw.length, 3);
+});
+
+test('verrichtingenUitPdf: KBC Mobile-afschrift, kaartbetaling en overschrijving', () => {
+  const regels = [
+    'KBC-Rekening',
+    'BE00 0000 0000 0000 EUR',
+    'Elektronisch afschrift',
+    '16-10-2026 COLRUYT AALTER -54,20 EUR',
+    'via Debit Mastercard',
+    'Datum',
+    '16-10-2026 om 12.00 uur',
+    '17-10-2026 DRANKCENTRALE AALTER -1.245,80 EUR',
+    'Mededeling',
+    '+++123/4567/89012+++',
+    '17-10-2026 JAN PEETERS 12,50 EUR',
+    'Mededeling',
+    'terugbetaling',
+    'KBC Bank NV - Havenlaan 2 - 1080 Brussel - België',
+  ];
+  const v = verrichtingenUitPdf(regels);
+  assert.deepEqual(
+    v.map(x => [x.datum, x.bedrag, x.tegenpartij, x.mededeling]),
+    [
+      ['2026-10-16', 54.2, 'COLRUYT AALTER', ''],
+      ['2026-10-17', 1245.8, 'DRANKCENTRALE AALTER', '+++123/4567/89012+++'],
+    ],
+  );
 });

@@ -3,7 +3,8 @@ import { BottomSheet } from '../../components/Modal';
 import { showToast } from '../../components/Toast';
 import * as db from '../../lib/supabaseService';
 import { euro } from '../../lib/geld';
-import { koppelAankopen, leesBestand, parseCsv, uitgaandeVerrichtingen } from '../../lib/uittreksel';
+import { koppelAankopen, leesBestand, parseCsv, uitgaandeVerrichtingen, verrichtingenUitPdf } from '../../lib/uittreksel';
+import { pdfRegels } from '../../lib/pdfTekst';
 
 // Aankoopfacturen uit een bankuittreksel (CSV uit de bank-app): uitgaande betalingen die bij een factuur horen
 // zetten we op betaald, de andere kan je in één keer als nieuwe (betaalde) factuur toevoegen.
@@ -20,12 +21,21 @@ export const UittrekselAankopen = ({ facturen, periodes, standaardPeriode, onKla
   const [bezig, setBezig] = useState(false);
 
   const lees = async e => {
-    const file = e.target.files?.[0];
+    const files = [...(e.target.files || [])];
     e.target.value = '';
-    if (!file) return;
+    if (!files.length) return;
     try {
-      const verrichtingen = uitgaandeVerrichtingen(parseCsv(await leesBestand(file)));
-      if (!verrichtingen.length) return showToast('Geen uitgaande betalingen gevonden. Is het een CSV-export van de bank?', 'warning');
+      const verrichtingen = [];
+      for (const file of files) {
+        if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
+          // PDF uit KBC Mobile: de PDF zelf gaat mee als bijlage bij een nieuwe factuur
+          const uitPdf = verrichtingenUitPdf(await pdfRegels(file));
+          verrichtingen.push(...uitPdf.map(v => ({ ...v, bestand: uitPdf.length === 1 ? file : null })));
+        } else {
+          verrichtingen.push(...uitgaandeVerrichtingen(parseCsv(await leesBestand(file))));
+        }
+      }
+      if (!verrichtingen.length) return showToast('Geen uitgaande betalingen gevonden in dit bestand', 'warning');
       const r = koppelAankopen(verrichtingen, facturen);
       setResultaat(r);
       setBetalen(r.teBetalen.filter(x => x.zeker).map(x => x.factuur.id));
@@ -33,7 +43,7 @@ export const UittrekselAankopen = ({ facturen, periodes, standaardPeriode, onKla
       setPeriodId(standaardPeriode || '');
     } catch (err) {
       console.error(err);
-      showToast('Kon het bestand niet lezen. Is het een CSV-export van de bank?', 'error');
+      showToast('Kon het bestand niet lezen. Is het een CSV of PDF van de bank?', 'error');
     }
   };
 
@@ -61,15 +71,18 @@ export const UittrekselAankopen = ({ facturen, periodes, standaardPeriode, onKla
       }
       for (const i of gekozenNieuw) {
         const v = resultaat.nieuw[i];
-        await db.bewaarAankoopfactuur({
-          period_id: periodId,
-          leverancier: nieuw[i].trim().slice(0, 80),
-          bedrag: v.bedrag,
-          mededeling: v.mededeling || null,
-          factuurdatum: v.datum,
-          betaald: true,
-          notitie: 'Uit bankuittreksel',
-        });
+        await db.bewaarAankoopfactuur(
+          {
+            period_id: periodId,
+            leverancier: nieuw[i].trim().slice(0, 80),
+            bedrag: v.bedrag,
+            mededeling: v.mededeling || null,
+            factuurdatum: v.datum,
+            betaald: true,
+            notitie: 'Uit bankuittreksel',
+          },
+          v.bestand || null,
+        );
         gelukt++;
       }
       showToast(`${gelukt} ${gelukt === 1 ? 'factuur' : 'facturen'} bijgewerkt`, 'success');
@@ -94,15 +107,27 @@ export const UittrekselAankopen = ({ facturen, periodes, standaardPeriode, onKla
 
   return (
     <>
-      <input ref={invoer} type="file" accept=".csv,.txt,text/csv" className="hidden" onChange={lees} />
-      <button
-        type="button"
-        disabled={!periodes.length}
-        onClick={() => invoer.current?.click()}
-        className="w-full rounded-2xl bg-kaart-event dark:bg-kaart-event-d py-3.5 font-bold flex items-center justify-center gap-2 disabled:opacity-40"
-      >
-        <span className="material-icons-round">account_balance</span> Uit bankuittreksel (CSV)
-      </button>
+      <input ref={invoer} type="file" multiple accept=".csv,.txt,text/csv,.pdf,application/pdf" className="hidden" onChange={lees} />
+      <div className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d p-4 space-y-3">
+        <button
+          type="button"
+          disabled={!periodes.length}
+          onClick={() => invoer.current?.click()}
+          className="w-full rounded-xl bg-white dark:bg-white/10 py-3.5 font-bold flex items-center justify-center gap-2 disabled:opacity-40"
+        >
+          <span className="material-icons-round">account_balance</span> Uit de bank (PDF of CSV)
+        </button>
+        <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1.5">
+          <li>
+            <span className="font-semibold text-inkt dark:text-white">PDF:</span> in de KBC-app, tik op de betaling en bewaar
+            ze als PDF. Je kan er meerdere tegelijk kiezen.
+          </li>
+          <li>
+            <span className="font-semibold text-inkt dark:text-white">CSV:</span> op de website KBC Touch (computer), bij de
+            rekening de verrichtingen exporteren als CSV.
+          </li>
+        </ul>
+      </div>
 
       <BottomSheet
         isOpen={!!resultaat}
@@ -110,7 +135,7 @@ export const UittrekselAankopen = ({ facturen, periodes, standaardPeriode, onKla
         title="Bankuittreksel"
         subtitle={
           resultaat &&
-          `${resultaat.teBetalen.length + resultaat.nieuw.length + resultaat.alInOrde} uitgaande betalingen` +
+          (n => `${n} uitgaande ${n === 1 ? 'betaling' : 'betalingen'}`)(resultaat.teBetalen.length + resultaat.nieuw.length + resultaat.alInOrde) +
             (resultaat.alInOrde ? ` · ${resultaat.alInOrde} al in orde` : '')
         }
       >
@@ -220,7 +245,8 @@ export const UittrekselAankopen = ({ facturen, periodes, standaardPeriode, onKla
             )}
 
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Het bestand wordt niet opgeslagen. Een foto van de factuur voeg je daarna toe door op de factuur te tikken.
+              Een CSV wordt niet opgeslagen. Een PDF met één betaling komt als bijlage bij de nieuwe factuur; een foto van de
+              factuur zelf voeg je daarna toe door op de factuur te tikken.
             </p>
 
             <button
