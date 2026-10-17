@@ -7,13 +7,14 @@ export const Bollenrij = ({ bollen, nieuw = new Set() }) => {
   const navigate = useNavigate();
 
   return (
-    <nav aria-label="Snel naar" className="-mx-4 overflow-x-auto no-scrollbar">
+    <nav aria-label="Snel naar" data-rondleiding="bollen" className="-mx-4 overflow-x-auto no-scrollbar">
       <ul className="flex gap-3 px-4 pb-1 pt-1 w-max">
         {bollen.map(b => (
           <li key={b.id}>
             <button
               type="button"
               onClick={() => navigate(b.route)}
+              data-rondleiding={`bol-${b.id}`}
               className="flex flex-col items-center gap-1.5 w-[68px] focus:outline-none group"
               aria-label={nieuw.has(b.id) ? `${b.label} (nieuw)` : b.label}
             >

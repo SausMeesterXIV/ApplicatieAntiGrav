@@ -282,6 +282,7 @@ const StrepenKaart = ({ positie }) => {
           <button
             type="button"
             onClick={() => streep(snel)}
+            data-rondleiding="snel-streep"
             className="w-full rounded-2xl bg-inkt dark:bg-white px-5 py-4 flex items-center justify-between text-white dark:text-inkt active:scale-[0.99]"
           >
             <span className="text-xl font-bold truncate">{snel.name}</span>

@@ -164,6 +164,7 @@ export const SettingsScreen = () => {
             onClick={() => fotoInvoer.current?.click()}
             className="relative shrink-0 rounded-full"
             aria-label="Profielfoto wijzigen"
+            data-rondleiding="profielfoto"
           >
             <UserAvatar user={currentUser || undefined} size="lg" />
             <span className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-inkt dark:bg-white text-white dark:text-inkt flex items-center justify-center">
@@ -182,26 +183,34 @@ export const SettingsScreen = () => {
           <Rij label="Wachtwoord wijzigen" onClick={() => setWachtwoordOpen(true)} />
         </Groep>
 
+        <div data-rondleiding="startscherm-instellingen">
         <Groep titel="Startscherm">
           <Rij label="Volgorde bollen" waarde={`${aantalBollen} bollen`} onClick={() => navigate('/settings/bollen')} />
           <Rij label="Snelle drank" waarde={snelleDrank?.name || 'Kies'} onClick={() => setDrankOpen(true)} />
         </Groep>
+        </div>
 
+        <div data-rondleiding="meldingen-instellingen">
         <Groep titel="Meldingen">
           <PushInstelling />
           <Rij label="Alle meldingen" onClick={() => navigate('/notificaties')} />
         </Groep>
+        </div>
 
+        <div data-rondleiding="weergave">
         <Groep titel="Weergave">
           <Schakelaar label="Donkere weergave" aan={isDark} onChange={toggleDarkMode} />
           <Schakelaar label="Trillen bij acties" aan={hapticOn} onChange={toggleHaptic} />
         </Groep>
+        </div>
 
         <Groep titel="Beheer">
           {isHoofdleiding(currentUser) && (
             <Rij label="Rollen en werkgroepen" onClick={() => navigate('/admin/rollen')} />
           )}
-          <Rij label="Rondleiding bekijken" onClick={openRondleiding} />
+          <div data-rondleiding="rondleiding-knop">
+            <Rij label="Rondleiding bekijken" onClick={openRondleiding} />
+          </div>
           <Rij label="Credits" onClick={() => navigate('/credits')} />
         </Groep>
 

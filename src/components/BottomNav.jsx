@@ -41,6 +41,7 @@ export const BottomNav = ({ notifications = [] }) => {
               type="button"
               onClick={() => ga(item)}
               aria-label={item.label}
+              data-rondleiding={`nav-${item.id}`}
               aria-current={actief ? 'page' : undefined}
               className={`relative flex items-center justify-center w-12 h-12 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                 actief ? 'text-inkt dark:text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
@@ -77,6 +78,7 @@ export const Zijbalk = ({ notifications = [] }) => {
               <button
                 type="button"
                 onClick={() => ga(item)}
+                data-rondleiding={`nav-${item.id}`}
                 aria-current={actief ? 'page' : undefined}
                 className={`w-full flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                   actief

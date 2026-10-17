@@ -122,6 +122,7 @@ export const StrepenScreen = () => {
           <button
             type="button"
             onClick={() => navigate('/mijn-factuur')}
+            data-rondleiding="rekening"
             className="mt-6 w-full rounded-2xl bg-white dark:bg-white/10 px-5 py-4 flex items-center justify-between text-left active:scale-[0.99]"
           >
             <span className="min-w-0">
@@ -135,7 +136,7 @@ export const StrepenScreen = () => {
         </article>
 
         {/* Strepen zetten */}
-        <section className="relative rounded-[28px] bg-kaart-event dark:bg-kaart-event-d p-5 space-y-5">
+        <section data-rondleiding="strepen-zetten" className="relative rounded-[28px] bg-kaart-event dark:bg-kaart-event-d p-5 space-y-5">
           {plusEen && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
               <span className="text-5xl font-extrabold animate-bounce-up">+{plusEen}</span>
