@@ -103,3 +103,112 @@ export function zoekBetalingen(rijen, openFacturen) {
   }
   return [...resultaat.values()];
 }
+
+// ==================== Aankoopfacturen (uitgaande betalingen) ====================
+
+/** "31/10/2026", "31-10-2026", "31.10.2026" of "2026-10-31" -> "2026-10-31"; anders null. */
+export function leesDatum(waarde) {
+  const s = String(waarde || '').trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return null;
+}
+
+/** Gestructureerde mededeling in de vorm +++123/4567/89012+++ */
+export const mooieMededeling = code => `+++${code.slice(0, 3)}/${code.slice(3, 7)}/${code.slice(7)}+++`;
+
+// Kolomnamen van Belgische banken (KBC, Belfius, BNP, ING, Argenta, ...); de eerste die past wint
+const KOLOMMEN = {
+  datum: [/uitvoeringsdatum/, /boekingsdatum/, /^datum/, /date/],
+  bedrag: [/^bedrag$/, /^bedrag(?!.*valuta)/, /amount/],
+  tegenpartij: [/naam.*tegenpartij/, /tegenpartij.*naam/, /naam.*begunstigde/, /counterparty name/, /^tegenpartij$/, /^naam$/],
+  mededeling: [/mededeling/, /communicatie/, /bericht/],
+  omschrijving: [/omschrijving/, /description/, /details/], // enkel als er geen mededelingskolom is
+};
+
+function kolommenUit(kop) {
+  const namen = kop.map(c => c.trim().toLowerCase());
+  const zoek = patronen => {
+    for (const p of patronen) {
+      const i = namen.findIndex(n => p.test(n) && !/rekening|saldo|iban|bic/.test(n));
+      if (i > -1) return i;
+    }
+    return -1;
+  };
+  const alle = patronen => namen.map((n, i) => (patronen.some(p => p.test(n)) ? i : -1)).filter(i => i > -1);
+  const mededeling = alle(KOLOMMEN.mededeling);
+  return {
+    datum: zoek(KOLOMMEN.datum),
+    bedrag: zoek(KOLOMMEN.bedrag),
+    tegenpartij: zoek(KOLOMMEN.tegenpartij),
+    mededeling: mededeling.length ? mededeling : alle(KOLOMMEN.omschrijving),
+  };
+}
+
+/**
+ * Uitgaande verrichtingen uit een uittreksel: [{ datum, bedrag (positief), tegenpartij, mededeling, code, tekst }].
+ * Met een kopregel gebruiken we de kolommen; zonder kopregel zoeken we per rij een datum en een negatief bedrag.
+ */
+export function uitgaandeVerrichtingen(rijen) {
+  const kopIndex = rijen.slice(0, 15).findIndex(r => {
+    const k = kolommenUit(r);
+    return k.bedrag > -1 && k.datum > -1;
+  });
+  const k = kopIndex > -1 ? kolommenUit(rijen[kopIndex]) : null;
+  const resultaat = [];
+  for (const rij of rijen.slice(kopIndex + 1)) {
+    const bedrag = k ? leesBedrag(rij[k.bedrag]) : rij.map(leesBedrag).find(n => n !== null && n < 0);
+    if (bedrag == null || bedrag >= 0) continue;
+    const datum = k ? leesDatum(rij[k.datum]) : rij.map(leesDatum).find(Boolean) || null;
+    const vrij = k
+      ? k.mededeling.map(i => (rij[i] || '').trim()).filter(Boolean).join(' ')
+      : '';
+    const code = rij.flatMap(mededelingenIn)[0] || null;
+    resultaat.push({
+      datum,
+      bedrag: Math.round(-bedrag * 100) / 100,
+      tegenpartij: k && k.tegenpartij > -1 ? (rij[k.tegenpartij] || '').trim() : '',
+      mededeling: (code ? mooieMededeling(code) : vrij.replace(/\s+/g, ' ')).slice(0, 140),
+      code,
+      tekst: rij.join(' ').toLowerCase(),
+    });
+  }
+  return resultaat;
+}
+
+/**
+ * Koppelt uitgaande verrichtingen aan aankoopfacturen.
+ *  - zelfde gestructureerde mededeling: zeker
+ *  - zelfde bedrag en de naam van de leverancier staat in de rij: zeker
+ *  - enkel zelfde bedrag: misschien (niet vooraf aangevinkt)
+ * Geeft { teBetalen: [{ factuur, verrichting, zeker }], nieuw: [verrichting], alInOrde: aantal }.
+ * Een verrichting die bij een al betaalde factuur hoort, telt als "al in orde" en komt niet bij nieuw.
+ */
+export function koppelAankopen(verrichtingen, facturen) {
+  const gebruikt = new Set();
+  const teBetalen = [];
+  const nieuw = [];
+  let alInOrde = 0;
+  const zelfdeBedrag = (f, v) => Math.abs(Number(f.bedrag) - v.bedrag) < 0.005;
+  const naamInRij = (f, v) => {
+    const woord = String(f.leverancier || '').toLowerCase().split(/\s+/).find(w => w.length >= 3);
+    return !!woord && v.tekst.includes(woord);
+  };
+  for (const v of verrichtingen) {
+    const kandidaten = facturen.filter(f => !gebruikt.has(f.id));
+    const opCode = v.code && kandidaten.find(f => cijfers(f.mededeling) === v.code);
+    const opNaam = !opCode && kandidaten.find(f => zelfdeBedrag(f, v) && naamInRij(f, v));
+    const opBedrag = !opCode && !opNaam && kandidaten.find(f => zelfdeBedrag(f, v) && !f.betaald);
+    const factuur = opCode || opNaam || opBedrag;
+    if (!factuur) {
+      nieuw.push(v);
+      continue;
+    }
+    gebruikt.add(factuur.id);
+    if (factuur.betaald) alInOrde++;
+    else teBetalen.push({ factuur, verrichting: v, zeker: !opBedrag });
+  }
+  return { teBetalen, nieuw, alInOrde };
+}

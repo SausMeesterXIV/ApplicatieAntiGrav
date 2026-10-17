@@ -6,6 +6,7 @@ import { showToast } from '../../components/Toast';
 import * as db from '../../lib/supabaseService';
 import { euro } from '../../lib/geld';
 import { MAX_FOTO_MB, verkleinFoto } from '../../lib/foto';
+import { UittrekselAankopen } from './UittrekselAankopen';
 
 // Aankoopfacturen (migratie 003800): facturen die KSA krijgt (brouwer, drankcentrale, ...), voor Team Drank en
 // Financiën. Per factuur een bedrag, mededeling, datum, betaald en een foto of PDF; gebundeld per drankperiode.
@@ -165,6 +166,7 @@ export const AankoopfacturenScreen = () => {
         >
           <span className="material-icons-round">add_a_photo</span> Nieuwe factuur
         </button>
+        <UittrekselAankopen facturen={facturen} periodes={periodes} standaardPeriode={openPeriode?.id || periodes[0]?.id} onKlaar={laad} />
 
         {laden && <p className="px-2 text-sm text-gray-500">Laden…</p>}
 
