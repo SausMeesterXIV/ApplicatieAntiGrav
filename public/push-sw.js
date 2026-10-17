@@ -10,14 +10,33 @@ self.addEventListener('push', event => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'KSA LeidingsApp', {
-      body: data.body || '',
-      icon: '/pwa-192x192.png',
-      badge: '/pwa-192x192.png',
-      tag: data.tag,
-      data: { url: data.url || '/notificaties' },
-    })
+    ruimVervallenOp().then(() =>
+      self.registration.showNotification(data.title || 'KSA LeidingsApp', {
+        body: data.body || '',
+        icon: '/pwa-192x192.png',
+        badge: '/pwa-192x192.png',
+        tag: data.tag,
+        // verloopt_op: bv. "je kan friet bestellen" verdwijnt na het besteluur (zie ruimVervallenOp)
+        data: { url: data.url || '/notificaties', verloopt_op: data.verloopt_op || null },
+      })
+    )
   );
+});
+
+// Meldingen waarvan het moment voorbij is (bv. het besteluur van friet) weghalen. Gebeurt bij elke nieuwe push
+// en wanneer de app opent (bericht 'ruim-meldingen-op' vanuit de app).
+function ruimVervallenOp() {
+  return self.registration.getNotifications().then(lijst => {
+    const nu = Date.now();
+    for (const n of lijst) {
+      const tot = n.data && n.data.verloopt_op ? Date.parse(n.data.verloopt_op) : null;
+      if (tot && tot <= nu) n.close();
+    }
+  });
+}
+
+self.addEventListener('message', event => {
+  if (event.data === 'ruim-meldingen-op') event.waitUntil(ruimVervallenOp());
 });
 
 // Tikken op de melding: bestaand venster van de app focussen, of een nieuw openen

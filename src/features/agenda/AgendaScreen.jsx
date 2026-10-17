@@ -8,12 +8,15 @@ import { Aanwezigheid } from './Aanwezigheid';
 import { Bijlagen } from '../../components/Bijlagen';
 import { aankomendeEvents, totEnMetTekst, valtOp } from './datums';
 import { OudleidingLabel } from './OudleidingLabel';
+import { magEventMaken } from './rechten';
 
 export const AgendaScreen = () => {
   const navigate = useNavigate();
   const { loading, currentUser } = useAuth();
   const { notifications, handleMarkNotificationAsRead, events } = useAgenda();
   const kanEventsMaken = !currentUser?.isOudleiding;
+  // Nieuwe items maken: enkel Sfeerbeheer (recht agenda_beheren) en hoofdleiding
+  const magMaken = magEventMaken(currentUser);
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showNewEvents, setShowNewEvents] = useState(false);
@@ -99,7 +102,7 @@ export const AgendaScreen = () => {
 
         <div className="flex items-center justify-end gap-2">
           {/* Nieuw event: zelfde stijl als de knop "Nieuwe events" ernaast */}
-          {kanEventsMaken && (
+          {magMaken && (
             <button
               onClick={() => navigate('/agenda/beheer')}
               className="flex items-center gap-2 px-3 py-2 rounded-full border transition-all shadow-sm bg-white dark:bg-[#1e2330] border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"

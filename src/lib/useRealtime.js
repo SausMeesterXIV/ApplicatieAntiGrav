@@ -53,6 +53,7 @@ export function useFriesRealtime(userId, frituurSessieId, setFriesOrders) {
             date: new Date(n.created_at),
             status: n.status,
             periodId: n.period_id,
+            sessieId: n.sessie_id,
           };
 
           // Eigen bestellingen staan er al (optimistisch toegevoegd); niet dubbel toevoegen

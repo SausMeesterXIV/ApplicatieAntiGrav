@@ -231,8 +231,15 @@ const AppRoutes = () => {
             <Route index element={<HomeScreen />} />
 
             <Route path="agenda" element={<AgendaScreen />} />
-            {/* Iedereen voegt agenda-items toe; wat je mag aanpassen/verwijderen regelt het scherm + RLS */}
-            <Route path="agenda/beheer" element={<AgendaManageScreen />} />
+            {/* Agenda-items maken en beheren: Sfeerbeheer (recht agenda_beheren) en hoofdleiding; de RLS dwingt hetzelfde af */}
+            <Route
+              path="agenda/beheer"
+              element={
+                <RoleRoute role="agenda_beheren">
+                  <AgendaManageScreen />
+                </RoleRoute>
+              }
+            />
 
             <Route path="notificaties" element={<NotificationsScreen />} />
             <Route

@@ -79,7 +79,8 @@ export const SettingsScreen = () => {
   }, []);
 
   const aantalBollen = useMemo(() => bollenVoor(currentUser, gekozenVolgorde(currentUser)).length, [currentUser]);
-  const drankKeuzes = inVasteVolgorde(dranken.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM));
+  // Snelle drank: enkel vaste dranken (geen tijdelijke)
+  const drankKeuzes = inVasteVolgorde(dranken.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM && !d.isTemporary));
   const snelleDrank =
     drankKeuzes.find(d => String(d.id) === String(currentUser?.quickDrinkId)) ||
     drankKeuzes.find(d => d.name === SPECIAL_DRINKS.PINT_FREEDOM) ||

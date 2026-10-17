@@ -10,6 +10,7 @@ import { Groep, Rij } from '../../components/Lijst';
 import { SPECIAL_DRINKS } from '../../lib/constants';
 import { euro } from '../../lib/geld';
 import { LeiderStrepenSheet } from './LeiderStrepenSheet';
+import { StrepenTabel } from './StrepenTabel';
 import { drankSheet } from '../../lib/drankSheet';
 
 // Team Drank (design-update): zelfde stijl als het startscherm, Strepen en Instellingen.
@@ -33,7 +34,7 @@ const Pil = ({ icoon, children, onClick }) => (
 export const TeamDrankDashboardScreen = () => {
   const navigate = useNavigate();
   const { users, currentUser, loading } = useAuth();
-  const { streaks, activePeriod, handleDeleteStreak } = useDrink();
+  const { streaks, activePeriod, handleDeleteStreak, dranken } = useDrink();
   const { friesOrders } = useFries();
 
   const canAccess = hasRole(currentUser, 'drank');
@@ -346,21 +347,18 @@ export const TeamDrankDashboardScreen = () => {
             </label>
 
             <section className="space-y-2">
-              <Kopje>{zoek.trim() ? `${leiding.length} gevonden` : 'Alle leiding'}</Kopje>
-              <div className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d overflow-hidden divide-y divide-white dark:divide-white/5">
-                {leiding.map(u => (
-                  <Rij
-                    key={u.id}
-                    label={u.naam}
-                    sub={u.aantal ? `${u.aantal} ${u.aantal === 1 ? 'streep' : 'strepen'}` : 'Nog niets gestreept'}
-                    waarde={u.aantal ? euro(u.bedrag) : undefined}
-                    onClick={() => setGekozenLeiderId(u.id)}
-                  />
-                ))}
-                {leiding.length === 0 && (
-                  <p className="px-5 py-6 text-center text-sm text-gray-500 dark:text-gray-400">Niemand gevonden.</p>
-                )}
-              </div>
+              <Kopje>{zoek.trim() ? `${leiding.length} gevonden` : 'Alle leiding · per drank'}</Kopje>
+              {leiding.length === 0 ? (
+                <p className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d px-5 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                  Niemand gevonden.
+                </p>
+              ) : (
+                <StrepenTabel leiding={leiding} strepen={periodStreaks} dranken={dranken || []} onKies={setGekozenLeiderId} />
+              )}
+              <p className="px-2 text-xs text-gray-500 dark:text-gray-400">
+                Strepen van de lopende periode. Tik op een leider om strepen bij te zetten of te verwijderen. Schuif opzij
+                voor meer dranken.
+              </p>
             </section>
           </>
         )}

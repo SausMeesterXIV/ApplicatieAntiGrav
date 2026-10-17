@@ -21,7 +21,7 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 | Functie | Wie |
 |---|---|
 | Agenda bekijken | Alle leiding; oudleiding enkel de items die met hen gedeeld zijn |
-| Agenda-items maken | Alle leiding |
+| Agenda-items maken | Werkgroep Sfeerbeheer (recht agenda_beheren) + hoofdleiding (migratie 004000) |
 | Agenda-items aanpassen | Wie het item maakte + hoofdleiding + werkgroep Sfeerbeheer |
 | Agenda-items verwijderen | Wie het item maakte + hoofdleiding (alles) |
 | Aftelklokken beheren | Hoofdleiding + werkgroep Sfeerbeheer |
@@ -37,7 +37,7 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 | Oudleiding: registratiecode, nieuw wachtwoord, account aan/uit | Drankteam + hoofdleiding |
 | Iemand op oudleiding zetten | Hoofdleiding |
 | Friet zonder account op betaald zetten | Drankteam |
-| Frietbestelronde openen/afsluiten | Alle leiding |
+| Frietbestelronde openen/afsluiten/weggooien | Alle leiding |
 | Friet bestellen voor een ander | Alle leiding (die persoon krijgt een melding); voor iemand zonder account: naam typen (Drankteam krijgt een melding) |
 | Friet-menu en -prijzen beheren | Hoofdleiding + Drankteam |
 | Berichten sturen | Hoofdleiding + rollen die de hoofdleiding daarvoor aanduidt |
@@ -85,6 +85,8 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - **Extra kosten** (migratie 003500, scherm Extra kosten via Team Drank of Financiën): bv. de cara's van een weekend. Drankteam of Financiën kiest **totaal verdelen** (gelijk over de gekozen personen; overblijvende centen naar de eersten op naam, de som is exact) of **bedrag per persoon**, en wie meebetaalt. Per persoon wordt het een correctie (`billing_corrections` met `extra_kost_id`) in de open periode: telt mee in de voorlopige rekening, het afsluiten, de factuur en Excel; leiding ziet de regel op Mijn factuur. Verwijderen kan zolang de periode open is.
 - **Archief**: afgesloten periodes terugbekijken.
 - **Streaks**: een **ranking** van wie het meest streepte in de huidige periode.
+- **Strepen per leider** (Team Drank): één tabel met per leider het aantal strepen per drank, totalen per drank en per leider en het bedrag; tik op een leider om strepen bij te zetten of te verwijderen.
+- **Snelle drank**: enkel een vaste drank (geen tijdelijke).
 - **Gewone leiding ziet**: eigen verbruik, eigen openstaande factuur en eigen historiek (eerdere facturen, betaald of niet betaald).
 - **Betalen**: toon op de factuur het bedrag, het rekeningnummer en een gestructureerde mededeling, plus een **EPC-QR-code** (SEPA-overschrijvings-QR) die je scant met je bank-app of Payconiq. Er gaat **geen geld via de app** en er is geen betaalprovider. De app bewaart nooit bank- of kaartgegevens van leiding, enkel de rekening van KSA. Drankteam (of Financiën) duidt aan wanneer een factuur betaald is, met de hand of door een **CSV-export van het bankuittreksel** in te lezen (koppeling via gestructureerde mededeling en bedrag; het bestand wordt niet opgeslagen).
 
@@ -110,6 +112,8 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 
 ### Friet — behouden
 - Werkt met **bestelrondes**: iedereen kan een ronde openen, leiding voegt bestellingen toe, en iedereen kan de ronde afsluiten.
+- **Besteluur** (migratie 004000): wie opent, kiest tot hoe laat iedereen kan bestellen. Alle leiding en oudleiding krijgt meteen een melding; 5 minuten voor het besteluur krijgt wie nog niets bestelde een herinnering (pg_cron `friet-herinnering`). Beide meldingen vervallen op het besteluur (`notificaties.verloopt_op`): ze verdwijnen uit de app en, wanneer de app opent of er een nieuwe push binnenkomt, ook van de gsm.
+- **Ronde weggooien**: zolang een ronde niet afgerekend is, kan iedereen ze helemaal weggooien (`gooi_frietronde_weg`): alle bestellingen verdwijnen, niets komt op een drankrekening, en wie besteld had krijgt een melding.
 - Je bestelt uit een **menu met prijzen**, dat in de app beheerd wordt.
 - **Prijzen**: de prijs van een bestelling komt altijd uit het menu (server-side afgedwongen). Enkel hoofdleiding en Drankteam passen prijzen aan, ook van bestellingen achteraf.
 - **Bestellen voor een ander**: elke leider mag voor een ander bestellen. Die persoon krijgt altijd een melding (en push) met wie besteld heeft, wat en voor welk bedrag.
@@ -129,7 +133,7 @@ Een installeerbare mobiele webapp (PWA) **enkel voor de leiding** van KSA Aalter
 - Iedereen stemt één keer en kan zijn stem aanpassen tot de deadline.
 
 ### Beheer
-- **Rollen beheren**: hoofdleiding kent groepen en werkgroepen toe, en maakt werkgroepen aan of verwijdert ze. De laatste actieve hoofdleiding kan de rol niet verliezen, niet op inactief gezet en niet verwijderd worden (server-side afgedwongen), zodat er altijd iemand rollen kan uitdelen.
+- **Rollen beheren**: hoofdleiding kent groepen en werkgroepen toe, en maakt werkgroepen aan of verwijdert ze. Per werkgroep kan je de leden in bulk aanvinken, en met "Nieuw werkjaar" maak je alle werkgroepen in één keer leeg. De laatste actieve hoofdleiding kan de rol niet verliezen, niet op inactief gezet en niet verwijderd worden (server-side afgedwongen), zodat er altijd iemand rollen kan uitdelen.
 - **Instellingen**: profiel, wachtwoord wijzigen, meldingen aan of uit.
 
 ### Verwijderen

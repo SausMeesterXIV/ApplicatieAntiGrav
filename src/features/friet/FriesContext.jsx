@@ -22,6 +22,7 @@ export const FriesProvider = ({ children }) => {
   const [friesPickupTime, setFriesPickupTimeState] = useState(null);
   const [frituurSessieId, setFrituurSessieId] = useState(null);
   const [sessieGestart, setSessieGestart] = useState(null); // wanneer de lopende ronde geopend werd
+  const [bestelTot, setBestelTot] = useState(null); // tot wanneer iedereen kan bestellen (Date of null)
   const [loading, setLoading] = useState(true);
 
   useFriesRealtime(session?.user?.id || null, frituurSessieId, setFriesOrders);
@@ -43,6 +44,7 @@ export const FriesProvider = ({ children }) => {
         setFriesSessionStatusState(sessieData.status);
         setFriesPickupTimeState(sessieData.pickupTime);
         setSessieGestart(sessieData.gestart);
+        setBestelTot(sessieData.bestelTot);
       }
       setFriesOrders(ordersData || []);
       setFryItems(itemsData || []);
@@ -53,15 +55,16 @@ export const FriesProvider = ({ children }) => {
     }
   };
 
-  // Update lokaal én direct in de database
-  const setFriesSessionStatus = async status => {
+  // Update lokaal én direct in de database. Bij een nieuwe ronde: opties.bestelTot (Date) = besteluur
+  const setFriesSessionStatus = async (status, opties = {}) => {
     setFriesSessionStatusState(status);
     try {
       if (status === 'open' && !frituurSessieId) {
         try {
-          const newId = await db.createFrituurSessie(currentUser?.id || null);
+          const newId = await db.createFrituurSessie(currentUser?.id || null, opties.bestelTot || null);
           setFrituurSessieId(newId);
           setSessieGestart(new Date());
+          setBestelTot(opties.bestelTot || null);
         } catch (e) {
           // Iemand anders opende net een ronde (de database laat er maar één tegelijk toe): die tonen
           if (e?.code !== '23505') throw e;
@@ -71,6 +74,7 @@ export const FriesProvider = ({ children }) => {
             setFriesSessionStatusState(lopend.status);
             setFriesPickupTimeState(lopend.pickupTime);
             setSessieGestart(lopend.gestart);
+            setBestelTot(lopend.bestelTot);
             setFriesOrders(await db.fetchFrituurBestellingen());
           }
           showToast('Er was net al een ronde geopend: je bestelt mee in die ronde.', 'info');
@@ -114,6 +118,7 @@ export const FriesProvider = ({ children }) => {
       totalPrice: totalCost,
       date: new Date(),
       status: 'open',
+      sessieId: frituurSessieId,
     };
     setFriesOrders(prev => [newOrder, ...prev]);
 
@@ -160,6 +165,7 @@ export const FriesProvider = ({ children }) => {
       totalPrice: totalCost,
       date: new Date(),
       status: 'open',
+      sessieId: frituurSessieId,
     };
     setFriesOrders(prev => [newOrder, ...prev]);
     try {
@@ -187,6 +193,23 @@ export const FriesProvider = ({ children }) => {
     } catch (error) {
       setFriesOrders(prev => [orderToRemove, ...prev]);
       showToast(error.message || 'Fout bij het annuleren', 'error');
+    }
+  };
+
+  // De hele ronde weggooien (nog niet afgerekend): alle bestellingen weg, niets op een drankrekening
+  const gooiRondeWeg = async () => {
+    if (!frituurSessieId) return;
+    const sessie = frituurSessieId;
+    try {
+      const aantal = await db.gooiFrietrondeWeg(sessie);
+      setFriesOrders(prev => prev.filter(o => o.sessieId !== sessie));
+      setFrituurSessieId(null);
+      setFriesSessionStatusState('closed');
+      setFriesPickupTimeState(null);
+      setBestelTot(null);
+      showToast(aantal ? `Frietronde weggegooid (${aantal} ${aantal === 1 ? 'bestelling' : 'bestellingen'})` : 'Frietronde weggegooid', 'success');
+    } catch (e) {
+      showToast(e.message || 'Weggooien mislukt', 'error');
     }
   };
 
@@ -347,6 +370,7 @@ export const FriesProvider = ({ children }) => {
         id: frituurSessieId,
         status: friesSessionStatus,
         pickupTime: friesPickupTime,
+        bestelTot,
       }
     : null;
 
@@ -402,6 +426,7 @@ export const FriesProvider = ({ children }) => {
         setFriesSessionStatus,
         setFriesPickupTime,
         handleArchiveFriesSession,
+        gooiRondeWeg,
         handleCompleteFriesPayment,
         handlePlaceFryOrder,
         handleRemoveFryOrder,

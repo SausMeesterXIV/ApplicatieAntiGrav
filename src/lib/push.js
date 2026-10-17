@@ -20,6 +20,15 @@ function urlBase64NaarUint8Array(base64) {
   return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
 }
 
+/** Vervallen meldingen (bv. friet na het besteluur) van het toestel halen; de service worker doet het eigenlijke werk. */
+export function ruimMeldingenOp() {
+  try {
+    navigator.serviceWorker?.controller?.postMessage('ruim-meldingen-op');
+  } catch {
+    /* geen service worker (bv. npm run dev) */
+  }
+}
+
 async function registratie() {
   // De service worker wordt door vite-plugin-pwa geregistreerd (enkel in de gebouwde app / preview)
   return navigator.serviceWorker.ready;

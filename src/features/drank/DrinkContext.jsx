@@ -181,9 +181,9 @@ export function DrinkProvider({ children }) {
 
   const handleQuickStreep = () => {
     if (!currentUser) return;
-    const drinkId = currentUser.quickDrinkId || (dranken.length > 0 ? String(dranken[0].id) : null);
-    if (!drinkId) return;
-    const drink = dranken.find(d => String(d.id) === String(drinkId));
+    // Snelle drank is altijd een vaste drank; een tijdelijke (oude keuze) telt niet
+    const vast = dranken.filter(d => !d.isTemporary);
+    const drink = vast.find(d => String(d.id) === String(currentUser.quickDrinkId)) || vast[0];
     if (drink) {
       handleAddCost(currentUser.id, drink.id, 1, currentUser.naam);
     }

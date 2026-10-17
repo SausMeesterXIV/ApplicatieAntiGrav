@@ -248,10 +248,12 @@ const StrepenKaart = ({ positie }) => {
   const [snel, ...anderen] = useMemo(() => {
     const geldig = inVasteVolgorde(dranken.filter(d => d.name !== SPECIAL_DRINKS.BAK_FREEDOM));
     if (!geldig.length) return [];
-    // Zelf gekozen snelle drank, anders Freedom
+    // Zelf gekozen snelle drank, anders Freedom; altijd een vaste drank (geen tijdelijke)
+    const vast = geldig.filter(d => !d.isTemporary);
     const snelste =
-      geldig.find(d => String(d.id) === String(currentUser?.quickDrinkId)) ||
-      geldig.find(d => d.name === SPECIAL_DRINKS.PINT_FREEDOM) ||
+      vast.find(d => String(d.id) === String(currentUser?.quickDrinkId)) ||
+      vast.find(d => d.name === SPECIAL_DRINKS.PINT_FREEDOM) ||
+      vast[0] ||
       geldig[0];
     const rest = geldig.filter(d => d.id !== snelste.id);
     return [snelste, ...rest.slice(0, 2)];

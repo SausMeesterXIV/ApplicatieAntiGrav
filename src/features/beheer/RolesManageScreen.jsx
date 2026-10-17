@@ -350,11 +350,14 @@ const WerkgroepenTab = ({ users, werkgroepen, onSaved }) => {
         )}
       </div>
 
+      {werkgroepen.length > 0 && <NieuwWerkjaar users={users} onSaved={onSaved} />}
+
       {bewerk && (
         <WerkgroepBewerken
           key={bewerk === 'nieuw' ? 'nieuw' : bewerk.id}
           werkgroep={bewerk === 'nieuw' ? null : bewerk}
           leden={bewerk === 'nieuw' ? 0 : aantalLeden(bewerk.id)}
+          users={users}
           onClose={() => setBewerk(null)}
           onSaved={onSaved}
         />
@@ -363,17 +366,74 @@ const WerkgroepenTab = ({ users, werkgroepen, onSaved }) => {
   );
 };
 
-const WerkgroepBewerken = ({ werkgroep, leden, onClose, onSaved }) => {
+// Nieuw werkjaar: iedereen in één keer uit alle werkgroepen halen. Daarna deel je per werkgroep de nieuwe leden uit.
+// Hoofdleiding blijft; de groepen (Pagadders … Kim) kiest iedereen zelf opnieuw vanaf 1 september.
+const NieuwWerkjaar = ({ users, onSaved }) => {
+  const [bevestig, setBevestig] = useState(false);
+  const [bezig, setBezig] = useState(false);
+  const aantal = users.filter(u => u.werkgroepIds.length > 0).length;
+
+  const reset = async () => {
+    if (!bevestig) return setBevestig(true);
+    setBezig(true);
+    try {
+      await db.resetAlleWerkgroepen();
+      await onSaved();
+      showToast('Alle werkgroepen zijn leeg. Deel nu per werkgroep de nieuwe leden uit.', 'success');
+      setBevestig(false);
+    } catch {
+      showToast('Leegmaken mislukt', 'error');
+    } finally {
+      setBezig(false);
+    }
+  };
+
+  return (
+    <section className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-4 space-y-2">
+      <p className="font-bold">Nieuw werkjaar</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Haal iedereen uit alle werkgroepen en deel daarna per werkgroep de nieuwe leden uit. Hoofdleiding blijft. De groep
+        (Pagadders … Kim) kiest iedereen zelf opnieuw vanaf 1 september.
+      </p>
+      <div className="flex gap-2">
+        {bevestig && (
+          <button onClick={() => setBevestig(false)} disabled={bezig} className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 font-bold">
+            Annuleren
+          </button>
+        )}
+        <button
+          onClick={reset}
+          disabled={bezig || aantal === 0}
+          className={`flex-1 py-3 rounded-xl font-bold disabled:opacity-50 ${bevestig ? 'bg-red-600 text-white' : 'bg-red-50 text-red-600 dark:bg-red-900/20'}`}
+        >
+          {bezig ? 'Bezig…' : bevestig ? `Zeker? ${aantal} leiders verliezen hun werkgroep` : 'Alle werkgroepen leegmaken'}
+        </button>
+      </div>
+    </section>
+  );
+};
+
+const WerkgroepBewerken = ({ werkgroep, leden, users, onClose, onSaved }) => {
   const [naam, setNaam] = useState(werkgroep?.naam || '');
   const [rechten, setRechten] = useState(werkgroep?.rechten || []);
   const [bevestigVerwijderen, setBevestigVerwijderen] = useState(false);
   const [bezig, setBezig] = useState(false);
+  // Leden in bulk: alle actieve leiding (geen oudleiding) aan- of uitvinken
+  const kandidaten = useMemo(
+    () => users.filter(u => u.actief && !u.isOudleiding).sort((a, b) => (a.naam || '').localeCompare(b.naam || '')),
+    [users],
+  );
+  const [ledenIds, setLedenIds] = useState(() => (werkgroep ? users.filter(u => u.werkgroepIds.includes(werkgroep.id)).map(u => u.id) : []));
+  const [zoekLid, setZoekLid] = useState('');
+  const zichtbaar = kandidaten.filter(u => !zoekLid.trim() || (u.naam || '').toLowerCase().includes(zoekLid.trim().toLowerCase()));
 
   const opslaan = async () => {
     if (!naam.trim()) return showToast('Geef de werkgroep een naam', 'warning');
     setBezig(true);
     try {
-      await db.saveWerkgroep({ id: werkgroep?.id, naam, rechten });
+      const bewaard = await db.saveWerkgroep({ id: werkgroep?.id, naam, rechten });
+      const id = werkgroep?.id || bewaard?.id;
+      if (id) await db.setWerkgroepLeden(id, ledenIds);
       await onSaved();
       showToast('Werkgroep opgeslagen', 'success');
       onClose();
@@ -420,6 +480,31 @@ const WerkgroepBewerken = ({ werkgroep, leden, onClose, onSaved }) => {
               onChange={() => setRechten(toggle(rechten, key))}
             />
           ))}
+        </section>
+
+        <section className="space-y-2">
+          <div className="flex items-baseline justify-between">
+            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Leden ({ledenIds.length})</h3>
+            {ledenIds.length > 0 && (
+              <button type="button" onClick={() => setLedenIds([])} className="text-xs font-bold text-gray-500">
+                Niemand
+              </button>
+            )}
+          </div>
+          <input
+            type="search"
+            placeholder="Zoek leiding"
+            value={zoekLid}
+            onChange={e => setZoekLid(e.target.value)}
+            className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <div className="flex flex-wrap gap-2">
+            {zichtbaar.map(u => (
+              <Chip key={u.id} actief={ledenIds.includes(u.id)} onClick={() => setLedenIds(toggle(ledenIds, u.id))}>
+                {u.naam}
+              </Chip>
+            ))}
+          </div>
         </section>
 
         <button

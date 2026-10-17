@@ -8,7 +8,7 @@ import { maakTestdata } from './testdata';
 import { RPC, zetInvoeger } from './rpc';
 import { mededelingVan } from './hulp';
 
-const OPSLAG = 'ksa-demo-db-v2';
+const OPSLAG = 'ksa-demo-db-v3';
 const SESSIE = 'ksa-demo-sessie';
 
 // ==================== Database in het geheugen ====================
@@ -109,7 +109,52 @@ function naInvoegen(tabelNaam, rij) {
   if (tabelNaam === 'betaling_posten') rij.mededeling ||= mededelingVan(5000000 + rij.nummer);
   if ((tabelNaam === 'facturen' || tabelNaam === 'betaling_posten') && rij.status === 'betaald') rij.betaald_op ||= nu();
   if (tabelNaam === 'profiles' && !rij.naam) rij.naam = [rij.voornaam, rij.achternaam].filter(Boolean).join(' ') || rij.email;
+  if (tabelNaam === 'frituur_sessies' && rij.status === 'open') setTimeout(() => meldFrietronde(rij), 0);
 }
+
+// Zelfde als de triggers/cron van migratie 004000 (melding_frietronde_open en friet_herinneringen)
+const uur = t => new Date(t).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
+function meldAanLeden(sessie, wie, titel, bericht, verloopt) {
+  const door = tabel('profiles').find(p => p.id === sessie.created_by);
+  for (const p of wie) {
+    const rij = standaard('notificaties', {
+      zender_id: sessie.created_by, ontvanger_id: p.id, titel, bericht, type: 'order', action: 'Bestellen|/frituur',
+      zender_naam: door?.nickname || door?.naam || 'Friet', verloopt_op: verloopt,
+    });
+    tabel('notificaties').push(rij);
+    meld('notificaties', 'INSERT', rij);
+  }
+  bewaar();
+}
+function meldFrietronde(sessie) {
+  const door = tabel('profiles').find(p => p.id === sessie.created_by);
+  meldAanLeden(
+    sessie,
+    tabel('profiles').filter(p => p.actief && p.id !== sessie.created_by),
+    '🍟 Je kan friet bestellen',
+    `${door?.nickname || door?.naam || 'Iemand'} opende een frietronde.${sessie.bestel_tot ? ` Bestellen kan tot ${uur(sessie.bestel_tot)}.` : ''}`,
+    sessie.bestel_tot || new Date(Date.now() + 3 * 3600e3).toISOString(),
+  );
+}
+function frietHerinneringen() {
+  const nuMs = Date.now();
+  for (const s of tabel('frituur_sessies')) {
+    if (s.status !== 'open' || !s.bestel_tot || s.herinnerd_op) continue;
+    const tot = Date.parse(s.bestel_tot);
+    if (tot <= nuMs || tot > nuMs + 5 * 60e3) continue;
+    const besteld = new Set(tabel('frituur_bestellingen').filter(b => b.sessie_id === s.id).map(b => b.user_id));
+    meldAanLeden(
+      s,
+      tabel('profiles').filter(p => p.actief && !besteld.has(p.id)),
+      '⏰ Nog even om friet te bestellen',
+      `Je hebt nog niets besteld. Bestellen kan tot ${uur(s.bestel_tot)}.`,
+      s.bestel_tot,
+    );
+    s.herinnerd_op = nu();
+    bewaar();
+  }
+}
+setInterval(frietHerinneringen, 20000);
 function naAanpassen(tabelNaam, oud, rij) {
   if ('updated_at' in rij && SCHEMA[tabelNaam]?.updated_at === 'nu') rij.updated_at = nu();
   if ((tabelNaam === 'facturen' || tabelNaam === 'betaling_posten') && oud.status !== rij.status) {

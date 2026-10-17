@@ -38,10 +38,12 @@ Deno.serve(async req => {
       .update({ push_verzonden_op: new Date().toISOString() })
       .eq('id', id)
       .is('push_verzonden_op', null)
-      .select('id, zender_id, ontvanger_id, titel, bericht, type')
+      .select('id, zender_id, ontvanger_id, titel, bericht, type, verloopt_op')
       .maybeSingle();
     if (error) throw error;
     if (!melding) return json({ message: 'Al verstuurd of niet gevonden' });
+    // Vervallen melding (bv. friet na het besteluur): niet meer sturen
+    if (melding.verloopt_op && Date.parse(melding.verloopt_op) <= Date.now()) return json({ message: 'Vervallen' });
 
     // 2. Ontvangers: iedereen (behalve de afzender) of één persoon, enkel met push aan
     let query = supabase.from('profiles').select('id').eq('actief', true).eq('push_enabled', true);
@@ -69,7 +71,13 @@ Deno.serve(async req => {
       body: melding.bericht ?? '',
       url: urlVoorType(melding.type),
       tag: melding.id,
+      verloopt_op: melding.verloopt_op ?? null,
     });
+
+    // Hoe lang de pushdienst mag proberen af te leveren: max. een dag, en nooit na het vervallen van de melding
+    const ttl = melding.verloopt_op
+      ? Math.max(60, Math.min(60 * 60 * 24, Math.floor((Date.parse(melding.verloopt_op) - Date.now()) / 1000)))
+      : 60 * 60 * 24;
 
     // 4. Versturen; verlopen abonnementen (404/410) opruimen
     let verstuurd = 0;
@@ -78,7 +86,7 @@ Deno.serve(async req => {
       (abonnementen ?? []).map(async a => {
         try {
           await webpush.sendNotification({ endpoint: a.endpoint, keys: { p256dh: a.p256dh, auth: a.auth } }, payload, {
-            TTL: 60 * 60 * 24,
+            TTL: ttl,
           });
           verstuurd++;
         } catch (e) {

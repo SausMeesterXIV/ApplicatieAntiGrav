@@ -23,10 +23,11 @@ export const DEMO_PERSONEN = [
   { email: 'jens.claes@ksa-aalter.be', voornaam: 'Jens', achternaam: 'Claes', groep: 5, werkgroep: 'Drankteam', wat: 'Drankteam' },
   { email: 'sara.desmet@ksa-aalter.be', voornaam: 'Sara', achternaam: 'De Smet', groep: 4, werkgroep: 'Financiën', wat: 'Financiën' },
   { email: 'ruben.maes@ksa-aalter.be', voornaam: 'Ruben', achternaam: 'Maes', groep: 6, hoofdleiding: true, wat: 'Hoofdleiding' },
+  { email: 'emma.janssens@ksa-aalter.be', voornaam: 'Emma', achternaam: 'Janssens', groep: 7, werkgroep: 'Sfeerbeheer', wat: 'Sfeerbeheer (agenda)' },
 ];
 
 const ANDEREN = [
-  ['Emma', 'Janssens', 7, 'Sfeerbeheer'], ['Wout', 'Wouters', 1], ['Fien', 'Mertens', 1], ['Arne', 'Willems', 3],
+  ['Wout', 'Wouters', 1], ['Fien', 'Mertens', 1], ['Arne', 'Willems', 3],
   ['Lien', 'Goossens', 3, 'Drankteam'], ['Bram', 'Vermeulen', 5], ['Jana', 'Dubois', 2], ['Seppe', 'Lambrecht', 6],
   ['Noor', 'Hermans', 4, 'Financiën'], ['Mathias', 'Jacobs', 5], ['Ines', 'Martens', 6], ['Lars', 'Coppens', 7],
   ['Hanne', 'Smets', 1], ['Thomas', 'De Clercq', 2],

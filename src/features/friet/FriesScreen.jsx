@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useFries } from './FriesContext';
@@ -32,6 +32,7 @@ export const FriesScreen = () => {
     handleDeleteFryItem,
     loading: friesLoading,
     meldAanBestellers,
+    gooiRondeWeg,
   } = useFries();
 
   const loading = authLoading || friesLoading;
@@ -40,6 +41,44 @@ export const FriesScreen = () => {
 
   const sessionStatus = activeFrituurSession?.status || FRITUUR_STATUS.CLOSED;
   const pickupTime = activeFrituurSession?.pickupTime;
+  const bestelTot = activeFrituurSession?.bestelTot || null;
+
+  // Klok voor het besteluur (elke 20 seconden opnieuw)
+  const [nu, setNu] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNu(Date.now()), 20000);
+    return () => clearInterval(t);
+  }, []);
+  const minutenOver = bestelTot ? Math.ceil((bestelTot.getTime() - nu) / 60000) : null;
+  const uurTekst = d => d.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
+
+  // Ronde openen: besteluur kiezen (standaard binnen 30 minuten, afgerond op 5 minuten)
+  const [openSheet, setOpenSheet] = useState(false);
+  const [besteluur, setBesteluur] = useState('');
+  const startOpenen = () => {
+    const d = new Date(Date.now() + 30 * 60000);
+    d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5, 0, 0);
+    setBesteluur(uurTekst(d));
+    setOpenSheet(true);
+  };
+  const besteluurDatum = () => {
+    const [u, m] = besteluur.split(':').map(Number);
+    if (Number.isNaN(u) || Number.isNaN(m)) return null;
+    const d = new Date();
+    d.setHours(u, m, 0, 0);
+    return d;
+  };
+  const besteluurGeldig = (besteluurDatum()?.getTime() || 0) > Date.now();
+  const bevestigOpenen = () => {
+    const d = besteluurDatum();
+    if (!d || d.getTime() <= Date.now()) return;
+    onSessionChange(FRITUUR_STATUS.OPEN, { bestelTot: d });
+    setOpenSheet(false);
+  };
+
+  // Ronde weggooien (nog niet afgerekend): alles weg, niets op een drankrekening
+  const [weggooiSheet, setWeggooiSheet] = useState(false);
+  const bestellingenInRonde = myOrders.filter(o => o.sessieId && o.sessieId === activeFrituurSession?.id).length;
 
   const [cart, setCart] = useState([]);
   const [favoriteItems, setFavoriteItems] = useState(() => {
@@ -311,7 +350,7 @@ export const FriesScreen = () => {
         <div className="px-4 py-4 bg-white dark:bg-[#1e2330] border-b border-gray-200 dark:border-gray-800 shadow-sm transition-colors z-30 relative">
           {sessionStatus === FRITUUR_STATUS.CLOSED && (
             <button
-              onClick={() => onSessionChange(FRITUUR_STATUS.OPEN)}
+              onClick={startOpenen}
               className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
             >
               <span className="material-icons-round">play_arrow</span>Bestelling Openen
@@ -322,8 +361,25 @@ export const FriesScreen = () => {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-green-600 dark:text-green-500">
                 <span className="material-icons-round">lock_open</span>
-                <span className="font-bold text-sm">Iedereen kan nu bestellen</span>
+                <span className="font-bold text-sm">
+                  Iedereen kan nu bestellen{bestelTot ? ` tot ${uurTekst(bestelTot)}` : ''}
+                </span>
               </div>
+              {bestelTot && (
+                <p
+                  className={`text-sm font-semibold -mt-1 ${
+                    minutenOver <= 0
+                      ? 'text-red-600 dark:text-red-400'
+                      : minutenOver <= 5
+                        ? 'text-orange-600 dark:text-orange-400'
+                        : 'text-gray-500 dark:text-gray-400'
+                  }`}
+                >
+                  {minutenOver <= 0
+                    ? 'Het besteluur is voorbij. Stop het opnemen om te bestellen bij de frituur.'
+                    : `Nog ${minutenOver} ${minutenOver === 1 ? 'minuut' : 'minuten'}`}
+                </p>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={() => navigate('/frituur/overzicht')}
@@ -394,6 +450,16 @@ export const FriesScreen = () => {
                 </button>
               </div>
             </div>
+          )}
+
+          {sessionStatus !== FRITUUR_STATUS.CLOSED && activeFrituurSession?.id && (
+            <button
+              type="button"
+              onClick={() => setWeggooiSheet(true)}
+              className="mt-3 w-full text-sm font-semibold text-red-600 dark:text-red-400 py-2 flex items-center justify-center gap-1"
+            >
+              <span className="material-icons-round text-base">delete_forever</span> Ronde weggooien
+            </button>
           )}
 
           {sessionStatus === FRITUUR_STATUS.ORDERED && pickupTime && (
@@ -504,7 +570,8 @@ export const FriesScreen = () => {
 
         {!searchQuery && (
           <div className="px-4 mt-3 overflow-x-auto no-scrollbar">
-            <div className="flex gap-2">
+            {/* Op een computer kan je niet zijwaarts vegen: daar lopen de tabbladen over meerdere regels */}
+            <div className="flex gap-2 lg:flex-wrap">
               {TABS.map(cat => {
                 const isFavTab = cat === 'favorieten';
                 const isActive = activeCategory === cat;
@@ -658,6 +725,62 @@ export const FriesScreen = () => {
         </div>
       </main>
 
+      {/* Ronde openen: tot hoe laat kan iedereen bestellen? */}
+      <BottomSheet isOpen={openSheet} onClose={() => setOpenSheet(false)} title="Frietronde openen">
+        <div className="space-y-5">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Tot hoe laat kan iedereen bestellen? Iedereen krijgt meteen een melding. Wie 5 minuten voor dit uur nog niets
+            besteld heeft, krijgt een herinnering.
+          </p>
+          <div className="flex items-center justify-center">
+            <input
+              type="time"
+              value={besteluur}
+              onChange={e => setBesteluur(e.target.value)}
+              aria-label="Besteluur"
+              className="w-full max-w-[280px] bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-4xl font-black tabular-nums rounded-2xl px-4 py-5 text-center focus:ring-4 focus:ring-green-500/20 outline-none [color-scheme:light] dark:[color-scheme:dark]"
+            />
+          </div>
+          {!besteluurGeldig && besteluur && (
+            <p className="text-sm text-center font-semibold text-red-600 dark:text-red-400">Kies een uur later dan nu.</p>
+          )}
+          <button
+            onClick={bevestigOpenen}
+            disabled={!besteluurGeldig}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all disabled:opacity-40"
+          >
+            <span className="material-icons-round">campaign</span>
+            Openen en iedereen verwittigen
+          </button>
+        </div>
+      </BottomSheet>
+
+      {/* Ronde weggooien */}
+      <BottomSheet isOpen={weggooiSheet} onClose={() => setWeggooiSheet(false)} title="Ronde weggooien?">
+        <div className="space-y-5">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            {bestellingenInRonde
+              ? `Alle ${bestellingenInRonde} ${bestellingenInRonde === 1 ? 'bestelling verdwijnt' : 'bestellingen verdwijnen'}`
+              : 'De ronde verdwijnt'}{' '}
+            en er komt niets op iemands drankrekening. Wie besteld had, krijgt een melding. Dit kan je niet ongedaan maken.
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => setWeggooiSheet(false)} className="flex-1 py-3.5 rounded-xl bg-gray-100 dark:bg-gray-800 font-bold">
+              Annuleren
+            </button>
+            <button
+              onClick={async () => {
+                setWeggooiSheet(false);
+                await gooiRondeWeg();
+              }}
+              className="flex-1 py-3.5 rounded-xl bg-red-600 text-white font-bold"
+            >
+              Weggooien
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
+
       {/* 6. TIME PICKER MODAL */}
       <BottomSheet isOpen={showTimeInput} onClose={() => setShowTimeInput(false)} title="Hoe laat afhalen?">
         <div className="space-y-6">
@@ -666,7 +789,7 @@ export const FriesScreen = () => {
               type="time"
               value={tempPickupTime}
               onChange={e => setTempPickupTime(e.target.value)}
-              className="w-full max-w-[200px] bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-4xl font-black rounded-2xl p-6 text-center focus:ring-4 focus:ring-green-500/20 border-green-500/30 outline-none transition-all"
+              className="w-full max-w-[280px] bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-4xl font-black tabular-nums rounded-2xl px-4 py-5 text-center focus:ring-4 focus:ring-green-500/20 border-green-500/30 outline-none transition-all [color-scheme:light] dark:[color-scheme:dark]"
             />
           </div>
           <button

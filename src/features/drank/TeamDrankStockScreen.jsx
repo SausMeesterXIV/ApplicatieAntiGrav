@@ -193,7 +193,7 @@ export const TeamDrankStockScreen = () => {
           </div>
         )}
       </header>
-      <main className="flex-1 px-4 pb-nav-safe overflow-y-auto pt-2">
+      <main className={`flex-1 px-4 overflow-y-auto pt-2 ${activeMainTab === 'voorraad' ? 'pb-nav-knop' : 'pb-nav-safe'}`}>
         {activeMainTab === 'voorraad' ? (
           <>
             <VoorraadPerDrank />
@@ -340,13 +340,32 @@ export const TeamDrankStockScreen = () => {
                 <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">
                   Aantal
                 </label>
-                <input
-                  type="number"
-                  value={formData.count}
-                  onChange={e => setFormData({ ...formData, count: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
-                  placeholder="0"
-                />
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, count: String(Math.max(0, (parseInt(formData.count) || 0) - 1)) })}
+                    className="w-11 h-11 shrink-0 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center active:scale-95"
+                    aria-label="Eén minder"
+                  >
+                    <span className="material-icons-round">remove</span>
+                  </button>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={formData.count}
+                    onChange={e => setFormData({ ...formData, count: e.target.value })}
+                    className="w-full min-w-0 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-3 text-sm text-center font-bold tabular-nums text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-inkt/20 dark:focus:ring-white/30"
+                    placeholder="0"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, count: String((parseInt(formData.count) || 0) + 1) })}
+                    className="w-11 h-11 shrink-0 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center active:scale-95"
+                    aria-label="Eén meer"
+                  >
+                    <span className="material-icons-round">add</span>
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">

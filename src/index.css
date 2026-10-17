@@ -248,3 +248,23 @@
 .animate-bounce-up {
   animation: bounce-up 0.8s ease-out forwards;
 }
+/* Getallen: geen pijltjes van de browser (vooral op computer zichtbaar); waar nodig heeft de app eigen −/+-knoppen */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Inhoud boven een vaste knop die zelf boven de menubalk staat (bv. "Nieuw stock item") */
+.pb-nav-knop {
+  padding-bottom: calc(11rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 1024px) {
+  .pb-nav-knop {
+    padding-bottom: 7rem;
+  }
+}

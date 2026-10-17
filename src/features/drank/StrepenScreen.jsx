@@ -64,10 +64,12 @@ export const StrepenScreen = () => {
     if (!keuzeDranken.some(d => d.id === selectedDrink?.id)) setSelectedDrink(keuzeDranken[0] || null);
   }, [keuzeDranken, selectedDrink]);
 
+  // Snelle drank: enkel vaste dranken (geen tijdelijke)
+  const snelleKeuzes = keuzeDranken.filter(d => !d.isTemporary);
   const snelleDrank =
-    keuzeDranken.find(d => String(d.id) === String(currentUser?.quickDrinkId)) ||
-    keuzeDranken.find(d => d.name === SPECIAL_DRINKS.PINT_FREEDOM) ||
-    keuzeDranken[0];
+    snelleKeuzes.find(d => String(d.id) === String(currentUser?.quickDrinkId)) ||
+    snelleKeuzes.find(d => d.name === SPECIAL_DRINKS.PINT_FREEDOM) ||
+    snelleKeuzes[0];
 
   // Per ongeluk dubbel tikken (binnen 0,6 s) telt als één keer toevoegen
   const laatsteTik = useRef(0);
@@ -255,7 +257,7 @@ export const StrepenScreen = () => {
         subtitle="De grote +1-knop op je startscherm"
       >
         <ul className="pb-4 divide-y divide-gray-100 dark:divide-gray-800">
-          {keuzeDranken.map(d => (
+          {snelleKeuzes.map(d => (
             <li key={d.id}>
               <button
                 type="button"

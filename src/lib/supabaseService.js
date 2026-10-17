@@ -529,7 +529,11 @@ export async function fetchNotificaties(userId) {
   if (error) throw error;
 
   const gelezen = await fetchGelezen(userId, data || []);
-  return (data || []).map(n => mapNotificatie(n, n.profiles, gelezen));
+  // Vervallen meldingen (bv. "je kan friet bestellen" na het besteluur) niet meer tonen; de database doet dit ook
+  const nu = Date.now();
+  return (data || [])
+    .filter(n => !n.verloopt_op || Date.parse(n.verloopt_op) > nu)
+    .map(n => mapNotificatie(n, n.profiles, gelezen));
 }
 
 // Lokaal onthouden gelezen meldingen (van vóór de tabel notificatie_gelezen, en als snelle buffer)
@@ -638,17 +642,26 @@ export async function fetchActiveFrituurSessie() {
     status: data[0].status,
     pickupTime: data[0].pickup_time,
     gestart: data[0].created_at ? new Date(data[0].created_at) : null,
+    bestelTot: data[0].bestel_tot ? new Date(data[0].bestel_tot) : null,
   };
 }
 
-export async function createFrituurSessie(createdBy) {
+/** Nieuwe frietronde; bestelTot = tot wanneer iedereen kan bestellen (iedereen krijgt een melding, migratie 004000) */
+export async function createFrituurSessie(createdBy, bestelTot = null) {
   const { data, error } = await supabase
     .from('frituur_sessies')
-    .insert([{ status: 'open', created_by: createdBy }])
+    .insert([{ status: 'open', created_by: createdBy, bestel_tot: bestelTot ? bestelTot.toISOString() : null }])
     .select('id')
     .single();
   if (error) throw error;
   return data.id;
+}
+
+/** Een ronde die nog niet afgerekend is helemaal weggooien: alle bestellingen weg, niets op een drankrekening */
+export async function gooiFrietrondeWeg(sessieId) {
+  const { data, error } = await supabase.rpc('gooi_frietronde_weg', { p_sessie_id: sessieId });
+  if (error) throw error;
+  return data;
 }
 
 export async function updateFrituurSessie(sessieId, updates) {
@@ -698,6 +711,7 @@ export async function fetchFrituurBestellingen(sessieId) {
     userId: b.user_id,
     userName: b.user_name || 'Onbekend',
     besteldDoor: b.besteld_door || null, // wie de bestelling plaatste (kan een ander zijn)
+    sessieId: b.sessie_id || null,
     items: b.items || [],
     totalPrice: Number(b.totaal_prijs || 0),
     date: new Date(b.created_at),
@@ -1158,6 +1172,34 @@ export async function setProfielWerkgroepen(profileId, werkgroepIds) {
   const { error } = await supabase
     .from('profiel_werkgroepen')
     .insert(werkgroepIds.map(werkgroep_id => ({ profile_id: profileId, werkgroep_id })));
+  if (error) throw error;
+}
+
+/** Leden van één werkgroep in één keer instellen (rollen in bulk uitdelen). */
+export async function setWerkgroepLeden(werkgroepId, profileIds) {
+  const { data: huidig, error: leesFout } = await supabase
+    .from('profiel_werkgroepen')
+    .select('profile_id')
+    .eq('werkgroep_id', werkgroepId);
+  if (leesFout) throw leesFout;
+  const nu = new Set((huidig || []).map(r => r.profile_id));
+  const weg = [...nu].filter(id => !profileIds.includes(id));
+  const erbij = profileIds.filter(id => !nu.has(id));
+  if (weg.length) {
+    const { error } = await supabase.from('profiel_werkgroepen').delete().eq('werkgroep_id', werkgroepId).in('profile_id', weg);
+    if (error) throw error;
+  }
+  if (erbij.length) {
+    const { error } = await supabase
+      .from('profiel_werkgroepen')
+      .insert(erbij.map(profile_id => ({ profile_id, werkgroep_id: werkgroepId })));
+    if (error) throw error;
+  }
+}
+
+/** Nieuw werkjaar: iedereen uit alle werkgroepen halen (hoofdleiding en groepen blijven). */
+export async function resetAlleWerkgroepen() {
+  const { error } = await supabase.from('profiel_werkgroepen').delete().not('profile_id', 'is', null);
   if (error) throw error;
 }
 

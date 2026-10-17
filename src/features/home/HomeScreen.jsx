@@ -129,7 +129,7 @@ export const HomeScreen = () => {
                   </div>
                   {eerstvolgend.length === 0 ? (
                     <p className="rounded-2xl bg-kaart-event dark:bg-kaart-event-d px-4 py-5 text-sm text-gray-500 dark:text-gray-400">
-                      Niets gepland. Zet iets in de agenda met "Maak nieuw event" op het agendascherm.
+                      Niets gepland.
                     </p>
                   ) : (
                     <ul className="space-y-3">

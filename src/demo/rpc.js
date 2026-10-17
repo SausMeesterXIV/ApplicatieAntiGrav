@@ -240,6 +240,29 @@ export const RPC = {
     return { expected_amount: rond(best.reduce((t, b) => t + Number(b.totaal_prijs || 0), 0)), actual_amount: p_actual_amount };
   },
 
+  gooi_frietronde_weg: ({ p_sessie_id }, { uid }) => {
+    vereis(isLid(uid), 'Niet ingelogd als actieve leiding');
+    const s = tabel('frituur_sessies').find(x => x.id === p_sessie_id);
+    vereis(s, 'Onbekende frietronde');
+    vereis(!s.closed_at, 'Deze frietronde is al afgerekend en blijft bewaard');
+    const best = tabel('frituur_bestellingen').filter(b => b.sessie_id === s.id);
+    vereis(!best.some(b => b.factuur_id), 'Er staan al bestellingen van deze ronde op een factuur');
+    for (const b of best) {
+      if (b.user_id && b.user_id !== uid) {
+        voegToe('notificaties', {
+          zender_id: uid, ontvanger_id: b.user_id, titel: '🍟 Frietbestelling geannuleerd', type: 'order', action: 'Bekijken|/frituur',
+          zender_naam: profiel(uid)?.naam, bericht: `${profiel(uid)?.naam || 'Iemand'} heeft je frietbestelling geannuleerd. Dit komt niet op je drankfactuur.`,
+        });
+      }
+    }
+    verwijderRijen('frituur_bestellingen', best);
+    for (const n of tabel('notificaties')) {
+      if (n.type === 'order' && n.action === 'Bestellen|/frituur' && n.verloopt_op && Date.parse(n.verloopt_op) > Date.now()) n.verloopt_op = nu();
+    }
+    verwijderRijen('frituur_sessies', [s]);
+    return best.length;
+  },
+
   stuur_bericht: ({ p_doel, p_doel_id, p_personen, p_titel, p_bericht, p_afzender_naam }, { uid }) => {
     if (p_doel === 'open_factuur') {
       vereis(heeftRecht(uid, 'berichten_sturen') || heeftRecht(uid, 'drank_beheren'), 'Je hebt geen recht om deze berichten te sturen');
