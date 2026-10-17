@@ -6,7 +6,6 @@ import { showToast } from '../../components/Toast';
 import * as db from '../../lib/supabaseService';
 import { euro } from '../../lib/geld';
 import { MAX_FOTO_MB, verkleinFoto } from '../../lib/foto';
-import { UittrekselAankopen } from './UittrekselAankopen';
 import { useAuth } from '../auth/AuthContext';
 import { deelOfDownload, factuurRef, laadBijlage, maakMiniFactuur, miniFactuurNaam } from '../../lib/miniFactuur';
 
@@ -198,16 +197,6 @@ export const AankoopfacturenScreen = () => {
         >
           <span className="material-icons-round">add_a_photo</span> Nieuwe factuur
         </button>
-        <UittrekselAankopen
-          facturen={facturen}
-          periodes={periodes}
-          standaardPeriode={openPeriode?.id || periodes[0]?.id}
-          onKlaar={laad}
-          onManueel={bestand => {
-            open(null);
-            if (bestand) setFoto(bestand);
-          }}
-        />
 
         {laden && <p className="px-2 text-sm text-gray-500">Laden…</p>}
 
